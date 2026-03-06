@@ -1,5 +1,9 @@
+import { Routes, Route } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
-import MetricsDashboard from './components/MetricsDashboard'
+import DashboardPage from './pages/DashboardPage'
+import StaffResponsesPage from './pages/StaffResponsesPage'
+import StaffProfileDatabasePage from './pages/StaffProfileDatabasePage'
+import StaffProfilePage from './pages/StaffProfilePage'
 
 function App() {
   return (
@@ -7,7 +11,12 @@ function App() {
       <Sidebar />
 
       <main className="flex-1 ml-60 p-8">
-        <MetricsDashboard />
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/staff/responses" element={<StaffResponsesPage />} />
+          <Route path="/staff/profile-database" element={<StaffProfileDatabasePage />} />
+          <Route path="/staff/:id" element={<StaffProfilePage />} />
+        </Routes>
       </main>
     </div>
   )

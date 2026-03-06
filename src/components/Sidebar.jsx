@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   DollarSign,
@@ -12,21 +13,35 @@ import {
   UserCog,
   Receipt,
   ChevronDown,
-  Shield,
-  FileText,
 } from 'lucide-react'
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', active: true },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+  {
+    icon: UserCog,
+    label: 'Staff',
+    children: [
+      { label: 'Responses', path: '/staff/responses' },
+      { label: 'Staff Profile Database', path: '/staff/profile-database' },
+    ],
+  },
   {
     icon: DollarSign,
     label: 'Books',
-    children: ['Accounts', 'Transactions', 'Reports'],
+    children: [
+      { label: 'Accounts' },
+      { label: 'Transactions' },
+      { label: 'Reports' },
+    ],
   },
   {
     icon: CalendarDays,
     label: 'Calendars',
-    children: ['School Calendar', 'Staff Calendar', 'Events'],
+    children: [
+      { label: 'School Calendar' },
+      { label: 'Staff Calendar' },
+      { label: 'Events' },
+    ],
   },
   { icon: MessageSquare, label: 'Messages' },
   { icon: BookOpen, label: 'Lesson Plans' },
@@ -34,37 +49,69 @@ const navItems = [
   {
     icon: Users,
     label: 'Families',
-    children: ['Guardians', 'Students', 'Paperwork'],
-    defaultOpen: true,
+    children: [
+      { label: 'Guardians' },
+      { label: 'Students' },
+      { label: 'Paperwork' },
+    ],
   },
   {
     icon: School,
     label: 'Classrooms',
-    children: ['Room A', 'Room B', 'Room C'],
+    children: [
+      { label: 'Room A' },
+      { label: 'Room B' },
+      { label: 'Room C' },
+    ],
   },
   {
     icon: CreditCard,
     label: 'Billing',
-    children: ['Invoices', 'Payments', 'Plans'],
-  },
-  {
-    icon: UserCog,
-    label: 'Staff',
-    children: ['Directory', 'Schedules', 'Reviews'],
+    children: [
+      { label: 'Invoices' },
+      { label: 'Payments' },
+      { label: 'Plans' },
+    ],
   },
   { icon: Receipt, label: 'Payroll' },
 ]
 
 function NavItem({ item }) {
-  const [open, setOpen] = useState(item.defaultOpen || false)
+  const [open, setOpen] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
   const hasChildren = item.children && item.children.length > 0
+
+  // Check if this item or any child is active
+  const isDirectActive = item.path && location.pathname === item.path
+  const isChildActive = hasChildren && item.children.some(
+    (child) => child.path && location.pathname === child.path
+  )
+  // For Staff: also highlight when on /staff/:id profile pages
+  const isNestedActive = item.label === 'Staff' && location.pathname.startsWith('/staff/')
+  const isParentActive = isDirectActive || isChildActive || isNestedActive
+
+  // Auto-expand when a child route is active
+  useEffect(() => {
+    if (isChildActive || isNestedActive) {
+      setOpen(true)
+    }
+  }, [isChildActive, isNestedActive])
+
+  const handleClick = () => {
+    if (hasChildren) {
+      setOpen(!open)
+    } else if (item.path) {
+      navigate(item.path)
+    }
+  }
 
   return (
     <div>
       <button
-        onClick={() => hasChildren && setOpen(!open)}
+        onClick={handleClick}
         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium mb-0.5 transition-colors ${
-          item.active
+          isParentActive
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
         }`}
@@ -81,14 +128,24 @@ function NavItem({ item }) {
       </button>
       {hasChildren && open && (
         <div className="ml-8 mt-0.5 space-y-0.5">
-          {item.children.map((child) => (
-            <button
-              key={child}
-              className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              {child}
-            </button>
-          ))}
+          {item.children.map((child) => {
+            const isActive = child.path && location.pathname === child.path
+            return (
+              <button
+                key={child.label}
+                onClick={() => child.path && navigate(child.path)}
+                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
+                  isActive
+                    ? 'text-blue-600 bg-blue-50 font-medium'
+                    : child.path
+                      ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 cursor-pointer'
+                      : 'text-gray-400 cursor-default'
+                }`}
+              >
+                {child.label}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
