@@ -4,14 +4,11 @@ import {
   LayoutDashboard,
   DollarSign,
   CalendarDays,
-  MessageSquare,
   BookOpen,
-  UtensilsCrossed,
   Users,
   School,
   CreditCard,
   UserCog,
-  Receipt,
   ChevronDown,
 } from 'lucide-react'
 
@@ -43,9 +40,7 @@ const navItems = [
       { label: 'Events' },
     ],
   },
-  { icon: MessageSquare, label: 'Messages' },
   { icon: BookOpen, label: 'Lesson Plans' },
-  { icon: UtensilsCrossed, label: 'Food Program' },
   {
     icon: Users,
     label: 'Families',
@@ -73,7 +68,6 @@ const navItems = [
       { label: 'Plans' },
     ],
   },
-  { icon: Receipt, label: 'Payroll' },
 ]
 
 function NavItem({ item }) {
