@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage'
 import StaffResponsesPage from './pages/StaffResponsesPage'
 import StaffProfileDatabasePage from './pages/StaffProfileDatabasePage'
 import StaffProfilePage from './pages/StaffProfilePage'
+import ContentCalendarPage from './pages/ContentCalendarPage'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/staff/responses" element={<StaffResponsesPage />} />
           <Route path="/staff/profile-database" element={<StaffProfileDatabasePage />} />
           <Route path="/staff/:id" element={<StaffProfilePage />} />
+          <Route path="/calendars/content" element={<ContentCalendarPage />} />
         </Routes>
       </main>
     </div>

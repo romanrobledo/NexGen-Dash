@@ -35,6 +35,7 @@ const navItems = [
     icon: CalendarDays,
     label: 'Calendars',
     children: [
+      { label: 'Content', path: '/calendars/content' },
       { label: 'School Calendar' },
       { label: 'Staff Calendar' },
       { label: 'Events' },
@@ -81,8 +82,10 @@ function NavItem({ item }) {
   const isChildActive = hasChildren && item.children.some(
     (child) => child.path && location.pathname === child.path
   )
-  // For Staff: also highlight when on /staff/:id profile pages
-  const isNestedActive = item.label === 'Staff' && location.pathname.startsWith('/staff/')
+  // For Staff and Calendars: also highlight when on nested routes
+  const isNestedActive =
+    (item.label === 'Staff' && location.pathname.startsWith('/staff/')) ||
+    (item.label === 'Calendars' && location.pathname.startsWith('/calendars/'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 
   // Auto-expand when a child route is active
