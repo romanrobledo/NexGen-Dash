@@ -48,6 +48,9 @@ const navItems = [
     label: 'Trainings',
     children: [
       { label: 'Dashboard', path: '/trainings' },
+      { label: 'Onboarding', path: '/trainings/onboarding' },
+      { label: 'Tools', path: '/trainings/tools' },
+      { label: "How To's", path: '/trainings/howtos' },
     ],
   },
   {

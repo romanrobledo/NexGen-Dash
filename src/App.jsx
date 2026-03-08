@@ -6,6 +6,9 @@ import StaffProfileDatabasePage from './pages/StaffProfileDatabasePage'
 import StaffProfilePage from './pages/StaffProfilePage'
 import ContentCalendarPage from './pages/ContentCalendarPage'
 import TrainingsDashboardPage from './pages/TrainingsDashboardPage'
+import TrainingsOnboardingPage from './pages/TrainingsOnboardingPage'
+import TrainingsToolsPage from './pages/TrainingsToolsPage'
+import TrainingsHowTosPage from './pages/TrainingsHowTosPage'
 
 function App() {
   return (
@@ -20,6 +23,9 @@ function App() {
           <Route path="/staff/:id" element={<StaffProfilePage />} />
           <Route path="/calendars/content" element={<ContentCalendarPage />} />
           <Route path="/trainings" element={<TrainingsDashboardPage />} />
+          <Route path="/trainings/onboarding" element={<TrainingsOnboardingPage />} />
+          <Route path="/trainings/tools" element={<TrainingsToolsPage />} />
+          <Route path="/trainings/howtos" element={<TrainingsHowTosPage />} />
         </Routes>
       </main>
     </div>
