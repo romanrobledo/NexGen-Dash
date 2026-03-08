@@ -37,15 +37,6 @@ const navItems = [
     ],
   },
   {
-    icon: DollarSign,
-    label: 'Books',
-    children: [
-      { label: 'Accounts' },
-      { label: 'Transactions' },
-      { label: 'Reports' },
-    ],
-  },
-  {
     icon: CalendarDays,
     label: 'Calendars',
     children: [
@@ -56,6 +47,15 @@ const navItems = [
     ],
   },
   { icon: BookOpen, label: 'Lesson Plans' },
+  {
+    icon: DollarSign,
+    label: 'Books',
+    children: [
+      { label: 'Accounts' },
+      { label: 'Transactions' },
+      { label: 'Reports' },
+    ],
+  },
   {
     icon: Users,
     label: 'Families',
