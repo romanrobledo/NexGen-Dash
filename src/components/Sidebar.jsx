@@ -5,6 +5,7 @@ import {
   DollarSign,
   CalendarDays,
   BookOpen,
+  GraduationCap,
   Users,
   School,
   CreditCard,
@@ -42,6 +43,7 @@ const navItems = [
     ],
   },
   { icon: BookOpen, label: 'Lesson Plans' },
+  { icon: GraduationCap, label: 'Trainings' },
   {
     icon: Users,
     label: 'Families',
