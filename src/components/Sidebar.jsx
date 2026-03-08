@@ -43,7 +43,13 @@ const navItems = [
     ],
   },
   { icon: BookOpen, label: 'Lesson Plans' },
-  { icon: GraduationCap, label: 'Trainings' },
+  {
+    icon: GraduationCap,
+    label: 'Trainings',
+    children: [
+      { label: 'Dashboard', path: '/trainings' },
+    ],
+  },
   {
     icon: Users,
     label: 'Families',
@@ -87,7 +93,8 @@ function NavItem({ item }) {
   // For Staff and Calendars: also highlight when on nested routes
   const isNestedActive =
     (item.label === 'Staff' && location.pathname.startsWith('/staff/')) ||
-    (item.label === 'Calendars' && location.pathname.startsWith('/calendars/'))
+    (item.label === 'Calendars' && location.pathname.startsWith('/calendars/')) ||
+    (item.label === 'Trainings' && location.pathname.startsWith('/trainings'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 
   // Auto-expand when a child route is active
