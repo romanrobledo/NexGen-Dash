@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import DashboardPage from './pages/DashboardPage'
@@ -13,11 +14,16 @@ import TrainingsAdminPage from './pages/TrainingsAdminPage'
 import TrainingsViewerPage from './pages/TrainingsViewerPage'
 
 function App() {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-      <main className="flex-1 ml-60 p-8">
+      <main
+        className="flex-1 p-8 transition-all duration-300"
+        style={{ marginLeft: sidebarCollapsed ? '4rem' : '15rem' }}
+      >
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/staff/responses" element={<StaffResponsesPage />} />

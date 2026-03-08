@@ -11,6 +11,8 @@ import {
   CreditCard,
   UserCog,
   ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 
 const navItems = [
@@ -21,6 +23,17 @@ const navItems = [
     children: [
       { label: 'Responses', path: '/staff/responses' },
       { label: 'Staff Profile Database', path: '/staff/profile-database' },
+    ],
+  },
+  {
+    icon: GraduationCap,
+    label: 'Trainings',
+    children: [
+      { label: 'Dashboard', path: '/trainings' },
+      { label: 'Onboarding', path: '/trainings/onboarding' },
+      { label: 'Tools', path: '/trainings/tools' },
+      { label: "How To's", path: '/trainings/howtos' },
+      { label: 'Admin', path: '/trainings/admin' },
     ],
   },
   {
@@ -43,17 +56,6 @@ const navItems = [
     ],
   },
   { icon: BookOpen, label: 'Lesson Plans' },
-  {
-    icon: GraduationCap,
-    label: 'Trainings',
-    children: [
-      { label: 'Dashboard', path: '/trainings' },
-      { label: 'Onboarding', path: '/trainings/onboarding' },
-      { label: 'Tools', path: '/trainings/tools' },
-      { label: "How To's", path: '/trainings/howtos' },
-      { label: 'Admin', path: '/trainings/admin' },
-    ],
-  },
   {
     icon: Users,
     label: 'Families',
@@ -83,7 +85,7 @@ const navItems = [
   },
 ]
 
-function NavItem({ item }) {
+function NavItem({ item, collapsed }) {
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -94,26 +96,64 @@ function NavItem({ item }) {
   const isChildActive = hasChildren && item.children.some(
     (child) => child.path && location.pathname === child.path
   )
-  // For Staff and Calendars: also highlight when on nested routes
+  // For Staff, Calendars, Trainings: also highlight when on nested routes
   const isNestedActive =
     (item.label === 'Staff' && location.pathname.startsWith('/staff/')) ||
     (item.label === 'Calendars' && location.pathname.startsWith('/calendars/')) ||
     (item.label === 'Trainings' && location.pathname.startsWith('/trainings'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 
-  // Auto-expand when a child route is active
+  // Auto-expand when a child route is active (only when not collapsed)
   useEffect(() => {
-    if (isChildActive || isNestedActive) {
+    if ((isChildActive || isNestedActive) && !collapsed) {
       setOpen(true)
     }
-  }, [isChildActive, isNestedActive])
+  }, [isChildActive, isNestedActive, collapsed])
+
+  // Collapse children when sidebar collapses
+  useEffect(() => {
+    if (collapsed) setOpen(false)
+  }, [collapsed])
 
   const handleClick = () => {
+    if (collapsed) {
+      // In collapsed mode, if the item has a direct path, navigate there
+      // Otherwise navigate to the first child with a path
+      if (item.path) {
+        navigate(item.path)
+      } else if (hasChildren) {
+        const firstWithPath = item.children.find((c) => c.path)
+        if (firstWithPath) navigate(firstWithPath.path)
+      }
+      return
+    }
     if (hasChildren) {
       setOpen(!open)
     } else if (item.path) {
       navigate(item.path)
     }
+  }
+
+  if (collapsed) {
+    return (
+      <div className="relative group">
+        <button
+          onClick={handleClick}
+          className={`w-full flex items-center justify-center p-2.5 rounded-lg mb-0.5 transition-colors ${
+            isParentActive
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+          }`}
+          title={item.label}
+        >
+          <item.icon className="w-5 h-5" />
+        </button>
+        {/* Tooltip */}
+        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+          {item.label}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -162,21 +202,43 @@ function NavItem({ item }) {
   )
 }
 
-export default function Sidebar() {
+export default function Sidebar({ collapsed = false, onToggle }) {
   return (
-    <aside className="w-60 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0">
-      <div className="px-5 py-6">
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">NEXGEN</h1>
+    <aside
+      className={`bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300 z-40 ${
+        collapsed ? 'w-16' : 'w-60'
+      }`}
+    >
+      {/* Header */}
+      <div className={`flex items-center justify-between py-6 ${collapsed ? 'px-3' : 'px-5'}`}>
+        {!collapsed && (
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">NEXGEN</h1>
+        )}
+        <button
+          onClick={onToggle}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="w-5 h-5" />
+          ) : (
+            <PanelLeftClose className="w-5 h-5" />
+          )}
+        </button>
       </div>
 
-      <nav className="flex-1 px-3 overflow-y-auto">
+      {/* Nav items */}
+      <nav className={`flex-1 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
         {navItems.map((item) => (
-          <NavItem key={item.label} item={item} />
+          <NavItem key={item.label} item={item} collapsed={collapsed} />
         ))}
       </nav>
 
-      <div className="px-5 py-4 border-t border-gray-100">
-        <p className="text-xs text-gray-400">&copy; 2026 NexGen School</p>
+      {/* Footer */}
+      <div className={`py-4 border-t border-gray-100 ${collapsed ? 'px-2' : 'px-5'}`}>
+        {!collapsed && (
+          <p className="text-xs text-gray-400">&copy; 2026 NexGen School</p>
+        )}
       </div>
     </aside>
   )
