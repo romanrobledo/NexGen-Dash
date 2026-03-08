@@ -9,6 +9,8 @@ import TrainingsDashboardPage from './pages/TrainingsDashboardPage'
 import TrainingsOnboardingPage from './pages/TrainingsOnboardingPage'
 import TrainingsToolsPage from './pages/TrainingsToolsPage'
 import TrainingsHowTosPage from './pages/TrainingsHowTosPage'
+import TrainingsAdminPage from './pages/TrainingsAdminPage'
+import TrainingsViewerPage from './pages/TrainingsViewerPage'
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
           <Route path="/trainings/onboarding" element={<TrainingsOnboardingPage />} />
           <Route path="/trainings/tools" element={<TrainingsToolsPage />} />
           <Route path="/trainings/howtos" element={<TrainingsHowTosPage />} />
+          <Route path="/trainings/admin" element={<TrainingsAdminPage />} />
+          <Route path="/trainings/view/:stepId" element={<TrainingsViewerPage />} />
         </Routes>
       </main>
     </div>

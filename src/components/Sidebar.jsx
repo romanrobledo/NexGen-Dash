@@ -51,6 +51,7 @@ const navItems = [
       { label: 'Onboarding', path: '/trainings/onboarding' },
       { label: 'Tools', path: '/trainings/tools' },
       { label: "How To's", path: '/trainings/howtos' },
+      { label: 'Admin', path: '/trainings/admin' },
     ],
   },
   {

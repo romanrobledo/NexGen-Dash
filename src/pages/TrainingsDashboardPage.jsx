@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Loader2,
   Search,
@@ -105,6 +106,7 @@ function ProgressRing({ percentage, size = 80 }) {
 }
 
 export default function TrainingsDashboardPage() {
+  const navigate = useNavigate()
   const { subjects, loading, error } = useTrainings('general')
   const [activeTab, setActiveTab] = useState('todo')
   const [searchQuery, setSearchQuery] = useState('')
@@ -236,6 +238,14 @@ export default function TrainingsDashboardPage() {
                 return (
                   <div
                     key={subject.id}
+                    onClick={() => {
+                      // Navigate to first step of first topic
+                      const firstTopic = subject.topics?.[0]
+                      const firstStep = firstTopic?.steps?.[0]
+                      if (firstStep) {
+                        navigate(`/trainings/view/${firstStep.id}`)
+                      }
+                    }}
                     className="flex items-center gap-4 py-4 px-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer group"
                   >
                     {/* Icon */}
