@@ -16,12 +16,12 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+  { icon: LayoutDashboard, label: 'Pulse', path: '/' },
   {
     icon: UserCog,
     label: 'Staff',
     children: [
-      { label: 'Responses', path: '/staff/responses' },
+      { label: 'Quick Overview', path: '/staff/responses' },
       { label: 'Staff Profile Database', path: '/staff/profile-database' },
     ],
   },

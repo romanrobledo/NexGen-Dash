@@ -27,8 +27,8 @@ export default function StaffResponsesPage() {
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Staff Responses</h2>
-        <p className="text-gray-500 mt-1">View daily check-in & out responses from teachers</p>
+        <h2 className="text-2xl font-bold text-gray-900">Quick Overview</h2>
+        <p className="text-gray-500 mt-1">Overview of the Entire Staff</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
