@@ -104,8 +104,8 @@ export default function MetricsDashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Pulse</h2>
-        <p className="text-gray-500 mt-1">Track your center's key performance metrics</p>
+        <h2 className="text-2xl font-bold text-gray-900">S.A.N.D.</h2>
+        <p className="text-gray-500 mt-1">Sleep At Night Dashboard — Track your center's key performance metrics</p>
       </div>
 
       <section className="mb-8">
