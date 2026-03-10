@@ -20,7 +20,7 @@ const navItems = [
   { icon: LayoutDashboard, label: 'S.A.N.D.', path: '/' },
   {
     icon: Compass,
-    label: 'Dashboard',
+    label: 'Compass',
     children: [
       { label: 'Who Are We', path: '/dashboard/who-are-we' },
       { label: 'What Do I Do', path: '/dashboard/what-do-i-do' },
@@ -115,7 +115,7 @@ function NavItem({ item, collapsed }) {
   )
   // For nested menus: also highlight when on nested routes
   const isNestedActive =
-    (item.label === 'Dashboard' && location.pathname.startsWith('/dashboard/')) ||
+    (item.label === 'Compass' && location.pathname.startsWith('/dashboard/')) ||
     (item.label === 'Staff' && location.pathname.startsWith('/staff/')) ||
     (item.label === 'Calendars' && location.pathname.startsWith('/calendars/')) ||
     (item.label === 'Trainings' && location.pathname.startsWith('/trainings'))
