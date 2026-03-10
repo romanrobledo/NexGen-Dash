@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
+  Compass,
   DollarSign,
   CalendarDays,
   BookOpen,
@@ -17,6 +18,22 @@ import {
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Pulse', path: '/' },
+  {
+    icon: Compass,
+    label: 'Dashboard',
+    children: [
+      { label: 'Who Are We', path: '/dashboard/who-are-we' },
+      { label: 'What Do I Do', path: '/dashboard/what-do-i-do' },
+      { label: 'Why Is It Important', path: '/dashboard/why-is-it-important' },
+      { label: 'When Do I Do It', path: '/dashboard/when-do-i-do-it' },
+      { label: 'How Do I Do It', path: '/dashboard/how-do-i-do-it' },
+      { label: 'How Do I Know I Am Doing A Good Job', path: '/dashboard/how-do-i-know' },
+      { label: 'When Do We Meet', path: '/dashboard/when-do-we-meet' },
+      { label: 'What Do We Talk About', path: '/dashboard/what-do-we-talk-about' },
+      { label: 'Where Do We Go If You Have Questions', path: '/dashboard/where-to-go' },
+      { label: 'What Are The Most Important Metrics', path: '/dashboard/important-metrics' },
+    ],
+  },
   {
     icon: UserCog,
     label: 'Staff',
@@ -96,8 +113,9 @@ function NavItem({ item, collapsed }) {
   const isChildActive = hasChildren && item.children.some(
     (child) => child.path && location.pathname === child.path
   )
-  // For Staff, Calendars, Trainings: also highlight when on nested routes
+  // For nested menus: also highlight when on nested routes
   const isNestedActive =
+    (item.label === 'Dashboard' && location.pathname.startsWith('/dashboard/')) ||
     (item.label === 'Staff' && location.pathname.startsWith('/staff/')) ||
     (item.label === 'Calendars' && location.pathname.startsWith('/calendars/')) ||
     (item.label === 'Trainings' && location.pathname.startsWith('/trainings'))

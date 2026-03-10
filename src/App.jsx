@@ -12,6 +12,7 @@ import TrainingsToolsPage from './pages/TrainingsToolsPage'
 import TrainingsHowTosPage from './pages/TrainingsHowTosPage'
 import TrainingsAdminPage from './pages/TrainingsAdminPage'
 import TrainingsViewerPage from './pages/TrainingsViewerPage'
+import DashboardGuidePage from './pages/DashboardGuidePage'
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -26,6 +27,7 @@ function App() {
       >
         <Routes>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/dashboard/:slug" element={<DashboardGuidePage />} />
           <Route path="/staff/responses" element={<StaffResponsesPage />} />
           <Route path="/staff/profile-database" element={<StaffProfileDatabasePage />} />
           <Route path="/staff/:id" element={<StaffProfilePage />} />
