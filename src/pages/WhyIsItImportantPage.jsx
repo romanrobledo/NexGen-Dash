@@ -4,6 +4,20 @@ import { AlertTriangle } from 'lucide-react'
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
 const ROLES = [
   {
+    id: 'founder',
+    label: 'Founder',
+    emoji: '👑',
+    color: '#0F172A',
+    headline: 'Because if the business isn\'t healthy, nothing else survives.',
+    body: "Every classroom, every teacher, every meal served, every child who walks through these doors — it all depends on the financial health and strategic clarity of this business. Without revenue, there is no payroll. Without systems, there is no consistency. Without someone watching the numbers and having the courage to make hard decisions, the whole operation drifts. You are not running the daily operation — that is the Operator and Director. But you are running the machine that makes the daily operation possible. The families who trust NexGen are trusting that someone at the top is building something that will last. That someone is you. The real constraint is filling seats profitably. Everything else is noise. When you collapse to 3 core functions, track only 10–12 numbers, and make one clear decision every month — you are protecting every child, every family, and every team member in this building.",
+    weight: "Pricing changes are usually the highest-ROI lever by far. Your job is to stare at a few key numbers every month and have the courage to pull the obvious lever.",
+    stats: [
+      { label: 'Core functions you oversee', value: '3' },
+      { label: 'KPIs across the entire operation', value: '10–12' },
+      { label: 'Finance decisions per monthly review', value: '1 minimum' },
+    ],
+  },
+  {
     id: 'operator',
     label: 'Operator',
     emoji: '🏢',

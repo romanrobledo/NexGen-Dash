@@ -10,6 +10,7 @@ const URGENCY = {
 }
 
 const CONTACTS = {
+  founder:       { label: "Founder",                   emoji: "👑", color: "#0F172A" },
   operator:      { label: "Roman (Operator)",          emoji: "\ud83c\udfe2", color: "#2563EB" },
   director:      { label: "Director",                  emoji: "\ud83d\udccb", color: "#7C3AED" },
   lead_teacher:  { label: "Your Lead Teacher",         emoji: "\ud83d\udcda", color: "#059669" },
@@ -25,6 +26,43 @@ const CONTACTS = {
 }
 
 const ROLES = [
+  {
+    id: "founder",
+    label: "Founder",
+    emoji: "👑",
+    color: "#0F172A",
+    tagline: "Most of your answers live in your data or a conversation with the Operator.",
+    rule: "If you're solving a problem that should be solved by the Operator or Director, that's a systems gap — fix the system, not the symptom.",
+    categories: [
+      {
+        title: "Financial & Strategy",
+        icon: "💰",
+        items: [
+          { q: "Revenue is trending down — what do I do?", who: ["operator"], urgency: "sameday", note: "Pull the Monthly Finance Review forward. Ask the 3 diagnostic questions. Pick ONE decision." },
+          { q: "Should I raise prices?", who: ["operator"], urgency: "routine", note: "Monthly Finance Review question. Check Avg Revenue per Child and Net Profit %. Pricing changes are the highest-ROI lever." },
+          { q: "Payroll is too high as a % of revenue", who: ["operator"], urgency: "sameday", note: "Target is 50–55%. If above, review staffing vs. enrollment ratios with Director." },
+          { q: "Should I expand to a second location?", who: ["operator"], urgency: "routine", note: "You don't need a finance department until: Multiple locations OR $3M+ revenue with complex debt/grants." },
+        ],
+      },
+      {
+        title: "Enrollment & Growth",
+        icon: "📈",
+        items: [
+          { q: "Occupancy is below target", who: ["operator"], urgency: "sameday", note: "Check weekly enrollment KPIs with Robyn — leads, tours, conversions. Identify which lever is broken." },
+          { q: "Marketing isn't generating enough leads", who: ["operator"], urgency: "routine", note: "Review Marketing function with Robyn — Structure, Thinking, Data, & AI." },
+        ],
+      },
+      {
+        title: "People & Operations",
+        icon: "👥",
+        items: [
+          { q: "The Operator isn't performing", who: ["founder"], urgency: "routine", note: "Address in your weekly memos. Document patterns. Don't let it accumulate." },
+          { q: "Director performance is declining", who: ["operator"], urgency: "routine", note: "Operator should be managing this. If they're not, that's a systems gap." },
+          { q: "A critical compliance issue surfaces", who: ["operator", "director"], urgency: "immediate", note: "Operator and Director handle together. You stay informed but don't run the response." },
+        ],
+      },
+    ],
+  },
   {
     id: "operator",
     label: "Operator",

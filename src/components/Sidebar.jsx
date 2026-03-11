@@ -14,19 +14,28 @@ import {
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
+  Target,
 } from 'lucide-react'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'S.A.N.D.', path: '/' },
+  {
+    icon: Target,
+    label: 'Targets & Tasks',
+    children: [
+      { label: 'Dashboard', path: '/targets' },
+      { label: 'Submit New', path: '/targets/submit' },
+    ],
+  },
   {
     icon: Compass,
     label: 'Compass',
     children: [
       { label: 'Who Are We', path: '/dashboard/who-are-we' },
       { label: 'What Do I Do', path: '/dashboard/what-do-i-do' },
-      { label: 'Why Is It Important', path: '/dashboard/why-is-it-important' },
-      { label: 'When Do I Do It', path: '/dashboard/when-do-i-do-it' },
       { label: 'How Do I Do It', path: '/dashboard/how-do-i-do-it' },
+      { label: 'When Do I Do It', path: '/dashboard/when-do-i-do-it' },
+      { label: 'Why Is It Important', path: '/dashboard/why-is-it-important' },
       { label: 'How Do I Know I Am Doing A Good Job', path: '/dashboard/how-do-i-know' },
       { label: 'When Do We Meet', path: '/dashboard/when-do-we-meet' },
       { label: 'What Do We Talk About', path: '/dashboard/what-do-we-talk-about' },
@@ -36,7 +45,7 @@ const navItems = [
   },
   {
     icon: UserCog,
-    label: 'Staff',
+    label: 'Staff Database',
     children: [
       { label: 'Quick Overview', path: '/staff/responses' },
       { label: 'Staff Profile Database', path: '/staff/profile-database' },
@@ -44,13 +53,45 @@ const navItems = [
   },
   {
     icon: GraduationCap,
-    label: 'Trainings',
+    label: 'Library',
     children: [
       { label: 'Dashboard', path: '/trainings' },
       { label: 'Onboarding', path: '/trainings/onboarding' },
       { label: 'Tools', path: '/trainings/tools' },
       { label: "How To's", path: '/trainings/howtos' },
       { label: 'Admin', path: '/trainings/admin' },
+      {
+        label: 'Trainings',
+        path: '/trainings/sales',
+        children: [
+          {
+            label: 'Sales',
+            path: '/trainings/sales',
+            children: [
+              { label: 'Playbook', path: '/trainings/sales/playbook' },
+              { label: 'Campaigns', path: '/trainings/sales/campaigns' },
+              { label: 'Routine', path: '/trainings/sales/routine' },
+            ],
+          },
+          { label: 'Marketing', path: '/trainings/marketing' },
+          { label: 'Tours', path: '/trainings/tours' },
+          { label: 'Support', path: '/trainings/support' },
+          { label: 'Offers', path: '/trainings/offers' },
+          {
+            label: 'Fulfillment',
+            path: '/trainings/fulfillment',
+            children: [
+              { label: 'Infant Room', path: '/trainings/fulfillment/infant-room' },
+              { label: 'Older Infant Room', path: '/trainings/fulfillment/older-infant-room' },
+              { label: 'Young Toddler Room', path: '/trainings/fulfillment/young-toddler-room' },
+              { label: 'Toddler Room', path: '/trainings/fulfillment/toddler-room' },
+              { label: 'Pre-Kinder Room', path: '/trainings/fulfillment/pre-kinder-room' },
+              { label: 'Kinder Room', path: '/trainings/fulfillment/kinder-room' },
+              { label: 'Afterschool Room', path: '/trainings/fulfillment/afterschool-room' },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -102,6 +143,86 @@ const navItems = [
   },
 ]
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Recursively check if any descendant path matches the current location */
+function hasActiveDescendant(children, pathname) {
+  if (!children) return false
+  return children.some(
+    (child) =>
+      (child.path && pathname === child.path) ||
+      (child.path && pathname.startsWith(child.path + '/')) ||
+      hasActiveDescendant(child.children, pathname)
+  )
+}
+
+// ─── Recursive child-item renderer ───────────────────────────────────────────
+
+function ChildItem({ child, depth = 0 }) {
+  const [open, setOpen] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const hasChildren = child.children && child.children.length > 0
+
+  const isDirectActive = child.path && location.pathname === child.path
+  const isDescendantActive = hasChildren && hasActiveDescendant(child.children, location.pathname)
+  const isActive = isDirectActive || isDescendantActive
+
+  // Auto-expand when a descendant is active
+  useEffect(() => {
+    if (isDescendantActive || isDirectActive) {
+      setOpen(true)
+    }
+  }, [isDescendantActive, isDirectActive])
+
+  const handleClick = () => {
+    if (hasChildren) {
+      setOpen(!open)
+      // Also navigate if the item has its own path
+      if (child.path) navigate(child.path)
+    } else if (child.path) {
+      navigate(child.path)
+    }
+  }
+
+  // Indentation: first level of children uses pl-3, deeper levels add pl-3 more
+  const paddingLeft = `${0.75 + depth * 0.75}rem`
+
+  return (
+    <div>
+      <button
+        onClick={handleClick}
+        style={{ paddingLeft }}
+        className={`w-full text-left pr-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
+          isDirectActive
+            ? 'text-blue-600 bg-blue-50 font-medium'
+            : isDescendantActive
+              ? 'text-blue-600 font-medium'
+              : child.path
+                ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 cursor-pointer'
+                : 'text-gray-400 cursor-default'
+        }`}
+      >
+        <span className="truncate">{child.label}</span>
+        {hasChildren && (
+          <ChevronDown
+            className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        )}
+      </button>
+      {hasChildren && open && (
+        <div className="mt-0.5 space-y-0.5">
+          {child.children.map((grandchild) => (
+            <ChildItem key={grandchild.label} child={grandchild} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Top-level NavItem ───────────────────────────────────────────────────────
+
 function NavItem({ item, collapsed }) {
   const [open, setOpen] = useState(false)
   const location = useLocation()
@@ -110,15 +231,14 @@ function NavItem({ item, collapsed }) {
 
   // Check if this item or any child is active
   const isDirectActive = item.path && location.pathname === item.path
-  const isChildActive = hasChildren && item.children.some(
-    (child) => child.path && location.pathname === child.path
-  )
+  const isChildActive = hasChildren && hasActiveDescendant(item.children, location.pathname)
   // For nested menus: also highlight when on nested routes
   const isNestedActive =
     (item.label === 'Compass' && location.pathname.startsWith('/dashboard/')) ||
-    (item.label === 'Staff' && location.pathname.startsWith('/staff/')) ||
+    (item.label === 'Staff Database' && location.pathname.startsWith('/staff/')) ||
     (item.label === 'Calendars' && location.pathname.startsWith('/calendars/')) ||
-    (item.label === 'Trainings' && location.pathname.startsWith('/trainings'))
+    (item.label === 'Library' && location.pathname.startsWith('/trainings')) ||
+    (item.label === 'Targets & Tasks' && location.pathname.startsWith('/targets'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 
   // Auto-expand when a child route is active (only when not collapsed)
@@ -135,8 +255,6 @@ function NavItem({ item, collapsed }) {
 
   const handleClick = () => {
     if (collapsed) {
-      // In collapsed mode, if the item has a direct path, navigate there
-      // Otherwise navigate to the first child with a path
       if (item.path) {
         navigate(item.path)
       } else if (hasChildren) {
@@ -196,24 +314,9 @@ function NavItem({ item, collapsed }) {
       </button>
       {hasChildren && open && (
         <div className="ml-8 mt-0.5 space-y-0.5">
-          {item.children.map((child) => {
-            const isActive = child.path && location.pathname === child.path
-            return (
-              <button
-                key={child.label}
-                onClick={() => child.path && navigate(child.path)}
-                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                  isActive
-                    ? 'text-blue-600 bg-blue-50 font-medium'
-                    : child.path
-                      ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 cursor-pointer'
-                      : 'text-gray-400 cursor-default'
-                }`}
-              >
-                {child.label}
-              </button>
-            )
-          })}
+          {item.children.map((child) => (
+            <ChildItem key={child.label} child={child} depth={0} />
+          ))}
         </div>
       )}
     </div>
@@ -228,9 +331,9 @@ export default function Sidebar({ collapsed = false, onToggle }) {
       }`}
     >
       {/* Header */}
-      <div className={`flex items-center justify-between py-6 ${collapsed ? 'px-3' : 'px-5'}`}>
+      <div className={`flex items-center py-6 ${collapsed ? 'justify-center px-3' : 'px-5'}`}>
         {!collapsed && (
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">NEXGEN</h1>
+          <h1 className="flex-1 text-center text-2xl font-black text-gray-900 tracking-tight">NEXGEN</h1>
         )}
         <button
           onClick={onToggle}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
+import TopToolbar from './components/TopToolbar'
 import DashboardPage from './pages/DashboardPage'
 import StaffResponsesPage from './pages/StaffResponsesPage'
 import StaffProfileDatabasePage from './pages/StaffProfileDatabasePage'
@@ -23,6 +24,9 @@ import WhenDoWeMeetPage from './pages/WhenDoWeMeetPage'
 import WhatDoWeTalkAboutPage from './pages/WhatDoWeTalkAboutPage'
 import WhereDoWeGoPage from './pages/WhereDoWeGoPage'
 import ImportantMetricsPage from './pages/ImportantMetricsPage'
+import TargetTaskDashboardPage from './pages/TargetTaskDashboardPage'
+import TargetTaskSubmitPage from './pages/TargetTaskSubmitPage'
+import TrainingCategoryPage from './pages/TrainingCategoryPage'
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -31,12 +35,16 @@ function App() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-      <main
-        className="flex-1 p-8 transition-all duration-300"
+      <div
+        className="flex-1 flex flex-col transition-all duration-300"
         style={{ marginLeft: sidebarCollapsed ? '4rem' : '15rem' }}
       >
+        <TopToolbar />
+        <main className="flex-1 p-8">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/targets" element={<TargetTaskDashboardPage />} />
+          <Route path="/targets/submit" element={<TargetTaskSubmitPage />} />
           <Route path="/dashboard/who-are-we" element={<WhoAreWePage />} />
           <Route path="/dashboard/what-do-i-do" element={<WhatDoIDoPage />} />
           <Route path="/dashboard/how-do-i-do-it" element={<HowDoIDoItPage />} />
@@ -58,8 +66,11 @@ function App() {
           <Route path="/trainings/howtos" element={<TrainingsHowTosPage />} />
           <Route path="/trainings/admin" element={<TrainingsAdminPage />} />
           <Route path="/trainings/view/:stepId" element={<TrainingsViewerPage />} />
+          <Route path="/trainings/:category" element={<TrainingCategoryPage />} />
+          <Route path="/trainings/:category/:subcategory" element={<TrainingCategoryPage />} />
         </Routes>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

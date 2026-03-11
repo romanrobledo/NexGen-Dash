@@ -4,13 +4,50 @@ import { Clock } from 'lucide-react'
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
 const ROLES = [
   {
+    id: 'founder',
+    label: 'Founder',
+    emoji: '👑',
+    color: '#0F172A',
+    rhythm: 'Daily + Weekly + Monthly',
+    note: "Weekly is about staying out of trouble. Monthly is about making more money. Your job is to stare at a few key numbers and have the courage to pull the obvious lever.",
+    daily: [
+      { time: 'Morning', task: 'Daily Huddle (10–15 min) with Robyn + Rachel + Andrea — staffing/ratios, tours scheduled today, any fires (parent issues, staff issues). Goal: Does today break anywhere?' },
+    ],
+    weekly: [
+      { day: 'Monday', tasks: ['Weekly Scoreboard with Robyn — 4 numbers: Occupancy %, New Enrollments/Withdrawals, Total Payroll Dollars, Cash in Bank'] },
+      { day: 'Tuesday', tasks: ['Weekly Leadership Memos (45–60 min) — You + Robyn + Rachel: Scorecard Review (10–15 min), Wins/Losses (5 min), Top 3 Priorities (15–20 min), Who/What/When (15 min)'] },
+      { day: 'Wednesday', tasks: ['Deep work — systems building, strategy, content, growth planning'] },
+      { day: 'Thursday', tasks: ['Follow up on action items from Tuesday memos', 'Review any operational flags'] },
+      { day: 'Friday', tasks: ['Weekly close — what got done, what moves to next week'] },
+    ],
+    monthly: [
+      'Monthly Finance Review (60–90 min) with Robyn — Review last 3 months P&L, check 3 key ratios (Payroll % of Revenue, Avg Revenue per Child, Net Profit %), ask 3 diagnostic questions, pick ONE finance decision',
+      'Bookkeeper reports due by the 15th: P&L, Balance Sheet, Aged Receivables',
+      'Review all 10–12 KPIs across 3 functions — Enrollment, Experience & Retention, Cash & Admin',
+      'Progress check on quarterly goals',
+      'Full staff meeting close — vision, direction, what we are building toward',
+    ],
+  },
+  {
     id: 'operator',
     label: 'Operator',
     emoji: '🏢',
     color: '#2563EB',
-    rhythm: 'Weekly + Monthly',
+    rhythm: 'Daily + Weekly + Monthly',
     note: "Your job is not to run the daily operation — it's to make sure the daily operation runs itself. Your time is best spent on strategy, people, and systems. If you're solving daily fires, something upstream needs to be fixed.",
-    daily: [],
+    daily: [
+      { time: 'Arrival', task: 'Check In — Review priorities, align mindset, confirm the day is set up for success' },
+      { time: 'First 30 min', task: 'View any Tours scheduled for the day — ensure Tour Manager is prepped and the building is tour-ready' },
+      { time: 'Morning Block', task: 'Delivery Focus (Retention) — This is the heartbeat of the operation. Four lenses, every day:' },
+      { time: '→ CS', task: "Customer Satisfaction — How are our parents' experience? How can we improve? What do they need?" },
+      { time: '→ Product', task: 'Product — Are we hitting a 4-star TRS Rating and beyond? Is the classroom experience excellent?' },
+      { time: '→ Service', task: 'Service — Response Rate, Tonality, Quality of Response to families and inquiries' },
+      { time: '→ Fulfillment', task: 'Fulfillment — Ease & Speed of everything families interact with' },
+      { time: 'Midday Block', task: 'Revenue Focus (Enrollment) — This is what grows the business. Three levers:' },
+      { time: '→ Sales', task: 'Sales — Speed and Sequencing of lead follow-up and enrollment conversions' },
+      { time: '→ Marketing', task: 'Marketing — Structure, Thinking, Data, & AI driving visibility and lead generation' },
+      { time: '→ Tours', task: 'Tours — Conversion rates, tour quality, follow-up execution' },
+    ],
     weekly: [
       { day: 'Monday', tasks: ["Review previous week's KPIs and enrollment numbers", 'Set weekly priorities and communicate to Director'] },
       { day: 'Tuesday', tasks: ['All meetings stacked here — Director check-in, department leads, any external calls'] },

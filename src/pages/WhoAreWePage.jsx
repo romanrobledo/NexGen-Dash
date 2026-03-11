@@ -165,6 +165,240 @@ const PillarBadge = ({ label }) => (
   </div>
 )
 
+function NexGenClarityCard() {
+  const sections = [
+    {
+      id: 'what-we-do',
+      question: 'What We Do',
+      color: '#2563EB',
+      icon: '🏫',
+      headline: 'We provide safe, structured, high-quality early childhood education and care.',
+      body: 'NexGen School for Early Life Foundations is a TRS-certified early childhood education center serving children from 6 weeks through school age. We offer full-day childcare, structured curriculum, self-defense programming, and afterschool care — all under one roof.',
+    },
+    {
+      id: 'who-we-help',
+      question: 'Who We Help',
+      color: '#7C3AED',
+      icon: '👨‍👩‍👧',
+      headline: 'Families who need affordable, excellent care they can trust.',
+      body: 'We serve working families in the Harlingen, TX area who want more than just a place to drop their child off. Our families choose NexGen because they want structured learning, safety-first environments, and educators who treat their child like their own — without paying private school prices.',
+    },
+    {
+      id: 'how-we-help',
+      question: 'How We Help',
+      color: '#059669',
+      icon: '🤝',
+      headline: 'Through daily programs built around safety, learning, and family partnership.',
+      items: [
+        { label: 'Infant & Toddler Care', detail: '6 weeks – 3 years — responsive, nurturing, developmentally appropriate classrooms' },
+        { label: 'Pre-K & Kinder Programs', detail: 'School-readiness curriculum aligned to TRS standards and developmental milestones' },
+        { label: 'Afterschool Program', detail: 'Structured homework support, enrichment activities, and supervised care after school' },
+        { label: 'Self-Defense Curriculum', detail: 'Age-appropriate confidence and safety training built into the school week' },
+        { label: 'Family Communication', detail: 'Daily updates, open-door policy, and responsive staff at every touchpoint' },
+        { label: 'TRS-Certified Environment', detail: 'Independently verified to meet Texas Rising Star quality standards' },
+      ],
+    },
+    {
+      id: 'what-we-sell',
+      question: 'What We Sell',
+      color: '#D97706',
+      icon: '📋',
+      headline: 'Enrollment by age group and program type.',
+      note: 'All rates are weekly. Contact Front Desk for current pricing and availability.',
+      offers: [
+        { name: 'Infant Care',         detail: '6 weeks – 12 months',  tag: 'Full Day' },
+        { name: 'Older Infant',        detail: '12 – 18 months',       tag: 'Full Day' },
+        { name: 'Young Toddler',       detail: '18 – 24 months',       tag: 'Full Day' },
+        { name: 'Toddler',             detail: '2 – 3 years',          tag: 'Full Day' },
+        { name: 'Pre-Kinder',          detail: '3 – 4 years',          tag: 'Full Day' },
+        { name: 'Kinder',              detail: '4 – 5 years',          tag: 'Full Day' },
+        { name: 'Afterschool Program', detail: '5+ years',             tag: 'After School' },
+      ],
+    },
+  ]
+
+  return (
+    <div style={{ marginTop: '2rem' }}>
+      {/* Section Divider */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem',
+      }}>
+        <div style={{ flex: 1, height: 1, background: '#E2E8F0' }} />
+        <span style={{
+          fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.15em',
+          textTransform: 'uppercase', color: '#94A3B8', whiteSpace: 'nowrap',
+        }}>
+          Business Clarity
+        </span>
+        <div style={{ flex: 1, height: 1, background: '#E2E8F0' }} />
+      </div>
+
+      {/* Four Question Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {sections.map((section) => (
+          <div
+            key={section.id}
+            style={{
+              background: '#fff',
+              border: '1px solid #E2E8F0',
+              borderRadius: '14px',
+              overflow: 'hidden',
+              borderLeft: `4px solid ${section.color}`,
+            }}
+          >
+            {/* Card Header */}
+            <div style={{
+              padding: '1rem 1.5rem 0.75rem',
+              borderBottom: '1px solid #F1F5F9',
+              display: 'flex', alignItems: 'center', gap: '0.65rem',
+            }}>
+              <span style={{
+                width: 32, height: 32, borderRadius: '8px',
+                background: section.color + '15',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1rem', flexShrink: 0,
+              }}>
+                {section.icon}
+              </span>
+              <div>
+                <span style={{
+                  fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.14em',
+                  textTransform: 'uppercase', color: section.color,
+                }}>
+                  {section.question}
+                </span>
+                <p style={{
+                  fontSize: '0.9rem', fontWeight: 700, color: '#0F172A',
+                  margin: '0.1rem 0 0', lineHeight: 1.4,
+                }}>
+                  {section.headline}
+                </p>
+              </div>
+            </div>
+
+            {/* Card Body */}
+            <div style={{ padding: '1rem 1.5rem' }}>
+              {/* What We Do + Who We Help — text body */}
+              {section.body && (
+                <p style={{
+                  fontSize: '0.85rem', color: '#475569',
+                  lineHeight: 1.75, margin: 0,
+                }}>
+                  {section.body}
+                </p>
+              )}
+
+              {/* How We Help — item grid */}
+              {section.items && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                  gap: '0.6rem',
+                }}>
+                  {section.items.map((item, i) => (
+                    <div key={i} style={{
+                      background: '#F8FAFC',
+                      border: '1px solid #F1F5F9',
+                      borderRadius: '10px',
+                      padding: '0.75rem 0.9rem',
+                    }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        marginBottom: '0.25rem',
+                      }}>
+                        <div style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: section.color, flexShrink: 0,
+                        }} />
+                        <span style={{
+                          fontSize: '0.82rem', fontWeight: 700, color: '#0F172A',
+                        }}>
+                          {item.label}
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize: '0.76rem', color: '#64748B', lineHeight: 1.55,
+                        paddingLeft: '0.85rem', display: 'block',
+                      }}>
+                        {item.detail}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* What We Sell — offer rows */}
+              {section.offers && (
+                <>
+                  {section.note && (
+                    <p style={{
+                      fontSize: '0.75rem', color: '#94A3B8',
+                      margin: '0 0 0.85rem', fontStyle: 'italic',
+                    }}>
+                      {section.note}
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    {section.offers.map((offer, i) => (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.65rem 1rem',
+                        background: i % 2 === 0 ? '#F8FAFC' : '#fff',
+                        borderRadius: '8px',
+                        border: '1px solid #F1F5F9',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{
+                            width: 6, height: 6, borderRadius: '50%',
+                            background: section.color, flexShrink: 0,
+                          }} />
+                          <div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>
+                              {offer.name}
+                            </span>
+                            <span style={{
+                              fontSize: '0.75rem', color: '#94A3B8',
+                              marginLeft: '0.5rem',
+                            }}>
+                              {offer.detail}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                          <span style={{
+                            fontSize: '0.68rem', fontWeight: 700,
+                            background: section.color + '15',
+                            color: section.color,
+                            padding: '2px 8px', borderRadius: '99px',
+                            border: `1px solid ${section.color}25`,
+                          }}>
+                            {offer.tag}
+                          </span>
+                          {/* Price placeholder — fill in with actual rates */}
+                          <span style={{
+                            fontSize: '0.82rem', fontWeight: 700,
+                            color: '#0F172A',
+                            background: '#F1F5F9',
+                            padding: '3px 10px', borderRadius: '6px',
+                            letterSpacing: '0.02em',
+                          }}>
+                            $— / wk
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function WhoAreWePage() {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -494,6 +728,11 @@ export default function WhoAreWePage() {
             ))}
           </div>
         </Section>
+
+        <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '2rem 0' }} />
+
+        {/* BUSINESS CLARITY CARD */}
+        <NexGenClarityCard />
 
         <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '2rem 0' }} />
 

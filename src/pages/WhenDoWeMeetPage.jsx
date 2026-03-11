@@ -11,6 +11,7 @@ const CADENCE_COLORS = {
 }
 
 const ROLE_COLORS = {
+  founder:        "#0F172A",
   operator:       "#2563EB",
   director:       "#7C3AED",
   teacher:        "#059669",
@@ -25,6 +26,62 @@ const ROLE_COLORS = {
 }
 
 const ALL_MEETINGS = [
+  {
+    id: "daily-huddle",
+    title: "Daily Huddle",
+    emoji: "☀️",
+    cadence: "daily",
+    day: "Every day",
+    time: "Morning (first thing)",
+    duration: "10–15 min",
+    owner: "founder",
+    description: "Quick alignment between Founder, Operator, Director, and Andrea. Not a strategy session — a pulse check. The only question: Does today break anywhere?",
+    agenda: [
+      "Today's staffing and ratios — any gaps?",
+      "Tours scheduled for today — is Tour Manager prepped?",
+      "Any fires — parent issues, staff issues, anything urgent",
+    ],
+    attendees: ["founder", "operator", "director"],
+    owner_note: "Founder initiates. Keep it tight — 15 minutes max. If it needs a deeper conversation, schedule it separately.",
+  },
+  {
+    id: "weekly-leadership-memos",
+    title: "Weekly Leadership Memos",
+    emoji: "📋",
+    cadence: "weekly",
+    day: "Tuesday",
+    time: "After Operator ↔ Director check-in",
+    duration: "45–60 min",
+    owner: "founder",
+    description: "The strategic operating meeting for the leadership team. Review all KPIs, identify what's red, set priorities for the week, and assign clear ownership with deadlines.",
+    agenda: [
+      "Scorecard Review (10–15 min) — Look at all KPIs. Circle anything red.",
+      "Wins / Losses (5 min) — 1–2 big wins, 1–2 issues",
+      "Top 3 Priorities (15–20 min) — What to fix next week",
+      "Who / What / When (15 min) — Assign owners and due dates",
+    ],
+    attendees: ["founder", "operator", "director"],
+    owner_note: "Founder runs the agenda. Operator and Director come prepared with their numbers.",
+  },
+  {
+    id: "monthly-finance-review",
+    title: "Monthly Finance Review",
+    emoji: "💰",
+    cadence: "monthly",
+    day: "By the 20th of each month",
+    time: "Scheduled",
+    duration: "60–90 min",
+    owner: "founder",
+    description: "The Founder and Operator review the financial health of NexGen. Review last 3 months P&L, check 3 key ratios, ask 3 diagnostic questions, and make ONE specific finance decision. No meeting ends without a decision.",
+    agenda: [
+      "Review last 3 months P&L — revenue trend up, flat, or down?",
+      "Check 3 key ratios: Payroll % of Revenue (~50–55%), Average Revenue per Child, Net Profit % (~20%+)",
+      "Ask 3 diagnostic questions: Fill more seats? Raise prices? Control a cost bucket?",
+      "Pick ONE finance decision — pricing change, expense cut, or enrollment push",
+    ],
+    attendees: ["founder", "operator"],
+    owner_note: "Founder leads. Robyn brings the operational context. Bookkeeper optionally on Zoom. No meeting ends without a specific finance decision.",
+  },
   {
     id: "operator-director",
     title: "Operator \u2194 Director Check-In",
@@ -43,7 +100,7 @@ const ALL_MEETINGS = [
       "Priorities for the coming week",
       "Anything the Director needs from the Operator to move forward",
     ],
-    attendees: ["operator", "director"],
+    attendees: ["founder", "operator", "director"],
     owner_note: "Roman runs the agenda. Director comes prepared with updates.",
   },
   {
@@ -64,7 +121,7 @@ const ALL_MEETINGS = [
       "Open floor \u2014 questions and concerns (time-boxed to 10 min)",
       "Roman\u2019s close \u2014 vision, direction, what we\u2019re building toward",
     ],
-    attendees: ["operator", "director", "teacher", "teacher-assistant", "front-desk", "hiring-manager", "tour-manager", "lesson-plans", "kitchen-manager", "asst-kitchen", "bus-driver"],
+    attendees: ["founder", "operator", "director", "teacher", "teacher-assistant", "front-desk", "hiring-manager", "tour-manager", "lesson-plans", "kitchen-manager", "asst-kitchen", "bus-driver"],
     owner_note: "Director prepares the agenda by the Friday before. Roman sees it Monday morning.",
   },
   {
@@ -227,6 +284,7 @@ const ALL_MEETINGS = [
 // ─── ROLE VIEW ────────────────────────────────────────────────────────────────
 const ROLES = [
   { id: "all",              label: "All Meetings",     emoji: "\ud83d\udcc5", color: "#0F172A" },
+  { id: "founder",          label: "Founder",          emoji: "👑", color: "#0F172A" },
   { id: "operator",         label: "Operator",         emoji: "\ud83c\udfe2", color: "#2563EB" },
   { id: "director",         label: "Director",         emoji: "\ud83d\udccb", color: "#7C3AED" },
   { id: "teacher",          label: "Teacher",          emoji: "\ud83d\udcda", color: "#059669" },
@@ -385,11 +443,11 @@ const MeetingCard = ({ meeting, highlightRole }) => {
 
 // ─── CALENDAR OVERVIEW ────────────────────────────────────────────────────────
 const WEEK_MEETINGS = [
-  { day: "Mon", items: ["Full Staff (monthly)", "Bus Route Review (monthly)"] },
-  { day: "Tue", items: ["Operator \u2194 Director", "Hiring Pipeline Review"] },
-  { day: "Wed", items: ["Director \u2194 Teacher 1:1s (bi-weekly)"] },
-  { day: "Thu", items: ["Lesson Plans distributed (async)"] },
-  { day: "Fri", items: ["Tour Debrief", "Menu Planning (monthly)"] },
+  { day: "Mon", items: ["Daily Huddle", "Full Staff (monthly)", "Bus Route Review (monthly)"] },
+  { day: "Tue", items: ["Daily Huddle", "Operator \u2194 Director", "Weekly Leadership Memos", "Hiring Pipeline Review"] },
+  { day: "Wed", items: ["Daily Huddle", "Director \u2194 Teacher 1:1s (bi-weekly)"] },
+  { day: "Thu", items: ["Daily Huddle", "Lesson Plans distributed (async)"] },
+  { day: "Fri", items: ["Daily Huddle", "Tour Debrief", "Menu Planning (monthly)"] },
 ]
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────

@@ -20,6 +20,61 @@ const SCHOOL_METRICS = [
 // ─── ROLE METRICS ─────────────────────────────────────────────────────────────
 const ROLES = [
   {
+    id: "founder",
+    label: "Founder",
+    emoji: "\ud83d\udc51",
+    color: "#0F172A",
+    tagline: "You track the health of the whole machine across 3 core functions.",
+    north_star: "Are we filling seats profitably \u2014 and is every function owner hitting their 3\u20134 numbers?",
+    cadence: "Weekly scoreboard with Robyn. Monthly finance review. Quarterly deep dive.",
+    bigTargets: [
+      { label: "20 New Students", detail: "Shared target — Robyn + Robyne + Ed", icon: "🎯", color: "#2563EB" },
+      { label: "100 Customer Reviews", detail: "Google/Facebook — social proof for enrollment growth", icon: "⭐", color: "#EAB308" },
+    ],
+    metrics: [
+      {
+        category: "Enrollment KPIs (Robyn \u2014 Weekly)",
+        icon: "\ud83d\udcc8",
+        items: [
+          { label: "New Leads / Week", target: "Set baseline", green: "Above baseline", yellow: "At baseline", red: "Below baseline" },
+          { label: "Tours Held / Week", target: "Set baseline", green: "Above baseline", yellow: "At baseline", red: "Below baseline" },
+          { label: "New Enrollments / Week", target: "Set baseline", green: "Above baseline", yellow: "At baseline", red: "Below baseline" },
+          { label: "Occupancy %", target: "Enrolled \u00f7 175", green: "85%+", yellow: "70\u201384%", red: "Below 70%" },
+        ],
+      },
+      {
+        category: "Experience & Retention KPIs (Rachel \u2014 Weekly/Monthly)",
+        icon: "\u2764\ufe0f",
+        items: [
+          { label: "% Classrooms Green on TRS Checklist", target: "100%", green: "All green", yellow: "1\u20132 flagged", red: "3+ flagged" },
+          { label: "Staff Attendance / Call-Outs", target: "95%+ attendance", green: "95%+", yellow: "85\u201394%", red: "Below 85%" },
+          { label: "Family Churn %", target: "Below 5% monthly", green: "Below 5%", yellow: "5\u201310%", red: "Above 10%" },
+          { label: "Parent Complaints / Serious Issues", target: "Zero critical", green: "Zero", yellow: "1\u20132 minor", red: "Any critical or pattern" },
+        ],
+      },
+      {
+        category: "Cash & Admin KPIs (You \u2014 Monthly)",
+        icon: "\ud83d\udcb0",
+        items: [
+          { label: "Total Revenue & Net Profit", target: "Monthly P&L review", green: "At or above plan", yellow: "Within 10% below", red: "More than 10% below" },
+          { label: "Average Revenue per Child", target: "Revenue \u00f7 enrolled kids", green: "At or above target", yellow: "Slightly below", red: "Significantly below" },
+          { label: "Payroll % of Revenue", target: "~50\u201355%", green: "50\u201355%", yellow: "55\u201365%", red: "Above 65%" },
+          { label: "On-Time Collection Rate", target: "95%+", green: "95%+", yellow: "85\u201394%", red: "Below 85%" },
+        ],
+      },
+      {
+        category: "Weekly Scoreboard (Quick Check)",
+        icon: "\ud83d\udcca",
+        items: [
+          { label: "Occupancy %", target: "Are seats filled?", green: "85%+", yellow: "70\u201384%", red: "Below 70%" },
+          { label: "New Enrollments / Withdrawals", target: "Net positive", green: "Net positive", yellow: "Flat", red: "Net negative" },
+          { label: "Total Payroll Dollars (that week)", target: "In budget", green: "In budget", yellow: "Slightly over", red: "Significantly over" },
+          { label: "Cash in Bank", target: "Above 1 month expenses", green: "Yes", yellow: "Tight", red: "Below 1 month" },
+        ],
+      },
+    ],
+  },
+  {
     id: "operator",
     label: "Operator",
     emoji: "\ud83c\udfe2",
@@ -554,6 +609,31 @@ export default function ImportantMetricsPage() {
               </div>
             </div>
           </div>
+
+          {/* Big Targets (Founder only) */}
+          {activeRole.bigTargets && (
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${activeRole.bigTargets.length}, 1fr)`, gap: "0.75rem" }}>
+              {activeRole.bigTargets.map((t) => (
+                <div key={t.label} style={{
+                  background: "#fff", border: `2px solid ${t.color}30`, borderRadius: "14px",
+                  padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem",
+                }}>
+                  <span style={{
+                    fontSize: "1.75rem", width: 48, height: 48, borderRadius: "12px",
+                    background: t.color + "12", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>{t.icon}</span>
+                  <div>
+                    <p style={{ fontSize: "1.1rem", fontWeight: 800, color: t.color, margin: 0, letterSpacing: "-0.02em" }}>
+                      {t.label}
+                    </p>
+                    <p style={{ fontSize: "0.78rem", color: "#64748B", margin: "0.15rem 0 0", lineHeight: 1.4 }}>
+                      {t.detail}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* School-Wide Metrics Toggle */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden" }}>

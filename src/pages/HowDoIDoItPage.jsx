@@ -5,16 +5,50 @@ import { Wrench, BookOpen, ArrowLeft } from 'lucide-react'
 // ─── ROLE DATA ───────────────────────────────────────────────────────────────
 const ROLES = [
   {
+    id: 'founder',
+    label: 'Founder',
+    emoji: '👑',
+    color: '#0F172A',
+    tagline: 'Monitor + decide. Read the dials, pull the levers.',
+    sections: [
+      { title: 'Monthly Bookkeeper Request (By the 15th)', description: 'Request 3 reports: P&L (Profit & Loss) by month, Balance Sheet (cash position and debt), and Aged Receivables (subsidy vs. private pay breakdown). Group expenses into 5 buckets: Payroll, Facility, Food & Classroom, Admin/Software/Insurance, Other.' },
+      { title: 'Monthly Owner Finance Routine (60 min)', description: 'With Robyn (optionally bookkeeper on Zoom). Step A: Review last 3 months P&L — revenue trend up, flat, or down? Step B: Check 3 key ratios. Step C: Ask 3 diagnostic questions. Step D: Pick ONE finance decision.' },
+      { title: '3 Key Financial Ratios', description: 'Payroll % of Revenue (Target: ~50–55% — is labor cost under control?), Average Revenue per Child (are you charging enough?), Net Profit % (Target: ~20%+ — is the business healthy?).' },
+      { title: '3 Diagnostic Questions', description: 'Do we need to fill more seats? (Occupancy low). Do we need to raise prices? (Revenue per child too low). Do we need to control a cost bucket? (Payroll or facility out of line).' },
+      { title: 'Pick ONE Finance Decision', description: 'Every monthly meeting must end with a specific finance decision: "We are raising private-pay rates on [DATE]" or "We\'re cutting/renegotiating [EXPENSE]" or "We\'re going to push enrollment on [AGE GROUPS]." No meeting ends without a specific finance decision.' },
+      { title: 'Weekly Scoreboard (Quick Check)', description: 'Track 4 numbers with Robyn: Occupancy % (are seats filled?), New Enrollments/Withdrawals (trend direction), Total Payroll Dollars that week (largest expense in check?), Cash in Bank (above 1 month of expenses? Yes/No).' },
+      { title: 'Daily Huddle (10–15 min)', description: 'With Robyn + Rachel + Andrea. Cover: today\'s staffing/ratios, tours scheduled today, any fires (parent issues, staff issues). Goal: "Does today break anywhere?"' },
+      { title: 'Weekly Leadership Memos (45–60 min)', description: 'With Robyn + Rachel. Agenda: Scorecard Review (10–15 min — look at all KPIs, circle anything red), Wins/Losses (5 min), Top 3 Priorities (15–20 min — what to fix next week), Who/What/When (15 min — assign owners and due dates).' },
+      { title: '3 Core Functions Oversight', description: 'Enrollment (Robyn + Andrea): ads, inquiries, tours, enrollments. Experience & Retention (Rachel + Robyn): classroom quality, TRS, parent happiness, kid retention. Cash & Admin (You + bookkeeper): billing, collections, payroll, HR paperwork.' },
+      { title: 'Quarterly Planning Process', description: 'Set and cascade quarterly goals across all 3 functions. Create clear breakdown for each focus area: clear targets, clear responsibilities, clear tasks, clear deadlines.' },
+    ],
+    toolStack: {
+      note: 'Slack is the central hub. Everything routes through it. The NexGen Operating System (this software) is the focal point for role clarity, procedures, and KPIs.',
+      functions: [
+        { name: 'Acquisition', emoji: '📈', tools: ['Bitsync', 'Facebook', 'Google Ads', 'Slack'], owner: 'Robyn + Robyne + Ed' },
+        { name: 'Delivery', emoji: '🏫', tools: ['Bitsync', 'Slack'], owner: 'Rachel + Teachers' },
+        { name: 'Marketing & Content', emoji: '🎨', tools: ['Slack', 'Canva', 'SurveyMonkey'], owner: 'Robyne + Ed' },
+        { name: 'Operations', emoji: '⚙️', tools: ['Slack', 'Google Workspace', 'Gusto'], owner: 'Robyn + Rachel' },
+        { name: 'Management', emoji: '👑', tools: ['Google Workspace', 'Gusto', 'Bitsync', 'SurveyMonkey', 'ClickUp', 'Slack'], owner: 'You (Founder)' },
+      ],
+    },
+  },
+  {
     id: 'operator',
     label: 'Operator',
     emoji: '🏢',
     color: '#2563EB',
     tagline: 'Systems, strategy, and building the machine.',
     sections: [
+      { title: 'Morning Check-In Routine', description: "How to start the day — review priorities, check today's tours, and set the building up for success." },
+      { title: 'Delivery Focus: Customer Satisfaction', description: "How to evaluate and improve parents' experience — feedback loops, NPS, and proactive outreach." },
+      { title: 'Delivery Focus: Product & TRS Quality', description: 'How to monitor and drive toward a 4-star TRS Rating and beyond — classroom observations, scoring, improvement plans.' },
+      { title: 'Delivery Focus: Service & Fulfillment', description: 'How to measure Response Rate, Tonality, Quality of Response, and the Ease & Speed families experience.' },
+      { title: 'Revenue Focus: Sales Pipeline', description: 'How to manage Speed and Sequencing of enrollment — lead follow-up, conversion tracking, and closing.' },
+      { title: 'Revenue Focus: Marketing & AI', description: 'How to build Structure, Thinking, Data, & AI into your marketing engine for visibility and lead generation.' },
+      { title: 'Revenue Focus: Tour Conversions', description: 'How to track and improve tour-to-enrollment conversion rates and ensure follow-up execution.' },
       { title: 'Quarterly Planning Process', description: 'How to set and cascade quarterly goals across all departments.' },
-      { title: 'KPI Review Cadence', description: 'Weekly and monthly review rhythm for department leads.' },
       { title: 'Financial Review & Budget Management', description: 'How to review P&L, manage cash flow, and approve expenditures.' },
-      { title: 'Hiring Decision Framework', description: 'When to hire, how to evaluate leadership candidates, and approval workflow.' },
       { title: 'Systems Audit Checklist', description: 'Monthly audit of all operational systems to identify gaps.' },
     ],
   },
@@ -464,6 +498,106 @@ export default function HowDoIDoItPage() {
               ))}
             </div>
           </div>
+
+          {/* Tool Stack (Founder only) */}
+          {activeRole.toolStack && (
+            <div
+              style={{
+                background: '#fff',
+                border: '1px solid #E2E8F0',
+                borderRadius: '14px',
+                padding: '1.5rem',
+                marginBottom: '1rem',
+              }}
+            >
+              <p
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: '#94A3B8',
+                  margin: '0 0 0.5rem',
+                }}
+              >
+                NexGen Tool Stack
+              </p>
+              <p
+                style={{
+                  fontSize: '0.82rem',
+                  color: '#475569',
+                  lineHeight: 1.6,
+                  margin: '0 0 1.25rem',
+                }}
+              >
+                {activeRole.toolStack.note}
+              </p>
+
+              {/* Slack Hub Badge */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                  padding: '1rem',
+                  background: '#4A154B12',
+                  border: '2px solid #4A154B30',
+                  borderRadius: '14px',
+                  marginBottom: '1.25rem',
+                }}
+              >
+                <span style={{ fontSize: '1.75rem' }}>💬</span>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: '1rem', fontWeight: 800, color: '#4A154B', margin: 0 }}>Slack</p>
+                  <p style={{ fontSize: '0.75rem', color: '#64748B', margin: '0.1rem 0 0', fontWeight: 500 }}>
+                    Central hub — everything connects through Slack
+                  </p>
+                </div>
+              </div>
+
+              {/* Function Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                {activeRole.toolStack.functions.map((fn) => (
+                  <div
+                    key={fn.name}
+                    style={{
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      padding: '1rem 1.15rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                      <span style={{ fontSize: '1.1rem' }}>{fn.emoji}</span>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F172A' }}>{fn.name}</span>
+                    </div>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748B', margin: '0 0 0.4rem' }}>
+                      Owner: {fn.owner}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                      {fn.tools.map((tool) => (
+                        <span
+                          key={tool}
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            color: tool === 'Slack' ? '#4A154B' : '#374151',
+                            background: tool === 'Slack' ? '#4A154B15' : '#E2E8F0',
+                            border: tool === 'Slack' ? '1px solid #4A154B30' : '1px solid #CBD5E1',
+                            padding: '2px 8px',
+                            borderRadius: '99px',
+                          }}
+                        >
+                          {tool}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Info callout */}
           <div

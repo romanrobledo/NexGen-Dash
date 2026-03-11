@@ -5,6 +5,60 @@ import { ClipboardList, ArrowRight } from 'lucide-react'
 // ─── ROLE DATA ───────────────────────────────────────────────────────────────
 const ROLES = [
   {
+    id: 'founder',
+    label: 'Founder',
+    emoji: '👑',
+    color: '#0F172A',
+    tagline: 'You build the machine. Everyone else runs their lane inside it.',
+    overview:
+      "The Founder sets the vision and owns the financial health of NexGen. You do not run daily operations — that is the Operator and Director. Your job is to build systems, monitor the numbers, make strategic decisions, and ensure the business can scale. With 14 team members and a daycare, treating separate departments as distinct entities creates unnecessary complexity. The real constraint is filling seats profitably. Everything else is noise. Collapse to 3 core functions with clear ownership — and track only 10–12 numbers.",
+    focusAreas: [
+      {
+        pillar: 'Enrollment',
+        subtitle: 'Marketing + Sales',
+        color: '#2563EB',
+        items: [
+          { label: 'Owner', detail: 'Robyn + Robyne + Ed' },
+          { label: 'Target', detail: '🎯 20 new students  ·  ⭐ 100 customer reviews' },
+          { label: 'Scope', detail: 'Ads, inquiries, tours, enrollments, reviews' },
+          { label: 'KPIs', detail: 'New leads/week, Tours held/week, New enrollments/week, Occupancy %' },
+        ],
+      },
+      {
+        pillar: 'Experience & Retention',
+        subtitle: 'Fulfillment + CS + HR',
+        color: '#059669',
+        items: [
+          { label: 'Owner', detail: 'Rachel (Director) + Robyn' },
+          { label: 'Scope', detail: 'Classroom quality, TRS, parent happiness, kid retention' },
+          { label: 'KPIs', detail: '% classrooms green on TRS, Staff attendance, Family churn %, Parent complaints' },
+        ],
+      },
+      {
+        pillar: 'Cash & Admin',
+        subtitle: 'Targets + Tech',
+        color: '#DC2626',
+        items: [
+          { label: 'Owner', detail: 'You (+ bookkeeper/admin)' },
+          { label: 'Scope', detail: 'Billing, collections, payroll, basic HR paperwork' },
+          { label: 'KPIs', detail: 'Total revenue & net profit, Avg revenue/child, Payroll % of revenue, On-time collection rate' },
+        ],
+      },
+    ],
+    responsibilities: [
+      'Own the financial health of NexGen — revenue, expenses, profit margin',
+      'Set the vision, quarterly goals, and growth strategy',
+      'Run the 3-function model: Enrollment, Experience & Retention, Cash & Admin',
+      'Review 10–12 KPIs weekly and monthly — not more',
+      'Conduct Monthly Finance Review with Robyn (60–90 min)',
+      'Lead Weekly Leadership Memos with Robyn and Rachel (45–60 min)',
+      'Request 3 reports monthly from bookkeeper by the 15th: P&L, Balance Sheet, Aged Receivables',
+      'Make one specific finance decision every monthly review',
+      'Build and improve the systems that let the business run without you in the room',
+    ],
+    note: "You don't 'just monitor it.' You monitor + decide. Your job is to stare at a few key numbers and have the courage to pull the obvious lever: raise price, fill more seats, or cut dumb costs.",
+  },
+  {
     id: 'operator',
     label: 'Operator',
     emoji: '🏢',
@@ -12,6 +66,29 @@ const ROLES = [
     tagline: 'You run the business. Everyone else runs their lane.',
     overview:
       'The Operator is responsible for the overall health of the business — financially, operationally, and strategically. Your job is to make sure all departments are functioning, all systems are built, and all leaders have what they need to succeed. You don\'t manage classrooms. You manage the people who manage classrooms.',
+    focusAreas: [
+      {
+        pillar: 'Delivery Focus',
+        subtitle: 'Retention',
+        color: '#059669',
+        items: [
+          { label: 'Customer Satisfaction', detail: "How are our parents' experience? How can we improve? What do they need?" },
+          { label: 'Product', detail: '4-star TRS Rating and beyond — is the classroom experience excellent?' },
+          { label: 'Service', detail: 'Response Rate, Tonality, Quality of Response' },
+          { label: 'Fulfillment', detail: 'Ease & Speed of everything families interact with' },
+        ],
+      },
+      {
+        pillar: 'Revenue Focus',
+        subtitle: 'Enrollment',
+        color: '#2563EB',
+        items: [
+          { label: 'Sales', detail: 'Speed and Sequencing of lead follow-up and enrollment conversions' },
+          { label: 'Marketing', detail: 'Structure, Thinking, Data, & AI driving visibility and lead generation' },
+          { label: 'Tours', detail: 'Conversion rates, tour quality, and follow-up execution' },
+        ],
+      },
+    ],
     responsibilities: [
       'Set the vision, goals, and quarterly priorities for NexGen',
       'Oversee all department leads and hold them accountable to their KPIs',
@@ -441,6 +518,88 @@ export default function WhatDoIDoPage() {
               <ArrowRight style={{ width: 14, height: 14 }} />
             </button>
           </div>
+
+          {/* Focus Areas (Operator) */}
+          {activeRole.focusAreas && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${activeRole.focusAreas.length > 2 ? 3 : 2}, 1fr)`,
+                gap: '1rem',
+                marginBottom: '1rem',
+              }}
+            >
+              {activeRole.focusAreas.map((area) => (
+                <div
+                  key={area.pillar}
+                  style={{
+                    background: '#fff',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '14px',
+                    padding: '1.5rem',
+                    borderTop: `4px solid ${area.color}`,
+                  }}
+                >
+                  <div style={{ marginBottom: '1rem' }}>
+                    <p
+                      style={{
+                        fontSize: '1rem',
+                        fontWeight: 800,
+                        color: '#0F172A',
+                        margin: 0,
+                        letterSpacing: '-0.02em',
+                      }}
+                    >
+                      {area.pillar}
+                    </p>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '0.3rem',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: area.color,
+                        background: area.color + '12',
+                        padding: '2px 8px',
+                        borderRadius: '99px',
+                      }}
+                    >
+                      {area.subtitle}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                    {area.items.map((item) => (
+                      <div
+                        key={item.label}
+                        style={{
+                          padding: '0.7rem 0.9rem',
+                          background: '#F8FAFC',
+                          borderRadius: '10px',
+                          border: '1px solid #F1F5F9',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            color: area.color,
+                            marginBottom: '0.2rem',
+                          }}
+                        >
+                          {item.label}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#64748B', lineHeight: 1.5 }}>
+                          {item.detail}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Age Groups (Teacher only) */}
           {activeRole.ageGroups && (

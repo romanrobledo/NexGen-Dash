@@ -4,6 +4,55 @@ import { MessageSquare } from "lucide-react"
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
 const ROLES = [
   {
+    id: "founder",
+    label: "Founder",
+    emoji: "👑",
+    color: "#0F172A",
+    tagline: "You talk about numbers, strategy, and what needs to change at the system level.",
+    channels: [
+      {
+        id: "down",
+        label: "You Talk To: Operator + Director",
+        icon: "🔗",
+        direction: "down",
+        dirLabel: "Founder → Leadership Team",
+        color: "#0F172A",
+        topics: [
+          { topic: "Weekly Scoreboard — 4 key numbers", context: "Every Monday with Robyn — Occupancy %, Enrollments, Payroll, Cash in Bank" },
+          { topic: "KPI review and accountability", context: "Weekly Leadership Memos — circle anything red, assign owners" },
+          { topic: "Finance decisions and pricing strategy", context: "Monthly Finance Review — one decision per meeting, no exceptions" },
+          { topic: "Quarterly goals and strategic direction", context: "Quarterly — cascade across all 3 core functions" },
+          { topic: "Vision, culture, and what we're building toward", context: "Full staff meetings — you close with the big picture" },
+        ],
+      },
+      {
+        id: "external",
+        label: "You Talk To: External",
+        icon: "🌐",
+        direction: "out",
+        dirLabel: "Founder → Community / Partners",
+        color: "#0891B2",
+        topics: [
+          { topic: "NexGen's vision and positioning", context: "Community events, partner conversations" },
+          { topic: "Growth plans and expansion", context: "When evaluating second location readiness" },
+          { topic: "Strategic partnerships", context: "Technology, community organizations, referral sources" },
+        ],
+      },
+    ],
+    never: [
+      "Bypass the Operator or Director to manage individual staff — route it through them",
+      "Handle billing, collections, or payroll directly — delegate to bookkeeper/admin",
+      "Get pulled into daily fires that the Operator should be solving",
+      "Skip the monthly finance review — no meeting ends without a specific finance decision",
+    ],
+    systems: {
+      hub: "Slack",
+      hubNote: "Slack is the central communication platform for NexGen. Every team, every function, every department routes through it. If it's not in Slack, it didn't happen.",
+      focal: "NexGen Operating System",
+      focalNote: "This software is the single source of truth for role clarity, procedures, KPIs, escalation paths, and meeting cadences. Slack is where you communicate. The NexGen OS is where you operate.",
+    },
+  },
+  {
     id: "operator",
     label: "Operator",
     emoji: "\ud83c\udfe2",
@@ -495,6 +544,339 @@ const ROLES = [
   },
 ]
 
+// ─── MEETING AGENDA FRAMEWORK ────────────────────────────────────────────────
+const TIMELINE_STAGES = [
+  { label: 'Rebranding', icon: '🎨', status: 'current' },
+  { label: 'Systems Built', icon: '⚙️', status: 'upcoming' },
+  { label: 'Team Scaled', icon: '👥', status: 'upcoming' },
+  { label: 'Multi-Location', icon: '🏢', status: 'upcoming' },
+  { label: 'Replication Ready', icon: '🚀', status: 'upcoming' },
+]
+
+function MeetingAgendaFramework() {
+  const agendaItems = [
+    {
+      id: 'where-are-we',
+      title: 'Where Are We',
+      color: '#2563EB',
+      icon: '📍',
+      description: 'The pulse of where we currently stand. Every meeting starts with awareness — where are we on the journey?',
+      hasTimeline: true,
+    },
+    {
+      id: 'where-are-we-going',
+      title: 'Where Are We Going',
+      color: '#7C3AED',
+      icon: '🧭',
+      description: 'The destination. We don\'t just work — we build toward something. Every person in this building should be able to answer this question without hesitation.',
+      highlight: 'We are building NexGen into the most respected early childhood education brand in South Texas — and eventually, a model that can be replicated anywhere.',
+    },
+    {
+      id: 'why-are-we-going-there',
+      title: 'Why Are We Going There',
+      color: '#059669',
+      icon: '💡',
+      description: 'Our why. This is the fuel behind everything we build.',
+      reasons: [
+        { label: 'Impact for Future Generations', detail: 'Every child we serve today becomes the adult of tomorrow. The foundation we lay now echoes for decades.' },
+        { label: 'Changing the Future of Education', detail: 'We\'re proving that affordable and excellent are not opposites. We\'re setting a new standard — not following one.' },
+      ],
+    },
+    {
+      id: 'scorecard-review',
+      title: 'Scorecard & Dashboard Review',
+      color: '#D97706',
+      icon: '📊',
+      description: 'Numbers tell the truth. Every meeting includes a review of the metrics that matter — enrollment, retention, compliance, classroom quality, and financial health. The dashboard doesn\'t lie. We read it, we discuss it, we act on it.',
+      checkpoints: [
+        'Are we on track with enrollment targets?',
+        'Are classrooms meeting quality and compliance standards?',
+        'Are there any staffing gaps or retention concerns?',
+        'What does the financial picture look like this month?',
+        'What needs attention before it becomes a problem?',
+      ],
+    },
+    {
+      id: 'memos',
+      title: 'Memo\'s',
+      color: '#DC2626',
+      icon: '📝',
+      questions: [
+        {
+          q: 'What are memos?',
+          a: 'A memo is a written communication that captures a decision, directive, or important update. It\'s how we turn conversations into action — documented, clear, and accountable.',
+        },
+        {
+          q: 'What is in a memo?',
+          a: 'The situation or context, the decision or directive, who it affects, what needs to happen, and by when. No fluff — just clarity.',
+        },
+        {
+          q: 'Why are they important?',
+          a: 'Because verbal agreements get forgotten. Memos create a paper trail that protects everyone — leadership, staff, and families. If it\'s not written down, it didn\'t happen.',
+        },
+        {
+          q: 'When do we use them?',
+          a: 'Anytime a decision is made that affects operations, staffing, policy, or families. After every leadership meeting. After every performance conversation. After every policy change.',
+        },
+        {
+          q: 'What do we leave with?',
+          a: 'Every person who reads a memo should be able to answer three questions:',
+          takeaways: [
+            'What am I supposed to do?',
+            'How do I do it?',
+            'Where do I go if I have any questions?',
+          ],
+        },
+      ],
+    },
+  ]
+
+  return (
+    <div style={{ marginBottom: '2rem' }}>
+      {/* Section Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem',
+      }}>
+        <div style={{ flex: 1, height: 1, background: '#E2E8F0' }} />
+        <span style={{
+          fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.15em',
+          textTransform: 'uppercase', color: '#94A3B8', whiteSpace: 'nowrap',
+        }}>
+          Meeting Agenda Framework
+        </span>
+        <div style={{ flex: 1, height: 1, background: '#E2E8F0' }} />
+      </div>
+
+      <p style={{
+        fontSize: '0.85rem', color: '#64748B', lineHeight: 1.7,
+        margin: '0 0 1.25rem', textAlign: 'center', maxWidth: 600, marginLeft: 'auto', marginRight: 'auto',
+      }}>
+        These are the five pillars we cover in every meeting. They keep us aligned, accountable, and moving forward.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {agendaItems.map((item) => (
+          <div
+            key={item.id}
+            style={{
+              background: '#fff',
+              border: '1px solid #E2E8F0',
+              borderRadius: '14px',
+              overflow: 'hidden',
+              borderLeft: `4px solid ${item.color}`,
+            }}
+          >
+            {/* Card Header */}
+            <div style={{
+              padding: '1rem 1.5rem 0.75rem',
+              borderBottom: '1px solid #F1F5F9',
+              display: 'flex', alignItems: 'center', gap: '0.65rem',
+            }}>
+              <span style={{
+                width: 32, height: 32, borderRadius: '8px',
+                background: item.color + '15',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1rem', flexShrink: 0,
+              }}>
+                {item.icon}
+              </span>
+              <span style={{
+                fontSize: '0.95rem', fontWeight: 700, color: '#0F172A',
+                letterSpacing: '-0.01em',
+              }}>
+                {item.title}
+              </span>
+            </div>
+
+            {/* Card Body */}
+            <div style={{ padding: '1.25rem 1.5rem' }}>
+              {/* Description */}
+              {item.description && (
+                <p style={{
+                  fontSize: '0.85rem', color: '#475569',
+                  lineHeight: 1.75, margin: item.hasTimeline || item.highlight || item.reasons || item.checkpoints ? '0 0 1rem' : 0,
+                }}>
+                  {item.description}
+                </p>
+              )}
+
+              {/* WHERE ARE WE — Timeline */}
+              {item.hasTimeline && (
+                <div style={{
+                  background: '#F8FAFC', border: '1px solid #F1F5F9',
+                  borderRadius: '12px', padding: '1.25rem 1.5rem',
+                }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    position: 'relative',
+                  }}>
+                    {/* Progress line */}
+                    <div style={{
+                      position: 'absolute', top: 16, left: 20, right: 20,
+                      height: 3, background: '#E2E8F0', borderRadius: 2, zIndex: 0,
+                    }} />
+                    <div style={{
+                      position: 'absolute', top: 16, left: 20,
+                      width: '8%', height: 3, background: item.color,
+                      borderRadius: 2, zIndex: 1,
+                    }} />
+
+                    {TIMELINE_STAGES.map((stage, i) => (
+                      <div key={i} style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        gap: '0.4rem', zIndex: 2, flex: 1,
+                      }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%',
+                          background: stage.status === 'current' ? item.color : '#fff',
+                          border: stage.status === 'current' ? 'none' : '2px solid #E2E8F0',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.85rem',
+                          boxShadow: stage.status === 'current' ? `0 0 0 3px ${item.color}30` : 'none',
+                        }}>
+                          {stage.icon}
+                        </div>
+                        <span style={{
+                          fontSize: '0.68rem', fontWeight: stage.status === 'current' ? 700 : 500,
+                          color: stage.status === 'current' ? item.color : '#94A3B8',
+                          textAlign: 'center', lineHeight: 1.3,
+                        }}>
+                          {stage.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* WHERE ARE WE GOING — Highlight */}
+              {item.highlight && (
+                <div style={{
+                  background: `linear-gradient(135deg, ${item.color}08, ${item.color}12)`,
+                  border: `1px solid ${item.color}25`,
+                  borderRadius: '12px', padding: '1rem 1.25rem',
+                }}>
+                  <p style={{
+                    fontSize: '0.9rem', fontWeight: 700, color: '#0F172A',
+                    margin: 0, lineHeight: 1.6, fontStyle: 'italic',
+                  }}>
+                    "{item.highlight}"
+                  </p>
+                </div>
+              )}
+
+              {/* WHY — Reasons */}
+              {item.reasons && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {item.reasons.map((r, i) => (
+                    <div key={i} style={{
+                      background: '#F8FAFC', border: '1px solid #F1F5F9',
+                      borderRadius: '10px', padding: '0.85rem 1rem',
+                    }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        marginBottom: '0.3rem',
+                      }}>
+                        <div style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: item.color, flexShrink: 0,
+                        }} />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>
+                          {r.label}
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize: '0.8rem', color: '#64748B', lineHeight: 1.6,
+                        paddingLeft: '0.85rem', display: 'block',
+                      }}>
+                        {r.detail}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* SCORECARD — Checkpoints */}
+              {item.checkpoints && (
+                <div style={{
+                  background: item.color + '08', border: `1px solid ${item.color}20`,
+                  borderRadius: '10px', padding: '0.85rem 1.1rem',
+                }}>
+                  <p style={{
+                    fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', color: item.color, margin: '0 0 0.65rem',
+                  }}>
+                    Questions We Ask Every Time
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {item.checkpoints.map((cp, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                        <span style={{ color: item.color, fontSize: '0.75rem', fontWeight: 800, flexShrink: 0, marginTop: '1px' }}>▸</span>
+                        <span style={{ fontSize: '0.82rem', color: '#374151', lineHeight: 1.55 }}>{cp}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* MEMOS — Q&A */}
+              {item.questions && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {item.questions.map((mq, i) => (
+                    <div key={i} style={{
+                      background: i === item.questions.length - 1 ? '#0F172A' : '#F8FAFC',
+                      border: i === item.questions.length - 1 ? 'none' : '1px solid #F1F5F9',
+                      borderRadius: '10px', padding: '0.85rem 1.1rem',
+                    }}>
+                      <p style={{
+                        fontSize: '0.78rem', fontWeight: 700,
+                        color: i === item.questions.length - 1 ? item.color : item.color,
+                        margin: '0 0 0.35rem', letterSpacing: '-0.01em',
+                      }}>
+                        {mq.q}
+                      </p>
+                      <p style={{
+                        fontSize: '0.82rem',
+                        color: i === item.questions.length - 1 ? '#CBD5E1' : '#475569',
+                        lineHeight: 1.65, margin: 0,
+                      }}>
+                        {mq.a}
+                      </p>
+                      {mq.takeaways && (
+                        <div style={{ marginTop: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {mq.takeaways.map((tw, j) => (
+                            <div key={j} style={{
+                              display: 'flex', alignItems: 'center', gap: '0.5rem',
+                              background: '#1E293B', borderRadius: '8px',
+                              padding: '0.5rem 0.75rem',
+                            }}>
+                              <span style={{
+                                width: 20, height: 20, borderRadius: '50%',
+                                background: item.color, color: '#fff',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '0.65rem', fontWeight: 800, flexShrink: 0,
+                              }}>
+                                {j + 1}
+                              </span>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#F1F5F9' }}>
+                                {tw}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── COMPONENTS ───────────────────────────────────────────────────────────────
 const RoleButton = ({ role, isActive, onClick }) => (
   <button onClick={onClick} style={{
@@ -608,6 +990,9 @@ export default function WhatDoWeTalkAboutPage() {
         </div>
       </div>
 
+      {/* Meeting Agenda Framework */}
+      <MeetingAgendaFramework />
+
       <div style={{ display: "flex", gap: "1.75rem", alignItems: "flex-start" }}>
         {/* Role Selector */}
         <div style={{
@@ -652,6 +1037,49 @@ export default function WhatDoWeTalkAboutPage() {
           {activeRole.channels.map((ch, i) => (
             <ChannelCard key={i} channel={ch} roleColor={activeRole.color} />
           ))}
+
+          {/* Systems Hub (Founder only) */}
+          {activeRole.systems && (
+            <div style={{
+              background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px",
+              padding: "1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem",
+            }}>
+              <div style={{
+                background: "#4A154B08", border: "1.5px solid #4A154B25", borderRadius: "12px",
+                padding: "1.15rem 1.3rem", display: "flex", alignItems: "flex-start", gap: "0.85rem",
+              }}>
+                <span style={{
+                  fontSize: "1.5rem", width: 44, height: 44, borderRadius: "10px",
+                  background: "#4A154B15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>💬</span>
+                <div>
+                  <p style={{ fontSize: "0.88rem", fontWeight: 800, color: "#4A154B", margin: "0 0 0.3rem" }}>
+                    {activeRole.systems.hub}
+                  </p>
+                  <p style={{ fontSize: "0.78rem", color: "#475569", margin: 0, lineHeight: 1.6 }}>
+                    {activeRole.systems.hubNote}
+                  </p>
+                </div>
+              </div>
+              <div style={{
+                background: "#0F172A08", border: "1.5px solid #0F172A20", borderRadius: "12px",
+                padding: "1.15rem 1.3rem", display: "flex", alignItems: "flex-start", gap: "0.85rem",
+              }}>
+                <span style={{
+                  fontSize: "1.5rem", width: 44, height: 44, borderRadius: "10px",
+                  background: "#0F172A12", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>🖥️</span>
+                <div>
+                  <p style={{ fontSize: "0.88rem", fontWeight: 800, color: "#0F172A", margin: "0 0 0.3rem" }}>
+                    {activeRole.systems.focal}
+                  </p>
+                  <p style={{ fontSize: "0.78rem", color: "#475569", margin: 0, lineHeight: 1.6 }}>
+                    {activeRole.systems.focalNote}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Never Say / Never Do */}
           <div style={{

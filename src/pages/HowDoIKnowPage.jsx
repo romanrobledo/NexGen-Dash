@@ -17,6 +17,64 @@ const scoreColor = (score, max = 10) => {
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
 const ROLES = [
   {
+    id: 'founder',
+    label: 'Founder',
+    emoji: '👑',
+    color: '#0F172A',
+    tagline: 'You are measured by the financial health and strategic clarity of the entire operation.',
+    categories: [
+      {
+        id: 'financial',
+        label: 'Financial Health',
+        icon: '💰',
+        weight: 35,
+        description: 'Are you monitoring the right numbers and making decisions from them?',
+        indicators: [
+          { label: 'Monthly P&L reviewed with Robyn', green: 'Every month by the 20th', yellow: 'Occasionally delayed', red: 'Skipped or inconsistent' },
+          { label: 'Net profit margin tracking', green: '20%+ consistently', yellow: '10–19%', red: 'Below 10% or unknown' },
+          { label: 'Payroll % of revenue', green: '50–55%', yellow: '55–65%', red: 'Above 65%' },
+          { label: 'One specific finance decision made per monthly review', green: 'Every month', yellow: 'Most months', red: 'Rarely or never' },
+        ],
+      },
+      {
+        id: 'enrollment',
+        label: 'Enrollment & Growth',
+        icon: '📈',
+        weight: 30,
+        description: 'Is the enrollment function producing results under Robyn\'s ownership?',
+        indicators: [
+          { label: 'Occupancy rate', green: '85%+', yellow: '70–84%', red: 'Below 70%' },
+          { label: 'Weekly enrollment KPIs reviewed', green: 'Every week with Robyn', yellow: 'Most weeks', red: 'Inconsistent' },
+          { label: 'Tour-to-enrollment conversion trend', green: 'Improving or stable', yellow: 'Flat', red: 'Declining' },
+        ],
+      },
+      {
+        id: 'experience',
+        label: 'Experience & Retention',
+        icon: '❤️',
+        weight: 20,
+        description: 'Is the Director keeping classrooms excellent and families happy?',
+        indicators: [
+          { label: 'TRS compliance maintained', green: '4+ Star', yellow: '3 Star', red: 'Below 3 Star' },
+          { label: 'Family churn %', green: 'Below 5%/month', yellow: '5–10%', red: 'Above 10%' },
+          { label: 'Parent complaints resolved', green: 'All within 24 hrs', yellow: 'Most within 48 hrs', red: 'Unresolved or patterns' },
+        ],
+      },
+      {
+        id: 'systems',
+        label: 'Systems & Cadence',
+        icon: '⚙️',
+        weight: 15,
+        description: 'Are the weekly and monthly rhythms happening consistently?',
+        indicators: [
+          { label: 'Daily Huddle happening', green: 'Every day', yellow: 'Most days', red: 'Sporadic' },
+          { label: 'Weekly Leadership Memos held', green: 'Every Tuesday', yellow: 'Most weeks', red: 'Inconsistent' },
+          { label: 'Monthly Finance Review completed', green: 'Every month', yellow: 'Most months', red: 'Skipped' },
+        ],
+      },
+    ],
+  },
+  {
     id: 'director',
     label: 'Director',
     emoji: '📋',

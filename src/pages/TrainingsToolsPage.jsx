@@ -54,8 +54,49 @@ const TRS_FILTERS = [
   { key: 'cat-3', label: 'Admin' },
 ]
 
+const STATIC_TOOLS = [
+  {
+    id: 'static-bizsync',
+    title: 'Bizsync',
+    description: 'How to use Bizsync for business operations and team coordination',
+    trs_category: 'all',
+    icon: 'star',
+    section: 'tools',
+    required_for: 'Leadership',
+    order_index: 11,
+    topic_count: 0,
+    step_count: 0,
+    completed_steps: 0,
+    progress: 0,
+    total_minutes: 0,
+    remaining_minutes: 0,
+    read_time: 'Coming soon',
+    topics: [],
+  },
+  {
+    id: 'static-slack',
+    title: 'Slack',
+    description: 'How to use Slack for internal team communication and collaboration',
+    trs_category: 'all',
+    icon: 'message',
+    section: 'tools',
+    required_for: 'Everyone',
+    order_index: 12,
+    topic_count: 0,
+    step_count: 0,
+    completed_steps: 0,
+    progress: 0,
+    total_minutes: 0,
+    remaining_minutes: 0,
+    read_time: 'Coming soon',
+    topics: [],
+  },
+]
+
 export default function TrainingsToolsPage() {
-  const { subjects, loading, error } = useTrainings('tools')
+  const { loading, error } = useTrainings('tools')
+  // All original DB tools moved to How To's — Tools now only shows these static items
+  const subjects = [...STATIC_TOOLS]
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
   const [viewMode, setViewMode] = useState('grid')
