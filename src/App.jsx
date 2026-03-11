@@ -19,6 +19,10 @@ import HowDoIDoItPage from './pages/HowDoIDoItPage'
 import WhyIsItImportantPage from './pages/WhyIsItImportantPage'
 import WhenDoIDoItPage from './pages/WhenDoIDoItPage'
 import HowDoIKnowPage from './pages/HowDoIKnowPage'
+import WhenDoWeMeetPage from './pages/WhenDoWeMeetPage'
+import WhatDoWeTalkAboutPage from './pages/WhatDoWeTalkAboutPage'
+import WhereDoWeGoPage from './pages/WhereDoWeGoPage'
+import ImportantMetricsPage from './pages/ImportantMetricsPage'
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -39,6 +43,10 @@ function App() {
           <Route path="/dashboard/why-is-it-important" element={<WhyIsItImportantPage />} />
           <Route path="/dashboard/when-do-i-do-it" element={<WhenDoIDoItPage />} />
           <Route path="/dashboard/how-do-i-know" element={<HowDoIKnowPage />} />
+          <Route path="/dashboard/when-do-we-meet" element={<WhenDoWeMeetPage />} />
+          <Route path="/dashboard/what-do-we-talk-about" element={<WhatDoWeTalkAboutPage />} />
+          <Route path="/dashboard/where-to-go" element={<WhereDoWeGoPage />} />
+          <Route path="/dashboard/important-metrics" element={<ImportantMetricsPage />} />
           <Route path="/dashboard/:slug" element={<DashboardGuidePage />} />
           <Route path="/staff/responses" element={<StaffResponsesPage />} />
           <Route path="/staff/profile-database" element={<StaffProfileDatabasePage />} />
