@@ -281,13 +281,11 @@ function CreateUserModal({ onClose, onSuccess, onError }) {
     setSaving(true)
 
     try {
-      // 1. Create auth user via Supabase (using signUp which works with anon key)
-      // Note: For production, use an Edge Function with service_role key
-      // For now, we use the admin invite approach via direct REST API
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      // IMPORTANT: Save the current founder session BEFORE signUp,
+      // because signUp will replace it with the new user's session
+      const { data: { session: founderSession } } = await supabase.auth.getSession()
 
-      // Try creating via signUp (user won't need to confirm if email confirm is disabled)
+      // 1. Create auth user via signUp (works with anon key)
       const { data: authData, error: authErr } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -301,11 +299,19 @@ function CreateUserModal({ onClose, onSuccess, onError }) {
       const authUserId = authData.user?.id
       if (!authUserId) throw new Error('Failed to create auth user')
 
-      // 2. Generate a random avatar color
+      // 2. IMMEDIATELY restore the founder's session so we don't get logged out
+      if (founderSession) {
+        await supabase.auth.setSession({
+          access_token: founderSession.access_token,
+          refresh_token: founderSession.refresh_token,
+        })
+      }
+
+      // 3. Generate a random avatar color
       const colors = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316']
       const avatarColor = colors[Math.floor(Math.random() * colors.length)]
 
-      // 3. Create staff record (exclude full_name — it's a generated column)
+      // 4. Create staff record (exclude full_name — it's a generated column)
       const { error: staffErr } = await supabase.from('staff').insert({
         first_name: form.firstName,
         last_name: form.lastName,
@@ -447,21 +453,20 @@ function EditUserModal({ staff, onClose, onSuccess, onError }) {
 
       if (error) throw error
 
-      // If password provided and user has auth, try to update it
-      if (newPassword && hasAuth) {
-        const { error: pwErr } = await supabase.auth.admin.updateUserById(
-          staff.auth_user_id,
-          { password: newPassword }
-        )
-        if (pwErr) {
-          // Admin API may not work with anon key — fall back to sending reset
-          onSuccess(`Profile updated. Password change requires admin access — use "Send Password Reset" instead.`)
-          onClose()
-          return
-        }
+      // Password changes and auth-email changes require service_role access.
+      // With the anon key we can only update the staff table record.
+      // Use "Send Password Reset" to let the user set a new password via email.
+      if (newPassword) {
+        onSuccess(`Profile updated. To change the login password, use "Send Password Reset" — the user will receive an email to set a new password.`)
+        onClose()
+        return
       }
 
-      onSuccess(`Updated ${displayName}`)
+      let msg = `Updated ${displayName}`
+      if (email !== staff.email) {
+        msg += `. Note: the display email was updated, but the login email can only be changed via password reset.`
+      }
+      onSuccess(msg)
       onClose()
     } catch (err) {
       onError(err.message || 'Failed to update user')
@@ -498,6 +503,10 @@ function EditUserModal({ staff, onClose, onSuccess, onError }) {
         if (error) throw error
         onSuccess(`Invite sent to ${email}`)
       } else {
+        // IMPORTANT: Save the current founder session BEFORE signUp,
+        // because signUp will replace it with the new user's session
+        const { data: { session: founderSession } } = await supabase.auth.getSession()
+
         // No auth account — create one with a temporary password, then send reset
         const tempPassword = crypto.randomUUID().slice(0, 16) + 'Aa1!'
         const { data: authData, error: authErr } = await supabase.auth.signUp({
@@ -506,6 +515,14 @@ function EditUserModal({ staff, onClose, onSuccess, onError }) {
           options: { data: { full_name: displayName } },
         })
         if (authErr) throw authErr
+
+        // IMMEDIATELY restore the founder's session so we don't get logged out
+        if (founderSession) {
+          await supabase.auth.setSession({
+            access_token: founderSession.access_token,
+            refresh_token: founderSession.refresh_token,
+          })
+        }
 
         // Link auth user to staff record
         if (authData.user?.id) {
