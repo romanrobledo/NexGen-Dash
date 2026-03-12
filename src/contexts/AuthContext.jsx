@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
@@ -8,6 +8,14 @@ export function AuthProvider({ children }) {
   const [staff, setStaff] = useState(null)
   const [permissions, setPermissions] = useState({})
   const [loading, setLoading] = useState(true)
+  const loadingResolved = useRef(false)
+
+  function finishLoading() {
+    if (!loadingResolved.current) {
+      loadingResolved.current = true
+      setLoading(false)
+    }
+  }
 
   // Fetch staff profile + permissions for logged-in user
   async function loadProfile(userId) {
@@ -62,42 +70,68 @@ export function AuthProvider({ children }) {
   // Listen for auth changes
   useEffect(() => {
     if (!supabase) {
-      setLoading(false)
+      finishLoading()
       return
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s)
-      if (s?.user) {
-        loadProfile(s.user.id).finally(() => setLoading(false))
-      } else {
-        setLoading(false)
+    // Safety timeout — if auth check takes longer than 4 seconds, stop loading
+    // This prevents infinite spinner from stale/corrupt tokens
+    const timeout = setTimeout(() => {
+      if (!loadingResolved.current) {
+        console.warn('Auth loading timeout — clearing stale session')
+        // Clear any stale Supabase tokens that may be causing the hang
+        const keys = Object.keys(localStorage).filter(
+          (k) => k.includes('supabase') || k.includes('sb-')
+        )
+        keys.forEach((k) => localStorage.removeItem(k))
+        setSession(null)
+        setStaff(null)
+        setPermissions({})
+        finishLoading()
       }
-    }).catch((err) => {
-      console.error('Error getting session:', err)
-      setLoading(false)
-    })
+    }, 4000)
 
-    // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, s) => {
+    // Get initial session
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: s } }) => {
         setSession(s)
         if (s?.user) {
-          await loadProfile(s.user.id)
+          loadProfile(s.user.id).finally(() => finishLoading())
         } else {
-          setStaff(null)
-          setPermissions({})
+          finishLoading()
         }
-      }
-    )
+      })
+      .catch((err) => {
+        console.error('Error getting session:', err)
+        finishLoading()
+      })
 
-    return () => subscription.unsubscribe()
+    // Subscribe to auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      setSession(s)
+      if (s?.user) {
+        await loadProfile(s.user.id)
+      } else {
+        setStaff(null)
+        setPermissions({})
+      }
+    })
+
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function signIn(email, password) {
     if (!supabase) throw new Error('Supabase not configured')
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
     if (error) throw error
     return data
   }
