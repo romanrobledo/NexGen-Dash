@@ -26,7 +26,6 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      // Fetch staff record linked to this auth user
       const { data: staffRow, error: staffErr } = await supabase
         .from('staff')
         .select('*')
@@ -42,7 +41,6 @@ export function AuthProvider({ children }) {
 
       setStaff(staffRow)
 
-      // Fetch role permissions
       const { data: perms, error: permsErr } = await supabase
         .from('role_permissions')
         .select('permission_key, enabled')
@@ -54,7 +52,6 @@ export function AuthProvider({ children }) {
         return
       }
 
-      // Convert to { permission_key: boolean } map
       const permMap = {}
       perms?.forEach((p) => {
         permMap[p.permission_key] = p.enabled
@@ -67,34 +64,25 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // Listen for auth changes
+  // Initialize auth on mount
   useEffect(() => {
     if (!supabase) {
       finishLoading()
       return
     }
 
-    // Safety timeout — if auth check takes longer than 10 seconds, stop loading.
-    // This is a non-destructive safety net: it just finishes loading so the user
-    // sees the login page instead of an infinite spinner. We do NOT clear tokens
-    // because that can corrupt the Supabase client's internal state.
+    // Safety timeout — if everything takes longer than 10 seconds, just show login.
+    // With navigator.locks bypassed this should never fire, but kept as a safety net.
     const timeout = setTimeout(() => {
       if (!loadingResolved.current) {
-        console.warn('Auth loading timeout — finishing loading (non-destructive)')
+        console.warn('Auth loading timeout — finishing loading')
         finishLoading()
       }
     }, 10000)
 
-    // Get initial session — wrapped in a race with a 5-second fallback
-    // because getSession() can hang due to navigator.locks issues
-    const getSessionWithTimeout = Promise.race([
-      supabase.auth.getSession(),
-      new Promise((resolve) =>
-        setTimeout(() => resolve({ data: { session: null } }), 5000)
-      ),
-    ])
-
-    getSessionWithTimeout
+    // Get initial session (resolves instantly now that navigator.locks are bypassed)
+    supabase.auth
+      .getSession()
       .then(({ data: { session: s } }) => {
         setSession(s)
         if (s?.user) {
@@ -108,7 +96,7 @@ export function AuthProvider({ children }) {
         finishLoading()
       })
 
-    // Subscribe to auth state changes
+    // Subscribe to auth state changes (handles token refresh, sign-out from other tabs, etc.)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, s) => {
@@ -136,12 +124,10 @@ export function AuthProvider({ children }) {
     if (error) throw error
 
     // Set session IMMEDIATELY so ProtectedRoute sees it when LoginPage navigates.
-    // Load profile in the background — don't await it to avoid hanging if the
-    // Supabase client's REST queries are slow.
+    // Load profile in background — UI updates reactively when state changes.
     if (data.session) {
       setSession(data.session)
       if (data.session.user) {
-        // Fire-and-forget: profile loads in background, UI updates reactively
         loadProfile(data.session.user.id)
       }
     }
@@ -159,7 +145,6 @@ export function AuthProvider({ children }) {
   }
 
   function hasPermission(key) {
-    // Founder always has access to everything
     if (staff?.role === 'founder') return true
     return permissions[key] === true
   }
