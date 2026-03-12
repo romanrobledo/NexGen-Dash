@@ -74,26 +74,27 @@ export function AuthProvider({ children }) {
       return
     }
 
-    // Safety timeout — if auth check takes longer than 4 seconds, stop loading
-    // This prevents infinite spinner from stale/corrupt tokens
+    // Safety timeout — if auth check takes longer than 10 seconds, stop loading.
+    // This is a non-destructive safety net: it just finishes loading so the user
+    // sees the login page instead of an infinite spinner. We do NOT clear tokens
+    // because that can corrupt the Supabase client's internal state.
     const timeout = setTimeout(() => {
       if (!loadingResolved.current) {
-        console.warn('Auth loading timeout — clearing stale session')
-        // Clear any stale Supabase tokens that may be causing the hang
-        const keys = Object.keys(localStorage).filter(
-          (k) => k.includes('supabase') || k.includes('sb-')
-        )
-        keys.forEach((k) => localStorage.removeItem(k))
-        setSession(null)
-        setStaff(null)
-        setPermissions({})
+        console.warn('Auth loading timeout — finishing loading (non-destructive)')
         finishLoading()
       }
-    }, 4000)
+    }, 10000)
 
-    // Get initial session
-    supabase.auth
-      .getSession()
+    // Get initial session — wrapped in a race with a 5-second fallback
+    // because getSession() can hang due to navigator.locks issues
+    const getSessionWithTimeout = Promise.race([
+      supabase.auth.getSession(),
+      new Promise((resolve) =>
+        setTimeout(() => resolve({ data: { session: null } }), 5000)
+      ),
+    ])
+
+    getSessionWithTimeout
       .then(({ data: { session: s } }) => {
         setSession(s)
         if (s?.user) {
@@ -134,13 +135,14 @@ export function AuthProvider({ children }) {
     })
     if (error) throw error
 
-    // Set session and load profile IMMEDIATELY so that when LoginPage
-    // calls navigate('/'), ProtectedRoute already sees the session & staff.
-    // (onAuthStateChange fires async and may not update state before navigate)
+    // Set session IMMEDIATELY so ProtectedRoute sees it when LoginPage navigates.
+    // Load profile in the background — don't await it to avoid hanging if the
+    // Supabase client's REST queries are slow.
     if (data.session) {
       setSession(data.session)
       if (data.session.user) {
-        await loadProfile(data.session.user.id)
+        // Fire-and-forget: profile loads in background, UI updates reactively
+        loadProfile(data.session.user.id)
       }
     }
 

@@ -22,17 +22,14 @@ export default function ProtectedRoute({ children, requiredPermission }) {
     return <Navigate to="/login" replace />
   }
 
-  // Logged in but no staff profile found → show error
+  // Logged in but staff profile still loading — show loading spinner briefly
+  // (profile loads in background after signIn; give it a moment)
   if (!staff) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md">
-          <ShieldOff className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Account Not Linked</h2>
-          <p className="text-sm text-gray-500">
-            Your login is valid but no staff profile is linked to this account.
-            Please contact your administrator.
-          </p>
+        <div className="text-center">
+          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-400">Loading profile...</p>
         </div>
       </div>
     )
