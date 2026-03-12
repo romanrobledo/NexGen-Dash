@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
 import Sidebar from './components/Sidebar'
 import TopToolbar from './components/TopToolbar'
+import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import StaffResponsesPage from './pages/StaffResponsesPage'
 import StaffProfileDatabasePage from './pages/StaffProfileDatabasePage'
@@ -27,8 +30,9 @@ import ImportantMetricsPage from './pages/ImportantMetricsPage'
 import TargetTaskDashboardPage from './pages/TargetTaskDashboardPage'
 import TargetTaskSubmitPage from './pages/TargetTaskSubmitPage'
 import TrainingCategoryPage from './pages/TrainingCategoryPage'
+import AdminPanelPage from './pages/AdminPanelPage'
 
-function App() {
+function AppShell({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
@@ -41,37 +45,62 @@ function App() {
       >
         <TopToolbar />
         <main className="flex-1 p-8">
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/targets" element={<TargetTaskDashboardPage />} />
-          <Route path="/targets/submit" element={<TargetTaskSubmitPage />} />
-          <Route path="/dashboard/who-are-we" element={<WhoAreWePage />} />
-          <Route path="/dashboard/what-do-i-do" element={<WhatDoIDoPage />} />
-          <Route path="/dashboard/how-do-i-do-it" element={<HowDoIDoItPage />} />
-          <Route path="/dashboard/why-is-it-important" element={<WhyIsItImportantPage />} />
-          <Route path="/dashboard/when-do-i-do-it" element={<WhenDoIDoItPage />} />
-          <Route path="/dashboard/how-do-i-know" element={<HowDoIKnowPage />} />
-          <Route path="/dashboard/when-do-we-meet" element={<WhenDoWeMeetPage />} />
-          <Route path="/dashboard/what-do-we-talk-about" element={<WhatDoWeTalkAboutPage />} />
-          <Route path="/dashboard/where-to-go" element={<WhereDoWeGoPage />} />
-          <Route path="/dashboard/important-metrics" element={<ImportantMetricsPage />} />
-          <Route path="/dashboard/:slug" element={<DashboardGuidePage />} />
-          <Route path="/staff/responses" element={<StaffResponsesPage />} />
-          <Route path="/staff/profile-database" element={<StaffProfileDatabasePage />} />
-          <Route path="/staff/:id" element={<StaffProfilePage />} />
-          <Route path="/calendars/content" element={<ContentCalendarPage />} />
-          <Route path="/trainings" element={<TrainingsDashboardPage />} />
-          <Route path="/trainings/onboarding" element={<TrainingsOnboardingPage />} />
-          <Route path="/trainings/tools" element={<TrainingsToolsPage />} />
-          <Route path="/trainings/howtos" element={<TrainingsHowTosPage />} />
-          <Route path="/trainings/admin" element={<TrainingsAdminPage />} />
-          <Route path="/trainings/view/:stepId" element={<TrainingsViewerPage />} />
-          <Route path="/trainings/:category" element={<TrainingCategoryPage />} />
-          <Route path="/trainings/:category/:subcategory" element={<TrainingCategoryPage />} />
-        </Routes>
+          {children}
         </main>
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Routes>
+        {/* Public route — Login */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Protected routes — wrapped in AppShell (sidebar + toolbar) */}
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <AppShell>
+              <Routes>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/targets" element={<TargetTaskDashboardPage />} />
+                <Route path="/targets/submit" element={<TargetTaskSubmitPage />} />
+                <Route path="/dashboard/who-are-we" element={<WhoAreWePage />} />
+                <Route path="/dashboard/what-do-i-do" element={<WhatDoIDoPage />} />
+                <Route path="/dashboard/how-do-i-do-it" element={<HowDoIDoItPage />} />
+                <Route path="/dashboard/why-is-it-important" element={<WhyIsItImportantPage />} />
+                <Route path="/dashboard/when-do-i-do-it" element={<WhenDoIDoItPage />} />
+                <Route path="/dashboard/how-do-i-know" element={<HowDoIKnowPage />} />
+                <Route path="/dashboard/when-do-we-meet" element={<WhenDoWeMeetPage />} />
+                <Route path="/dashboard/what-do-we-talk-about" element={<WhatDoWeTalkAboutPage />} />
+                <Route path="/dashboard/where-to-go" element={<WhereDoWeGoPage />} />
+                <Route path="/dashboard/important-metrics" element={<ImportantMetricsPage />} />
+                <Route path="/dashboard/:slug" element={<DashboardGuidePage />} />
+                <Route path="/staff/responses" element={<StaffResponsesPage />} />
+                <Route path="/staff/profile-database" element={<StaffProfileDatabasePage />} />
+                <Route path="/staff/:id" element={<StaffProfilePage />} />
+                <Route path="/calendars/content" element={<ContentCalendarPage />} />
+                <Route path="/trainings" element={<TrainingsDashboardPage />} />
+                <Route path="/trainings/onboarding" element={<TrainingsOnboardingPage />} />
+                <Route path="/trainings/tools" element={<TrainingsToolsPage />} />
+                <Route path="/trainings/howtos" element={<TrainingsHowTosPage />} />
+                <Route path="/trainings/admin" element={<TrainingsAdminPage />} />
+                <Route path="/trainings/view/:stepId" element={<TrainingsViewerPage />} />
+                <Route path="/trainings/:category" element={<TrainingCategoryPage />} />
+                <Route path="/trainings/:category/:subcategory" element={<TrainingCategoryPage />} />
+                <Route path="/admin" element={
+                  <ProtectedRoute requiredPermission="admin_panel">
+                    <AdminPanelPage />
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </AppShell>
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </AuthProvider>
   )
 }
 

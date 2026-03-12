@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import {
   LayoutDashboard,
   Compass,
@@ -15,13 +16,16 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Target,
+  ShieldCheck,
 } from 'lucide-react'
 
+// Each top-level item has a permissionKey that maps to role_permissions
 const navItems = [
-  { icon: LayoutDashboard, label: 'S.A.N.D.', path: '/' },
+  { icon: LayoutDashboard, label: 'S.A.N.D.', path: '/', permissionKey: 'dashboard' },
   {
     icon: Target,
     label: 'Targets & Tasks',
+    permissionKey: 'targets',
     children: [
       { label: 'Dashboard', path: '/targets' },
       { label: 'Submit New', path: '/targets/submit' },
@@ -30,6 +34,7 @@ const navItems = [
   {
     icon: Compass,
     label: 'Compass',
+    permissionKey: 'compass',
     children: [
       { label: 'Who Are We', path: '/dashboard/who-are-we' },
       { label: 'What Do I Do', path: '/dashboard/what-do-i-do' },
@@ -46,6 +51,7 @@ const navItems = [
   {
     icon: UserCog,
     label: 'Staff Database',
+    permissionKey: 'staff_database',
     children: [
       { label: 'Quick Overview', path: '/staff/responses' },
       { label: 'Staff Profile Database', path: '/staff/profile-database' },
@@ -54,6 +60,7 @@ const navItems = [
   {
     icon: GraduationCap,
     label: 'Library',
+    permissionKey: 'library',
     children: [
       { label: 'Dashboard', path: '/trainings' },
       { label: 'Onboarding', path: '/trainings/onboarding' },
@@ -97,6 +104,7 @@ const navItems = [
   {
     icon: CalendarDays,
     label: 'Calendars',
+    permissionKey: 'calendars',
     children: [
       { label: 'Content', path: '/calendars/content' },
       { label: 'School Calendar' },
@@ -104,10 +112,11 @@ const navItems = [
       { label: 'Events' },
     ],
   },
-  { icon: BookOpen, label: 'Lesson Plans' },
+  { icon: BookOpen, label: 'Lesson Plans', permissionKey: 'lesson_plans' },
   {
     icon: Users,
     label: 'Families',
+    permissionKey: 'families',
     children: [
       { label: 'Guardians' },
       { label: 'Students' },
@@ -117,6 +126,7 @@ const navItems = [
   {
     icon: School,
     label: 'Classrooms',
+    permissionKey: 'classrooms',
     children: [
       { label: 'Room A' },
       { label: 'Room B' },
@@ -126,6 +136,7 @@ const navItems = [
   {
     icon: DollarSign,
     label: 'Books',
+    permissionKey: 'books',
     children: [
       { label: 'Accounts' },
       { label: 'Transactions' },
@@ -135,11 +146,18 @@ const navItems = [
   {
     icon: CreditCard,
     label: 'Billing',
+    permissionKey: 'billing',
     children: [
       { label: 'Invoices' },
       { label: 'Payments' },
       { label: 'Plans' },
     ],
+  },
+  {
+    icon: ShieldCheck,
+    label: 'Admin Panel',
+    path: '/admin',
+    permissionKey: 'admin_panel',
   },
 ]
 
@@ -238,7 +256,8 @@ function NavItem({ item, collapsed }) {
     (item.label === 'Staff Database' && location.pathname.startsWith('/staff/')) ||
     (item.label === 'Calendars' && location.pathname.startsWith('/calendars/')) ||
     (item.label === 'Library' && location.pathname.startsWith('/trainings')) ||
-    (item.label === 'Targets & Tasks' && location.pathname.startsWith('/targets'))
+    (item.label === 'Targets & Tasks' && location.pathname.startsWith('/targets')) ||
+    (item.label === 'Admin Panel' && location.pathname.startsWith('/admin'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 
   // Auto-expand when a child route is active (only when not collapsed)
@@ -324,6 +343,16 @@ function NavItem({ item, collapsed }) {
 }
 
 export default function Sidebar({ collapsed = false, onToggle }) {
+  const { hasPermission, staff } = useAuth()
+
+  // Filter nav items by user permissions
+  const visibleItems = navItems.filter((item) => {
+    if (!item.permissionKey) return true
+    // If no staff loaded yet (still loading), show all items to avoid flash
+    if (!staff) return true
+    return hasPermission(item.permissionKey)
+  })
+
   return (
     <aside
       className={`bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300 z-40 ${
@@ -350,7 +379,7 @@ export default function Sidebar({ collapsed = false, onToggle }) {
 
       {/* Nav items */}
       <nav className={`flex-1 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
-        {navItems.map((item) => (
+        {visibleItems.map((item) => (
           <NavItem key={item.label} item={item} collapsed={collapsed} />
         ))}
       </nav>
