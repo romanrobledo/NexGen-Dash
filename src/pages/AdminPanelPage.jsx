@@ -11,15 +11,18 @@ import {
   AlertCircle,
   CheckCircle,
   UserPlus,
-  Pencil,
+  Settings2,
   ToggleLeft,
   ToggleRight,
+  Mail,
+  KeyRound,
+  Send,
 } from 'lucide-react'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const ALL_ROLES = [
-  'founder', 'operator', 'director', 'teacher', 'teacher-assistant',
+  'founder', 'operator', 'executive-assistant', 'director', 'teacher', 'teacher-assistant',
   'front-desk', 'hiring-manager', 'tour-manager', 'lesson-plans',
   'kitchen-manager', 'asst-kitchen', 'bus-driver',
 ]
@@ -43,6 +46,7 @@ function roleBadgeColor(role) {
   const colors = {
     founder: 'bg-purple-100 text-purple-700',
     operator: 'bg-blue-100 text-blue-700',
+    'executive-assistant': 'bg-sky-100 text-sky-700',
     director: 'bg-emerald-100 text-emerald-700',
     teacher: 'bg-amber-100 text-amber-700',
     'teacher-assistant': 'bg-yellow-100 text-yellow-700',
@@ -219,10 +223,10 @@ function UsersTab() {
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => setEditingStaff(s)}
-                      className="text-gray-400 hover:text-blue-600 transition-colors p-1"
-                      title="Edit"
+                      className="text-gray-400 hover:text-blue-600 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
+                      title="Manage user"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Settings2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -417,7 +421,14 @@ function CreateUserModal({ onClose, onSuccess, onError }) {
 function EditUserModal({ staff, onClose, onSuccess, onError }) {
   const [role, setRole] = useState(staff.role)
   const [status, setStatus] = useState(staff.status || 'active')
+  const [email, setEmail] = useState(staff.email || '')
+  const [newPassword, setNewPassword] = useState('')
   const [saving, setSaving] = useState(false)
+  const [sendingInvite, setSendingInvite] = useState(false)
+  const [resettingPw, setResettingPw] = useState(false)
+
+  const displayName = staff.full_name || `${staff.first_name} ${staff.last_name}`
+  const hasAuth = !!staff.auth_user_id
 
   async function handleSave(e) {
     e.preventDefault()
@@ -425,13 +436,32 @@ function EditUserModal({ staff, onClose, onSuccess, onError }) {
     setSaving(true)
 
     try {
+      // Update staff record (role, status, email)
+      const updates = { role, status }
+      if (email !== staff.email) updates.email = email
+
       const { error } = await supabase
         .from('staff')
-        .update({ role, status })
+        .update(updates)
         .eq('id', staff.id)
 
       if (error) throw error
-      onSuccess(`Updated ${staff.full_name || staff.first_name}`)
+
+      // If password provided and user has auth, try to update it
+      if (newPassword && hasAuth) {
+        const { error: pwErr } = await supabase.auth.admin.updateUserById(
+          staff.auth_user_id,
+          { password: newPassword }
+        )
+        if (pwErr) {
+          // Admin API may not work with anon key — fall back to sending reset
+          onSuccess(`Profile updated. Password change requires admin access — use "Send Password Reset" instead.`)
+          onClose()
+          return
+        }
+      }
+
+      onSuccess(`Updated ${displayName}`)
       onClose()
     } catch (err) {
       onError(err.message || 'Failed to update user')
@@ -440,42 +470,182 @@ function EditUserModal({ staff, onClose, onSuccess, onError }) {
     }
   }
 
+  async function handleSendPasswordReset() {
+    if (!supabase || !email) return
+    setResettingPw(true)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      })
+      if (error) throw error
+      onSuccess(`Password reset email sent to ${email}`)
+    } catch (err) {
+      onError(err.message || 'Failed to send reset email')
+    } finally {
+      setResettingPw(false)
+    }
+  }
+
+  async function handleSendInvite() {
+    if (!supabase || !email) return
+    setSendingInvite(true)
+    try {
+      if (hasAuth) {
+        // User already has auth — send password reset as "invite"
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/login`,
+        })
+        if (error) throw error
+        onSuccess(`Invite sent to ${email}`)
+      } else {
+        // No auth account — create one with a temporary password, then send reset
+        const tempPassword = crypto.randomUUID().slice(0, 16) + 'Aa1!'
+        const { data: authData, error: authErr } = await supabase.auth.signUp({
+          email,
+          password: tempPassword,
+          options: { data: { full_name: displayName } },
+        })
+        if (authErr) throw authErr
+
+        // Link auth user to staff record
+        if (authData.user?.id) {
+          await supabase
+            .from('staff')
+            .update({ auth_user_id: authData.user.id })
+            .eq('id', staff.id)
+        }
+
+        // Send password reset so user can set their own password
+        await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/login`,
+        })
+
+        onSuccess(`Account created & invite sent to ${email}`)
+      }
+    } catch (err) {
+      onError(err.message || 'Failed to send invite')
+    } finally {
+      setSendingInvite(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+        {/* Header with user info */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Edit {staff.full_name || `${staff.first_name} ${staff.last_name}`}
-          </h3>
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+              style={{ backgroundColor: staff.avatar_color || '#6b7280' }}
+            >
+              {(staff.first_name?.[0] || '') + (staff.last_name?.[0] || '')}
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">{displayName}</h3>
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${roleBadgeColor(staff.role)}`}>
+                {formatRole(staff.role)}
+              </span>
+            </div>
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <form onSubmit={handleSave} className="p-6 space-y-4">
+
+        <form onSubmit={handleSave} className="p-6 space-y-5">
+          {/* Account Section */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select
-              value={role} onChange={(e) => setRole(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
-            >
-              {ALL_ROLES.map((r) => (
-                <option key={r} value={r}>{formatRole(r)}</option>
-              ))}
-            </select>
+            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Account</h4>
+            <div className="space-y-3">
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Mail className="w-3.5 h-3.5 inline mr-1.5 text-gray-400" />
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* New Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <KeyRound className="w-3.5 h-3.5 inline mr-1.5 text-gray-400" />
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Leave blank to keep current"
+                  minLength={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Quick Action Buttons */}
+              <div className="flex gap-2 pt-1">
+                {hasAuth && (
+                  <button
+                    type="button"
+                    onClick={handleSendPasswordReset}
+                    disabled={resettingPw}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    {resettingPw ? 'Sending...' : 'Send Password Reset'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSendInvite}
+                  disabled={sendingInvite}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {sendingInvite ? 'Sending...' : hasAuth ? 'Resend Invite' : 'Send Invite'}
+                </button>
+              </div>
+            </div>
           </div>
 
+          {/* Role & Status Section */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              value={status} onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Role & Status</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                >
+                  {ALL_ROLES.map((r) => (
+                    <option key={r} value={r}>{formatRole(r)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          {/* Footer */}
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
               Cancel
             </button>

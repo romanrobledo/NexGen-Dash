@@ -88,6 +88,21 @@ INSERT INTO role_permissions (role, permission_key, enabled) VALUES
   ('operator', 'billing', true),
   ('operator', 'admin_panel', false);
 
+-- EXECUTIVE-ASSISTANT — same permissions as Operator
+INSERT INTO role_permissions (role, permission_key, enabled) VALUES
+  ('executive-assistant', 'dashboard', true),
+  ('executive-assistant', 'targets', true),
+  ('executive-assistant', 'compass', true),
+  ('executive-assistant', 'staff_database', true),
+  ('executive-assistant', 'library', true),
+  ('executive-assistant', 'calendars', true),
+  ('executive-assistant', 'lesson_plans', true),
+  ('executive-assistant', 'families', true),
+  ('executive-assistant', 'classrooms', true),
+  ('executive-assistant', 'books', false),
+  ('executive-assistant', 'billing', true),
+  ('executive-assistant', 'admin_panel', false);
+
 -- DIRECTOR
 INSERT INTO role_permissions (role, permission_key, enabled) VALUES
   ('director', 'dashboard', true),
