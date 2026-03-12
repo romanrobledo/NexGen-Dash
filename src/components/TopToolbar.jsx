@@ -11,6 +11,8 @@ import {
   Sun,
   Moon,
   CloudSun,
+  UserCheck,
+  UserX,
 } from 'lucide-react'
 
 function getGreeting() {
@@ -82,6 +84,8 @@ export default function TopToolbar() {
 
         {/* Center — Quick Actions */}
         <div className="flex items-center gap-2">
+          <ToolbarButton icon={UserCheck} label="Check-in" color="green" />
+          <ToolbarButton icon={UserX} label="Check-out" color="red" />
           <ToolbarButton icon={MessageCircle} label="Chat" color="blue" />
           <ToolbarButton icon={Search} label="Search" color="gray" />
         </div>
