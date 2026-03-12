@@ -73,7 +73,7 @@ INSERT INTO role_permissions (role, permission_key, enabled) VALUES
   ('founder', 'billing', true),
   ('founder', 'admin_panel', true);
 
--- OPERATOR — everything except admin
+-- OPERATOR — everything except Books and Admin Panel
 INSERT INTO role_permissions (role, permission_key, enabled) VALUES
   ('operator', 'dashboard', true),
   ('operator', 'targets', true),
@@ -84,7 +84,7 @@ INSERT INTO role_permissions (role, permission_key, enabled) VALUES
   ('operator', 'lesson_plans', true),
   ('operator', 'families', true),
   ('operator', 'classrooms', true),
-  ('operator', 'books', true),
+  ('operator', 'books', false),
   ('operator', 'billing', true),
   ('operator', 'admin_panel', false);
 
@@ -103,10 +103,10 @@ INSERT INTO role_permissions (role, permission_key, enabled) VALUES
   ('director', 'billing', false),
   ('director', 'admin_panel', false);
 
--- TEACHER
+-- TEACHER — no S.A.N.D., Targets, Staff DB, Books, Billing, Admin
 INSERT INTO role_permissions (role, permission_key, enabled) VALUES
-  ('teacher', 'dashboard', true),
-  ('teacher', 'targets', true),
+  ('teacher', 'dashboard', false),
+  ('teacher', 'targets', false),
   ('teacher', 'compass', true),
   ('teacher', 'staff_database', false),
   ('teacher', 'library', true),
@@ -193,32 +193,32 @@ INSERT INTO role_permissions (role, permission_key, enabled) VALUES
   ('lesson-plans', 'billing', false),
   ('lesson-plans', 'admin_panel', false);
 
--- KITCHEN-MANAGER
+-- KITCHEN-MANAGER — same as Teacher but also no Lesson Plans
 INSERT INTO role_permissions (role, permission_key, enabled) VALUES
-  ('kitchen-manager', 'dashboard', true),
-  ('kitchen-manager', 'targets', true),
+  ('kitchen-manager', 'dashboard', false),
+  ('kitchen-manager', 'targets', false),
   ('kitchen-manager', 'compass', true),
   ('kitchen-manager', 'staff_database', false),
   ('kitchen-manager', 'library', true),
   ('kitchen-manager', 'calendars', true),
   ('kitchen-manager', 'lesson_plans', false),
-  ('kitchen-manager', 'families', false),
-  ('kitchen-manager', 'classrooms', false),
+  ('kitchen-manager', 'families', true),
+  ('kitchen-manager', 'classrooms', true),
   ('kitchen-manager', 'books', false),
   ('kitchen-manager', 'billing', false),
   ('kitchen-manager', 'admin_panel', false);
 
--- ASST-KITCHEN
+-- ASST-KITCHEN — same as Kitchen Manager
 INSERT INTO role_permissions (role, permission_key, enabled) VALUES
-  ('asst-kitchen', 'dashboard', true),
-  ('asst-kitchen', 'targets', true),
+  ('asst-kitchen', 'dashboard', false),
+  ('asst-kitchen', 'targets', false),
   ('asst-kitchen', 'compass', true),
   ('asst-kitchen', 'staff_database', false),
   ('asst-kitchen', 'library', true),
   ('asst-kitchen', 'calendars', true),
   ('asst-kitchen', 'lesson_plans', false),
-  ('asst-kitchen', 'families', false),
-  ('asst-kitchen', 'classrooms', false),
+  ('asst-kitchen', 'families', true),
+  ('asst-kitchen', 'classrooms', true),
   ('asst-kitchen', 'books', false),
   ('asst-kitchen', 'billing', false),
   ('asst-kitchen', 'admin_panel', false);
