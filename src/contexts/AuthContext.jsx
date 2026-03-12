@@ -74,6 +74,9 @@ export function AuthProvider({ children }) {
       } else {
         setLoading(false)
       }
+    }).catch((err) => {
+      console.error('Error getting session:', err)
+      setLoading(false)
     })
 
     // Subscribe to auth state changes
