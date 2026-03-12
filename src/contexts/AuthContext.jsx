@@ -133,6 +133,17 @@ export function AuthProvider({ children }) {
       password,
     })
     if (error) throw error
+
+    // Set session and load profile IMMEDIATELY so that when LoginPage
+    // calls navigate('/'), ProtectedRoute already sees the session & staff.
+    // (onAuthStateChange fires async and may not update state before navigate)
+    if (data.session) {
+      setSession(data.session)
+      if (data.session.user) {
+        await loadProfile(data.session.user.id)
+      }
+    }
+
     return data
   }
 
