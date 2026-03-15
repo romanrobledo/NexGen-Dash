@@ -29,6 +29,9 @@ export default function CheckoutPage() {
 
     const { error: submitError } = await submitCheckin({
       staff_id: staff.id,
+      staff_name: staff.full_name || `${staff.first_name} ${staff.last_name}`,
+      staff_email: staff.email,
+      staff_role: staff.role,
       type: 'checkout',
       rating,
       activities: activities.trim(),

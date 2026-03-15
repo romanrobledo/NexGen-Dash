@@ -29,6 +29,9 @@ export default function CheckinPage() {
 
     const { error: submitError } = await submitCheckin({
       staff_id: staff.id,
+      staff_name: staff.full_name || `${staff.first_name} ${staff.last_name}`,
+      staff_email: staff.email,
+      staff_role: staff.role,
       type: 'checkin',
       rating,
       activities: activities.trim(),
