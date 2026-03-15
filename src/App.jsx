@@ -31,6 +31,8 @@ import TargetTaskDashboardPage from './pages/TargetTaskDashboardPage'
 import TargetTaskSubmitPage from './pages/TargetTaskSubmitPage'
 import TrainingCategoryPage from './pages/TrainingCategoryPage'
 import AdminPanelPage from './pages/AdminPanelPage'
+import CheckinPage from './pages/CheckinPage'
+import CheckoutPage from './pages/CheckoutPage'
 
 function AppShell({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -67,6 +69,8 @@ function App() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/targets" element={<TargetTaskDashboardPage />} />
                 <Route path="/targets/submit" element={<TargetTaskSubmitPage />} />
+                <Route path="/checkin" element={<CheckinPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/dashboard/who-are-we" element={<WhoAreWePage />} />
                 <Route path="/dashboard/what-do-i-do" element={<WhatDoIDoPage />} />
                 <Route path="/dashboard/how-do-i-do-it" element={<HowDoIDoItPage />} />

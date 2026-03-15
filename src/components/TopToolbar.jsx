@@ -84,8 +84,8 @@ export default function TopToolbar() {
 
         {/* Center — Quick Actions */}
         <div className="flex items-center gap-2">
-          <ToolbarButton icon={UserCheck} label="Check-in" color="green" />
-          <ToolbarButton icon={UserX} label="Check-out" color="red" />
+          <ToolbarButton icon={UserCheck} label="Check-in" color="green" onClick={() => navigate('/checkin')} />
+          <ToolbarButton icon={UserX} label="Check-out" color="red" onClick={() => navigate('/checkout')} />
           <ToolbarButton icon={MessageCircle} label="Chat" color="blue" />
           <ToolbarButton icon={Search} label="Search" color="gray" />
         </div>
@@ -149,7 +149,7 @@ export default function TopToolbar() {
   )
 }
 
-function ToolbarButton({ icon: Icon, label, color }) {
+function ToolbarButton({ icon: Icon, label, color, onClick }) {
   const colorClasses = {
     green: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100',
     red: 'bg-red-50 text-red-500 hover:bg-red-100',
@@ -159,6 +159,7 @@ function ToolbarButton({ icon: Icon, label, color }) {
 
   return (
     <button
+      onClick={onClick}
       className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${colorClasses[color] || colorClasses.gray}`}
     >
       <Icon className="w-4 h-4" />

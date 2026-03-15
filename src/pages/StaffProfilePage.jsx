@@ -139,6 +139,7 @@ export default function StaffProfilePage() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Date</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Type</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Rating</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Activities</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">
@@ -161,6 +162,15 @@ export default function StaffProfilePage() {
                         day: 'numeric',
                         year: 'numeric',
                       })}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        r.type === 'checkout'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-emerald-100 text-emerald-700'
+                      }`}>
+                        {r.type === 'checkout' ? 'Check-out' : 'Check-in'}
+                      </span>
                     </td>
                     <td className="py-3 px-4">
                       <RatingBadge value={r.rating} />
