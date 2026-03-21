@@ -33,6 +33,11 @@ import TrainingCategoryPage from './pages/TrainingCategoryPage'
 import AdminPanelPage from './pages/AdminPanelPage'
 import CheckinPage from './pages/CheckinPage'
 import CheckoutPage from './pages/CheckoutPage'
+import OperatingSystemPage from './pages/OperatingSystemPage'
+import HandbooksPage from './pages/HandbooksPage'
+import ApplicationsPage from './pages/ApplicationsPage'
+import TrsDocumentsPage from './pages/TrsDocumentsPage'
+import QuickFocusPage from './pages/QuickFocusPage'
 
 function AppShell({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -71,6 +76,11 @@ function App() {
                 <Route path="/targets/submit" element={<TargetTaskSubmitPage />} />
                 <Route path="/checkin" element={<CheckinPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="/operating-system" element={<OperatingSystemPage />} />
+                <Route path="/handbooks" element={<HandbooksPage />} />
+                <Route path="/applications" element={<ApplicationsPage />} />
+                <Route path="/trs/documents" element={<TrsDocumentsPage />} />
+                <Route path="/quick-focus" element={<QuickFocusPage />} />
                 <Route path="/dashboard/who-are-we" element={<WhoAreWePage />} />
                 <Route path="/dashboard/what-do-i-do" element={<WhatDoIDoPage />} />
                 <Route path="/dashboard/how-do-i-do-it" element={<HowDoIDoItPage />} />

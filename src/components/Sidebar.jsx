@@ -17,11 +17,16 @@ import {
   PanelLeftOpen,
   Target,
   ShieldCheck,
+  FileText,
+  ClipboardList,
+  Zap,
 } from 'lucide-react'
 
 // Each top-level item has a permissionKey that maps to role_permissions
 const navItems = [
   { icon: LayoutDashboard, label: 'S.A.N.D.', path: '/', permissionKey: 'dashboard' },
+  { icon: FileText, label: 'Operating System', path: '/operating-system', permissionKey: 'dashboard' },
+  { icon: Zap, label: 'Quick Focus', path: '/quick-focus', permissionKey: 'dashboard' },
   {
     icon: Target,
     label: 'Targets & Tasks',
@@ -113,6 +118,16 @@ const navItems = [
     ],
   },
   { icon: BookOpen, label: 'Lesson Plans', permissionKey: 'lesson_plans' },
+  { icon: FileText, label: 'Handbooks', path: '/handbooks', permissionKey: 'dashboard' },
+  { icon: ClipboardList, label: 'Applications', path: '/applications', permissionKey: 'dashboard' },
+  {
+    icon: ShieldCheck,
+    label: 'TRS',
+    permissionKey: 'dashboard',
+    children: [
+      { label: 'Documents', path: '/trs/documents' },
+    ],
+  },
   {
     icon: Users,
     label: 'Families',
@@ -257,7 +272,12 @@ function NavItem({ item, collapsed }) {
     (item.label === 'Calendars' && location.pathname.startsWith('/calendars/')) ||
     (item.label === 'Library' && location.pathname.startsWith('/trainings')) ||
     (item.label === 'Targets & Tasks' && location.pathname.startsWith('/targets')) ||
-    (item.label === 'Admin Panel' && location.pathname.startsWith('/admin'))
+    (item.label === 'Admin Panel' && location.pathname.startsWith('/admin')) ||
+    (item.label === 'Operating System' && location.pathname === '/operating-system') ||
+    (item.label === 'Quick Focus' && location.pathname === '/quick-focus') ||
+    (item.label === 'Handbooks' && location.pathname === '/handbooks') ||
+    (item.label === 'Applications' && location.pathname === '/applications') ||
+    (item.label === 'TRS' && location.pathname.startsWith('/trs'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 
   // Auto-expand when a child route is active (only when not collapsed)
