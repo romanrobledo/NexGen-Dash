@@ -4,8 +4,8 @@
     {
       "name": "dev",
       "runtimeExecutable": "/bin/bash",
-      "runtimeArgs": ["-c", "export PATH=/Users/roman/.nvm/versions/node/v20.20.0/bin:$PATH && npx vite --host --port 5173"],
-      "port": 5173
+      "runtimeArgs": ["-c", "export PATH=/Users/roman/.nvm/versions/node/v20.20.0/bin:$PATH && npx vite --host --port ${PORT:-5173}"],
+      "autoPort": true
     }
   ]
 }

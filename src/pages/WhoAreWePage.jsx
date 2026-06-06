@@ -1,4 +1,5 @@
 import { Users } from 'lucide-react'
+import { useViewMode } from '../contexts/ViewModeContext'
 
 const Section = ({ id, title, children, accent = '#2563EB' }) => (
   <div
@@ -400,6 +401,7 @@ function NexGenClarityCard() {
 }
 
 export default function WhoAreWePage() {
+  const { mobileMode } = useViewMode()
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Page Header */}
@@ -441,8 +443,8 @@ export default function WhoAreWePage() {
           background: '#fff',
           border: '1px solid #E2E8F0',
           borderRadius: '16px',
-          padding: '2.25rem',
-          maxWidth: 780,
+          padding: mobileMode ? '1.25rem' : '2.25rem',
+          maxWidth: mobileMode ? '100%' : 780,
         }}
       >
         {/* WHO WE ARE */}
@@ -671,7 +673,7 @@ export default function WhoAreWePage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: mobileMode ? '1fr' : '1fr 1fr',
               gap: '0.75rem',
             }}
           >

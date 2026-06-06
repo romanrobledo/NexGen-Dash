@@ -284,7 +284,7 @@ export default function TargetTaskSubmitPage() {
             <label style={labelStyle}>Detail / Description</label>
             <input
               style={inputStyle}
-              placeholder="e.g. Robyn + Robyne + Ed"
+              placeholder="e.g. Robyn + Ed"
               value={targetDetail}
               onChange={(e) => setTargetDetail(e.target.value)}
               onFocus={(e) => { e.target.style.borderColor = '#2563EB' }}

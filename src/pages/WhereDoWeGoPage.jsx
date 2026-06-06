@@ -1,5 +1,8 @@
 import { useState } from "react"
-import { HelpCircle } from "lucide-react"
+import { HelpCircle, UserCircle } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useViewMode } from "../contexts/ViewModeContext"
+import { useSelectedRoleId } from "../hooks/useSelectedRole"
 
 // ─── ESCALATION PATHS ─────────────────────────────────────────────────────────
 const URGENCY = {
@@ -10,7 +13,8 @@ const URGENCY = {
 }
 
 const CONTACTS = {
-  founder:       { label: "Founder",                   emoji: "👑", color: "#0F172A" },
+  visionary:     { label: "Visionary",                 emoji: "👑", color: "#0F172A" },
+  integrator:    { label: "Integrator",                emoji: "⚙️", color: "#1E3A8A" },
   operator:      { label: "Roman (Operator)",          emoji: "\ud83c\udfe2", color: "#2563EB" },
   director:      { label: "Director",                  emoji: "\ud83d\udccb", color: "#7C3AED" },
   lead_teacher:  { label: "Your Lead Teacher",         emoji: "\ud83d\udcda", color: "#059669" },
@@ -27,38 +31,77 @@ const CONTACTS = {
 
 const ROLES = [
   {
-    id: "founder",
-    label: "Founder",
+    id: "visionary",
+    label: "Visionary",
     emoji: "👑",
     color: "#0F172A",
-    tagline: "Most of your answers live in your data or a conversation with the Operator.",
-    rule: "If you're solving a problem that should be solved by the Operator or Director, that's a systems gap — fix the system, not the symptom.",
+    tagline: "Per Rocket Fuel, almost every answer flows through the Integrator. If you're solving it yourself, you're out of your seat.",
+    rule: "If you're tempted to solve it directly, stop and ask: 'Have I given this to the Integrator?' The Visionary's job is to filter ideas in, not to push execution out.",
     categories: [
       {
-        title: "Financial & Strategy",
-        icon: "💰",
+        title: "Vision & Strategy",
+        icon: "🎯",
         items: [
-          { q: "Revenue is trending down — what do I do?", who: ["operator"], urgency: "sameday", note: "Pull the Monthly Finance Review forward. Ask the 3 diagnostic questions. Pick ONE decision." },
-          { q: "Should I raise prices?", who: ["operator"], urgency: "routine", note: "Monthly Finance Review question. Check Avg Revenue per Child and Net Profit %. Pricing changes are the highest-ROI lever." },
-          { q: "Payroll is too high as a % of revenue", who: ["operator"], urgency: "sameday", note: "Target is 50–55%. If above, review staffing vs. enrollment ratios with Director." },
-          { q: "Should I expand to a second location?", who: ["operator"], urgency: "routine", note: "You don't need a finance department until: Multiple locations OR $3M+ revenue with complex debt/grants." },
+          { q: "I have a new idea — what do I do with it?", who: ["integrator"], urgency: "routine", note: "Drop it in the Same Page Meeting. The Integrator decides if/when it gets scheduled. Do not force it into this quarter's Rocks." },
+          { q: "Is the V/TO still true? Does anything need to change?", who: ["integrator"], urgency: "routine", note: "Quarterly Pulsing is where this gets reviewed. Bring your instinct; the Integrator brings the data." },
+          { q: "Are we drifting from Core Values?", who: ["integrator"], urgency: "sameday", note: "Name what you see. The Integrator uses People Analyzer + GWC to address it." },
+          { q: "Should we make a big bet (R&D, new program, new seat)?", who: ["integrator"], urgency: "routine", note: "Same Page Meeting decision. Integrator stress-tests feasibility, you decide direction." },
         ],
       },
       {
-        title: "Enrollment & Growth",
-        icon: "📈",
+        title: "Execution & Accountability",
+        icon: "⚙️",
         items: [
-          { q: "Occupancy is below target", who: ["operator"], urgency: "sameday", note: "Check weekly enrollment KPIs with Robyn — leads, tours, conversions. Identify which lever is broken." },
-          { q: "Marketing isn't generating enough leads", who: ["operator"], urgency: "routine", note: "Review Marketing function with Robyn — Structure, Thinking, Data, & AI." },
+          { q: "The Scorecard has red numbers — what do I do?", who: ["integrator"], urgency: "routine", note: "Don't jump in. The Integrator surfaces red numbers in the L10, IDS's them, and reports back. Trust the process." },
+          { q: "A Rock is off-track", who: ["integrator"], urgency: "routine", note: "L10 territory. The Integrator owns the Rock system. You don't chase Rocks." },
+          { q: "The Integrator isn't performing", who: ["visionary"], urgency: "routine", note: "This is the hardest call. Use Same Page Meeting to address. If LMA gaps persist, consider coaching or replacing the seat. Rocket Fuel is clear — the wrong Integrator will kill the company." },
         ],
       },
       {
-        title: "People & Operations",
+        title: "Culture, Brand & Relationships",
         icon: "👥",
         items: [
-          { q: "The Operator isn't performing", who: ["founder"], urgency: "routine", note: "Address in your weekly memos. Document patterns. Don't let it accumulate." },
-          { q: "Director performance is declining", who: ["operator"], urgency: "routine", note: "Operator should be managing this. If they're not, that's a systems gap." },
-          { q: "A critical compliance issue surfaces", who: ["operator", "director"], urgency: "immediate", note: "Operator and Director handle together. You stay informed but don't run the response." },
+          { q: "A top-20 relationship needs attention", who: ["visionary"], urgency: "sameday", note: "This is YOUR seat. Visionary owns key external relationships per Rocket Fuel. Make the call / take the coffee." },
+          { q: "Culture feels off on the floor", who: ["integrator"], urgency: "sameday", note: "Name it to the Integrator in the Same Page Meeting. They activate LMA with direct reports." },
+          { q: "A critical compliance or safety issue surfaces", who: ["integrator", "operator", "director"], urgency: "immediate", note: "Integrator leads the response. You stay informed but don't run it." },
+        ],
+      },
+    ],
+  },
+  {
+    id: "integrator",
+    label: "Integrator",
+    emoji: "⚙️",
+    color: "#1E3A8A",
+    tagline: "You are the bridge between vision and execution. Almost every cross-functional question lands on your desk — and most answers come from the Scorecard, the Issues List, or a 1:1.",
+    rule: "If it's a Rock, a Scorecard number, or a leadership-team issue, it belongs to you. If it's vision, culture, or a new bet — escalate to the Visionary in the Same Page Meeting.",
+    categories: [
+      {
+        title: "Scorecard & Rocks",
+        icon: "📊",
+        items: [
+          { q: "A Scorecard number has been red 3 weeks in a row", who: ["integrator"], urgency: "sameday", note: "Add it to the Issues List. IDS in the next L10. Don't let red numbers become the new normal." },
+          { q: "A Rock is going to miss the quarter", who: ["integrator"], urgency: "sameday", note: "Surface it in the L10 immediately. IDS the blocker. Never surprise the team at end-of-quarter." },
+          { q: "We need to set next quarter's Rocks", who: ["visionary", "operator", "director"], urgency: "routine", note: "Quarterly Pulsing session. You drive the agenda; leadership team picks the 3–7 company Rocks." },
+        ],
+      },
+      {
+        title: "Leadership Team & LMA",
+        icon: "👥",
+        items: [
+          { q: "The Operator or Director is struggling with GWC", who: ["integrator"], urgency: "routine", note: "1:1 first. Coach them on the missing dimension (Get it / Want it / Capacity). If it persists, People Analyzer conversation with the Visionary." },
+          { q: "Leadership team is avoiding a hard conversation", who: ["integrator"], urgency: "sameday", note: "Name it in the L10. Put it on the Issues List. IDS it until resolved — that's the Integrator's job." },
+          { q: "The Visionary is stepping on the Integrator's seat", who: ["visionary"], urgency: "sameday", note: "Same Page Meeting conversation. Name the boundary. Protect both seats. This is normal early — Rocket Fuel expects it." },
+        ],
+      },
+      {
+        title: "Execution & Obstacles",
+        icon: "⚡",
+        items: [
+          { q: "Two departments are in conflict", who: ["integrator"], urgency: "sameday", note: "Cross-functional IDS. You are the tie-breaker per Rocket Fuel — don't let it fester." },
+          { q: "A leader is blocked and can't make progress", who: ["integrator"], urgency: "sameday", note: "Remove the obstacle. This is the #1 Integrator job. If you can't remove it, escalate in Same Page Meeting." },
+          { q: "Monthly Finance Review — something looks wrong", who: ["visionary"], urgency: "sameday", note: "You build the deck. You flag the concern. The Visionary decides." },
+          { q: "A compliance or safety issue surfaces", who: ["operator", "director"], urgency: "immediate", note: "You lead the response. Operator and Director execute. Visionary stays informed." },
         ],
       },
     ],
@@ -511,7 +554,10 @@ const CategoryBlock = ({ category, roleColor }) => {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function WhereDoWeGoPage() {
-  const [activeRole, setActiveRole] = useState(ROLES[0])
+  const [selectedId] = useSelectedRoleId()
+  const activeRole = ROLES.find((r) => r.id === selectedId) || ROLES[0]
+  const navigate = useNavigate()
+  const { mobileMode } = useViewMode()
 
   const immediateItems = activeRole.categories
     .flatMap(c => c.items)
@@ -532,25 +578,69 @@ export default function WhereDoWeGoPage() {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: "1.75rem", alignItems: "flex-start" }}>
-        {/* Role Selector */}
-        <div style={{
-          width: 200, flexShrink: 0, background: "#fff",
-          border: "1px solid #E2E8F0", borderRadius: "14px",
-          padding: "1rem 0.75rem", position: "sticky", top: "1rem",
-        }}>
-          <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#94A3B8", margin: "0 0.5rem 0.75rem" }}>
-            Select Your Role
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            {ROLES.map(role => (
-              <RoleButton key={role.id} role={role} isActive={activeRole.id === role.id} onClick={() => setActiveRole(role)} />
-            ))}
+      {/* Current Role + Change Role Button */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{ fontSize: '1.3rem' }}>{activeRole.emoji}</span>
+          <div>
+            <p
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: '#94A3B8',
+                margin: 0,
+              }}
+            >
+              Current Role
+            </p>
+            <p
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                color: activeRole.color,
+                margin: 0,
+              }}
+            >
+              {activeRole.label}
+            </p>
           </div>
         </div>
+        <button
+          onClick={() => navigate('/dashboard/who-am-i')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.55rem 1rem',
+            background: '#fff',
+            border: '1.5px solid #E2E8F0',
+            borderRadius: '10px',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: '#475569',
+            cursor: 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          <UserCircle className="w-4 h-4" />
+          Choose a different Role
+        </button>
+      </div>
 
+      <div>
         {/* Content */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
           {/* Header */}
           <div style={{
             background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px",

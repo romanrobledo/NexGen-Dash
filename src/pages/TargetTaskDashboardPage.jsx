@@ -1,16 +1,10 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ChevronDown,
   ChevronRight,
-  Clock,
-  User2,
-  ExternalLink,
   CheckCircle2,
   Circle,
   ArrowRight,
   Target,
-  Pencil,
   Loader2,
   Plus,
 } from 'lucide-react'
@@ -18,6 +12,7 @@ import { useTargets } from '../hooks/useTargets'
 import { usePriorities } from '../hooks/usePriorities'
 import { useTasks } from '../hooks/useTasks'
 import { useTargetTaskMutations } from '../hooks/useTargetTaskMutations'
+import { useViewMode } from '../contexts/ViewModeContext'
 
 /* ─────────────────────────────────────────────
    DISPLAY-ONLY CONSTANTS (not operational data)
@@ -48,14 +43,13 @@ const FLOW_STEPS = ['Faster Feedback', 'Better Decisions', 'Cleaner Systems', 'S
    ───────────────────────────────────────────── */
 export default function TargetTaskDashboardPage() {
   const navigate = useNavigate()
+  const { mobileMode } = useViewMode()
 
   // Supabase data
   const { targets, loading: targetsLoading } = useTargets()
   const { priorities, loading: prioritiesLoading } = usePriorities()
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks()
   const { toggleTaskCompletion, saving } = useTargetTaskMutations()
-
-  const [expandedTasks, setExpandedTasks] = useState(new Set())
 
   const isLoading = targetsLoading || prioritiesLoading || tasksLoading
 
@@ -78,14 +72,6 @@ export default function TargetTaskDashboardPage() {
     refetchTasks()
   }
 
-  const toggleExpand = (id) => {
-    setExpandedTasks((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
-
   // ── Loading state ──
   if (isLoading) {
     return (
@@ -101,157 +87,257 @@ export default function TargetTaskDashboardPage() {
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
 
       {/* ── HEADER ──────────────────────────── */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-          <Target size={28} color="#2563EB" />
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0F172A', margin: 0 }}>
+      <div style={{ marginBottom: mobileMode ? 20 : 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <Target size={mobileMode ? 22 : 28} color="#2563EB" />
+          <h1 style={{ fontSize: mobileMode ? 20 : 28, fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.2 }}>
             Target & Task Dashboard
           </h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <p style={{ color: '#64748B', fontSize: 14, margin: 0 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: mobileMode ? 'stretch' : 'center',
+          flexDirection: mobileMode ? 'column' : 'row',
+          gap: mobileMode ? 10 : 12,
+          marginTop: mobileMode ? 8 : 0,
+        }}>
+          <p style={{ color: '#64748B', fontSize: mobileMode ? 13 : 14, margin: 0 }}>
             NexGen Priorities — Execution Task List
           </p>
           <button
             onClick={() => navigate('/targets/submit')}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               background: '#2563EB', color: '#fff', border: 'none',
-              borderRadius: 8, padding: '6px 14px', fontSize: 12,
+              borderRadius: 8,
+              padding: mobileMode ? '10px 14px' : '6px 14px',
+              fontSize: mobileMode ? 13 : 12,
               fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              width: mobileMode ? '100%' : 'auto',
             }}
           >
-            <Plus size={14} /> Add New
+            <Plus size={mobileMode ? 16 : 14} /> Add New
           </button>
         </div>
       </div>
 
-      {/* ── BIG TARGETS + PROGRESS ──────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: targets.length > 0 ? `repeat(${Math.min(targets.length + 1, 4)}, 1fr)` : '1fr', gap: 16, marginBottom: 32 }}>
-        {targets.map((t) => (
-          <div
-            key={t.id}
-            style={{
-              background: '#fff',
-              borderRadius: 14,
-              padding: '20px 24px',
-              border: `2px solid ${t.color}20`,
-              boxShadow: '0 1px 3px rgba(0,0,0,.04)',
-            }}
-          >
-            <span style={{ fontSize: 28 }}>{t.icon}</span>
-            <div style={{ fontSize: 20, fontWeight: 800, color: t.color, marginTop: 6 }}>{t.label}</div>
-            <div style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>{t.detail}</div>
-          </div>
-        ))}
-
-        {/* Progress card */}
-        <div
-          style={{
-            background: '#fff',
-            borderRadius: 14,
-            padding: '20px 24px',
-            border: '2px solid #E2E8F0',
-            boxShadow: '0 1px 3px rgba(0,0,0,.04)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#475569' }}>Overall Progress</span>
-            <span style={{ fontSize: 22, fontWeight: 800, color: '#0F172A' }}>
-              {completedCount}/{totalTasks}
-            </span>
-          </div>
-          <div
-            style={{
-              height: 10,
-              borderRadius: 5,
-              background: '#F1F5F9',
-              marginTop: 12,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                height: '100%',
-                width: `${pct}%`,
-                borderRadius: 5,
-                background: completedCount === totalTasks && totalTasks > 0 ? '#16A34A' : '#2563EB',
-                transition: 'width .4s ease',
-              }}
-            />
-          </div>
-          <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 6 }}>
-            {completedCount === totalTasks && totalTasks > 0 ? 'All tasks complete!' : `${pct}% complete · ${totalTasks - completedCount} remaining`}
-          </div>
+      {/* ── BIG TARGETS (single column, elongated) ── */}
+      {targets.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <h2 style={{ fontSize: mobileMode ? 15 : 16, fontWeight: 800, color: '#0F172A', margin: 0 }}>
+            Targets
+          </h2>
+          <span style={{ fontSize: 12, color: '#94A3B8', marginLeft: 'auto' }}>
+            {targets.length} total
+          </span>
         </div>
-      </div>
+      )}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: mobileMode ? 10 : 14,
+        marginBottom: mobileMode ? 20 : 24,
+      }}>
+        {targets.map((t) => {
+          // Parse a number out of the label as a fallback (e.g. "20 New Students" → 20)
+          const labelMatch = String(t.label || '').match(/\d+/)
+          const labelGoal = labelMatch ? parseInt(labelMatch[0], 10) : null
+          const goal = t.goal_value ?? labelGoal ?? 0
+          const current = t.current_value ?? 0
+          const rawPct = goal > 0 ? (current / goal) * 100 : 0
+          const targetPct = Math.max(0, Math.min(100, rawPct))
+          const isComplete = goal > 0 && current >= goal
 
-      {/* ── PRIORITY SECTIONS ───────────────── */}
-      {prioritiesWithTasks.map((priority) => {
-        const priTasks = priority.tasks
-        if (priTasks.length === 0) return null
-        const priDone = priTasks.filter((t) => t.is_completed).length
-
-        return (
-          <div key={priority.id} style={{ marginBottom: 28 }}>
-            {/* Priority header */}
+          return (
             <div
+              key={t.id}
               style={{
+                background: '#fff',
+                borderRadius: 14,
+                border: `2px solid ${t.color}20`,
+                boxShadow: '0 1px 3px rgba(0,0,0,.04)',
                 display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                marginBottom: 12,
+                alignItems: 'stretch',
+                overflow: 'hidden',
               }}
             >
-              <span
+              <div style={{
+                flex: 1,
+                minWidth: 0,
+                padding: mobileMode ? '14px 16px' : '18px 24px',
+              }}>
+              {/* Header row: icon + label + current/goal + pct */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: mobileMode ? 22 : 26, lineHeight: 1 }}>{t.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: mobileMode ? 15 : 17,
+                      fontWeight: 800,
+                      color: t.color,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {t.label}
+                  </div>
+                  {t.detail && (
+                    <div
+                      style={{
+                        fontSize: mobileMode ? 11 : 12,
+                        color: '#64748B',
+                        marginTop: 2,
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {t.detail}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <span
+                    style={{
+                      fontSize: mobileMode ? 18 : 22,
+                      fontWeight: 800,
+                      color: '#0F172A',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {current}
+                  </span>
+                  <span style={{ fontSize: 13, color: '#94A3B8', fontWeight: 600 }}>
+                    / {goal || '—'}
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: mobileMode ? 13 : 14,
+                    fontWeight: 800,
+                    color: isComplete ? '#10B981' : t.color,
+                    whiteSpace: 'nowrap',
+                    minWidth: 44,
+                    textAlign: 'right',
+                  }}
+                >
+                  {Math.round(targetPct)}%
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  background: priority.color,
-                  color: '#fff',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  letterSpacing: '.3px',
+                  height: 10,
+                  borderRadius: 5,
+                  background: '#F1F5F9',
+                  marginTop: 12,
+                  overflow: 'hidden',
                 }}
               >
-                {priority.code}
-              </span>
-              <span style={{ fontSize: 16, fontWeight: 700, color: '#0F172A' }}>
-                {priority.name}
-              </span>
-              <span style={{ fontSize: 12, color: '#94A3B8', marginLeft: 'auto' }}>
-                {priDone}/{priTasks.length} done
-              </span>
-            </div>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${targetPct}%`,
+                    borderRadius: 5,
+                    background: isComplete
+                      ? 'linear-gradient(90deg, #10B981, #059669)'
+                      : `linear-gradient(90deg, ${t.color}, ${t.color}cc)`,
+                    transition: 'width .4s ease',
+                  }}
+                />
+              </div>
 
-            {/* Task cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {priTasks.map((task) => {
+              {/* Footer caption */}
+              <div
+                style={{
+                  fontSize: 11,
+                  color: '#94A3B8',
+                  marginTop: 6,
+                  fontWeight: 500,
+                }}
+              >
+                {isComplete
+                  ? 'Target reached!'
+                  : goal > 0
+                    ? `${Math.max(goal - current, 0)} to go`
+                    : 'Set a goal to track'}
+              </div>
+              </div>
+
+              {/* Right-side click-through tab */}
+              <button
+                onClick={() => navigate(`/targets/progress#target-${t.id}`)}
+                style={{
+                  background: `${t.color}10`,
+                  border: 'none',
+                  borderLeft: `1px solid ${t.color}25`,
+                  color: t.color,
+                  cursor: 'pointer',
+                  padding: mobileMode ? '0 12px' : '0 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: 'inherit',
+                  transition: 'background .15s',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `${t.color}25`
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = `${t.color}10`
+                }}
+                title="Open target details"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          )
+        })}
+
+      </div>
+
+      {/* ── PER-TASK ELONGATED PROGRESS TILES ── */}
+      {tasks.length > 0 && (
+        <div style={{ marginBottom: mobileMode ? 28 : 36 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <h2 style={{ fontSize: mobileMode ? 15 : 16, fontWeight: 800, color: '#0F172A', margin: 0 }}>
+              Tasks
+            </h2>
+            <span style={{ fontSize: 12, color: '#94A3B8', marginLeft: 'auto' }}>
+              {completedCount}/{totalTasks} done
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: mobileMode ? 8 : 10 }}>
+            {prioritiesWithTasks.flatMap((priority) =>
+              priority.tasks.map((task) => {
                 const done = task.is_completed
-                const expanded = expandedTasks.has(task.id)
+                const taskPct = done ? 100 : 0
                 const tc = TIMELINE_COLORS[task.timeline] || TIMELINE_COLORS.Ongoing
-                const taskTools = Array.isArray(task.tools) ? task.tools : []
-                const taskNotes = Array.isArray(task.notes) ? task.notes : []
-                const taskSteps = Array.isArray(task.steps) ? task.steps : []
-                const taskCrossLinks = Array.isArray(task.cross_links) ? task.cross_links : []
 
                 return (
                   <div
                     key={task.id}
                     style={{
                       background: done ? '#F8FAFC' : '#fff',
-                      borderRadius: 14,
+                      borderRadius: 12,
                       border: `1.5px solid ${done ? '#E2E8F0' : priority.color + '30'}`,
-                      boxShadow: done ? 'none' : '0 1px 4px rgba(0,0,0,.04)',
+                      boxShadow: done ? 'none' : '0 1px 3px rgba(0,0,0,.04)',
+                      display: 'flex',
+                      alignItems: 'stretch',
                       overflow: 'hidden',
                       transition: 'all .2s ease',
                     }}
                   >
-                    {/* Top row */}
-                    <div style={{ padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                    {/* Main content */}
+                    <div
+                      style={{
+                        flex: 1,
+                        padding: mobileMode ? '12px 14px' : '14px 18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: mobileMode ? 10 : 14,
+                        minWidth: 0,
+                      }}
+                    >
                       {/* Completion toggle */}
                       <button
                         onClick={() => handleToggleComplete(task)}
@@ -261,276 +347,177 @@ export default function TargetTaskDashboardPage() {
                           border: 'none',
                           cursor: saving ? 'wait' : 'pointer',
                           padding: 0,
-                          marginTop: 2,
                           flexShrink: 0,
+                          display: 'flex',
                         }}
                         title={done ? 'Mark incomplete' : 'Mark complete'}
                       >
                         {done ? (
-                          <CheckCircle2 size={22} color="#16A34A" />
+                          <CheckCircle2 size={20} color="#16A34A" />
                         ) : (
-                          <Circle size={22} color="#CBD5E1" />
+                          <Circle size={20} color="#CBD5E1" />
                         )}
                       </button>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {/* Task name + badges */}
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
+                        {/* Title row */}
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
                           <span
                             style={{
-                              fontSize: 15,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              background: priority.color,
+                              color: '#fff',
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              letterSpacing: '.3px',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {priority.code}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: mobileMode ? 13 : 14,
                               fontWeight: 700,
                               color: done ? '#94A3B8' : '#0F172A',
                               textDecoration: done ? 'line-through' : 'none',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: mobileMode ? 'normal' : 'nowrap',
+                              flex: mobileMode ? '1 1 100%' : '1 1 auto',
+                              minWidth: 0,
                             }}
                           >
                             {task.task_number}. {task.name}
                           </span>
-
-                          {/* Timeline pill */}
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              color: tc.text,
-                              background: tc.bg,
-                              border: `1px solid ${tc.border}`,
-                              padding: '2px 8px',
-                              borderRadius: 6,
-                            }}
-                          >
-                            {task.timeline}
-                          </span>
-                        </div>
-
-                        {/* Objective */}
-                        <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 8px 0', lineHeight: 1.4 }}>
-                          {task.objective}
-                        </p>
-
-                        {/* Meta row */}
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, fontSize: 12, color: '#94A3B8' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <User2 size={13} /> {task.owner}
-                          </span>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Clock size={13} /> {task.time_estimate}
-                          </span>
-                          {taskTools.length > 0 && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                              {taskTools.map((tool) => (
-                                <span
-                                  key={tool}
-                                  style={{
-                                    background: tool === 'Slack' ? '#4A154B15' : '#F1F5F9',
-                                    color: tool === 'Slack' ? '#4A154B' : '#475569',
-                                    padding: '1px 7px',
-                                    borderRadius: 4,
-                                    fontSize: 11,
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  {tool}
-                                </span>
-                              ))}
+                          {!mobileMode && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 600,
+                                color: tc.text,
+                                background: tc.bg,
+                                border: `1px solid ${tc.border}`,
+                                padding: '1px 7px',
+                                borderRadius: 4,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {task.timeline}
                             </span>
                           )}
                         </div>
 
-                        {/* Owner note */}
-                        {task.owner_note && (
+                        {/* Progress bar */}
+                        <div
+                          style={{
+                            height: 6,
+                            borderRadius: 3,
+                            background: '#F1F5F9',
+                            overflow: 'hidden',
+                          }}
+                        >
                           <div
                             style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 5,
-                              marginTop: 8,
-                              background: '#FFFBEB',
-                              border: '1px solid #FDE68A',
-                              borderRadius: 6,
-                              padding: '3px 10px',
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: '#92400E',
+                              height: '100%',
+                              width: `${taskPct}%`,
+                              borderRadius: 3,
+                              background: done
+                                ? 'linear-gradient(90deg, #10B981, #059669)'
+                                : `linear-gradient(90deg, ${priority.color}, ${priority.color}cc)`,
+                              transition: 'width .4s ease',
                             }}
-                          >
-                            <Pencil size={11} /> {task.owner_note}
-                          </div>
-                        )}
-
-                        {/* Cross-links */}
-                        {taskCrossLinks.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                            {taskCrossLinks.map((link) => (
-                              <button
-                                key={link.path}
-                                onClick={() => navigate(link.path)}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  background: '#EFF6FF',
-                                  color: '#2563EB',
-                                  border: '1px solid #BFDBFE',
-                                  borderRadius: 6,
-                                  padding: '3px 10px',
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                  fontFamily: 'inherit',
-                                  transition: 'background .15s',
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#DBEAFE' }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#EFF6FF' }}
-                              >
-                                <ExternalLink size={11} /> {link.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Expand / collapse action steps */}
-                        {taskSteps.length > 0 && (
-                          <button
-                            onClick={() => toggleExpand(task.id)}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              marginTop: 10,
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: '#64748B',
-                              padding: 0,
-                              fontFamily: 'inherit',
-                            }}
-                          >
-                            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            {expanded ? 'Hide' : 'Show'} Action Steps ({taskSteps.length})
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Expanded section */}
-                    {expanded && (
-                      <div
-                        style={{
-                          borderTop: '1px solid #F1F5F9',
-                          padding: '14px 20px 16px 56px',
-                          background: '#FAFBFC',
-                        }}
-                      >
-                        {/* Notes */}
-                        {taskNotes.length > 0 && (
-                          <div
-                            style={{
-                              background: '#FFF7ED',
-                              border: '1px solid #FED7AA',
-                              borderRadius: 8,
-                              padding: '10px 14px',
-                              marginBottom: 14,
-                            }}
-                          >
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#9A3412', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <Pencil size={11} /> Founder's Notes
-                            </div>
-                            {taskNotes.map((note, i) => (
-                              <div
-                                key={i}
-                                style={{
-                                  fontSize: 12,
-                                  color: '#78350F',
-                                  lineHeight: 1.5,
-                                  marginTop: i > 0 ? 4 : 0,
-                                }}
-                              >
-                                • {note}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Steps */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {taskSteps.map((step, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: 8,
-                                fontSize: 13,
-                                color: '#334155',
-                                lineHeight: 1.5,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  flexShrink: 0,
-                                  width: 20,
-                                  height: 20,
-                                  borderRadius: '50%',
-                                  background: priority.color + '15',
-                                  color: priority.color,
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  marginTop: 1,
-                                }}
-                              >
-                                {i + 1}
-                              </span>
-                              {step}
-                            </div>
-                          ))}
+                          />
                         </div>
                       </div>
-                    )}
+
+                      {/* Percent */}
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: done ? '#10B981' : priority.color,
+                          flexShrink: 0,
+                          minWidth: 36,
+                          textAlign: 'right',
+                        }}
+                      >
+                        {taskPct}%
+                      </span>
+                    </div>
+
+                    {/* Right-side click-through tab */}
+                    <button
+                      onClick={() => navigate(`/targets/tasks#task-${task.id}`)}
+                      style={{
+                        background: done ? '#F1F5F9' : priority.color + '10',
+                        border: 'none',
+                        borderLeft: `1px solid ${done ? '#E2E8F0' : priority.color + '20'}`,
+                        color: done ? '#64748B' : priority.color,
+                        cursor: 'pointer',
+                        padding: mobileMode ? '0 12px' : '0 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'inherit',
+                        transition: 'background .15s',
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = done ? '#E2E8F0' : priority.color + '25'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = done ? '#F1F5F9' : priority.color + '10'
+                      }}
+                      title="Open task details"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
                   </div>
                 )
-              })}
-            </div>
+              })
+            )}
           </div>
-        )
-      })}
+        </div>
+      )}
 
-      {/* ── STRATEGIC THEMES ────────────────── */}
+      {/* ── WHY ARE WE TRACKING EVERYTHING? ── */}
       <div
         style={{
-          marginTop: 40,
-          background: '#0F172A',
+          marginTop: mobileMode ? 28 : 40,
+          background: '#fff',
+          border: '1px solid #E2E8F0',
           borderRadius: 16,
-          padding: '28px 28px 24px',
+          padding: mobileMode ? '20px 18px' : '28px 28px 24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,.04)',
         }}
       >
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: '0 0 6px 0' }}>
-          Strategic Themes
+        <h2 style={{ fontSize: mobileMode ? 16 : 18, fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
+          Why Are We Tracking Everything?
         </h2>
-        <p style={{ fontSize: 13, color: '#94A3B8', margin: '0 0 20px 0' }}>
+        <p style={{ fontSize: mobileMode ? 12 : 13, color: '#64748B', margin: '0 0 16px 0' }}>
           Everything in this plan feeds into one outcome
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: mobileMode ? '1fr' : 'repeat(3, 1fr)', gap: mobileMode ? 10 : 12, marginBottom: mobileMode ? 20 : 24 }}>
           {STRATEGIC_THEMES.map((t) => (
             <div
               key={t.name}
               style={{
-                background: '#1E293B',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
                 borderRadius: 10,
                 padding: '14px 16px',
               }}
             >
               <span style={{ fontSize: 20 }}>{t.icon}</span>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#F1F5F9', marginTop: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', marginTop: 6 }}>
                 {t.name}
               </div>
-              <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 12, color: '#64748B', marginTop: 2, lineHeight: 1.4 }}>
                 {t.detail}
               </div>
             </div>
@@ -551,8 +538,9 @@ export default function TargetTaskDashboardPage() {
             <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span
                 style={{
-                  background: '#2563EB',
-                  color: '#fff',
+                  background: '#EFF6FF',
+                  color: '#2563EB',
+                  border: '1px solid #BFDBFE',
                   fontSize: 12,
                   fontWeight: 700,
                   padding: '6px 14px',
@@ -561,14 +549,14 @@ export default function TargetTaskDashboardPage() {
               >
                 {step}
               </span>
-              {i < FLOW_STEPS.length - 1 && <ArrowRight size={16} color="#475569" />}
+              {i < FLOW_STEPS.length - 1 && <ArrowRight size={16} color="#CBD5E1" />}
             </div>
           ))}
         </div>
       </div>
 
       {/* ── FOOTER ──────────────────────────── */}
-      <div style={{ textAlign: 'center', padding: '28px 0 12px', fontSize: 12, color: '#CBD5E1' }}>
+      <div style={{ textAlign: 'center', padding: '28px 0 12px', fontSize: 12, color: '#94A3B8' }}>
         NexGen Priorities · Brandwave Holdings · Prepared Feb 2026
       </div>
     </div>

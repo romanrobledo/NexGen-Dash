@@ -1,62 +1,118 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClipboardList, ArrowRight } from 'lucide-react'
+import { ClipboardList, ArrowRight, UserCircle } from 'lucide-react'
+import { useViewMode } from '../contexts/ViewModeContext'
+import { useSelectedRoleId } from '../hooks/useSelectedRole'
 
 // ─── ROLE DATA ───────────────────────────────────────────────────────────────
 const ROLES = [
   {
-    id: 'founder',
-    label: 'Founder',
+    id: 'visionary',
+    label: 'Visionary',
     emoji: '👑',
     color: '#0F172A',
-    tagline: 'You build the machine. Everyone else runs their lane inside it.',
+    tagline: 'You see the future. Your Integrator builds the road to it.',
     overview:
-      "The Founder sets the vision and owns the financial health of NexGen. You do not run daily operations — that is the Operator and Director. Your job is to build systems, monitor the numbers, make strategic decisions, and ensure the business can scale. With 14 team members and a daycare, treating separate departments as distinct entities creates unnecessary complexity. The real constraint is filling seats profitably. Everything else is noise. Collapse to 3 core functions with clear ownership — and track only 10–12 numbers.",
+      "The Visionary is the founder seat described in Rocket Fuel. Your job is big ideas, culture, brand, and the biggest relationships — not daily operations. You generate 10–20 ideas a week and hand the best ones to your Integrator to filter and execute. You own the 3-Year Picture and the long-term why, while your Integrator owns the 90-day what and how. If you're deep in day-to-day problem solving, that's a sign your Integrator isn't fully activated — or you're stepping over them.",
     focusAreas: [
       {
-        pillar: 'Enrollment',
-        subtitle: 'Marketing + Sales',
-        color: '#2563EB',
+        pillar: 'Vision & Strategy',
+        subtitle: '3-Year Picture + Core Focus',
+        color: '#0F172A',
         items: [
-          { label: 'Owner', detail: 'Robyn + Robyne + Ed' },
-          { label: 'Target', detail: '🎯 20 new students  ·  ⭐ 100 customer reviews' },
-          { label: 'Scope', detail: 'Ads, inquiries, tours, enrollments, reviews' },
-          { label: 'KPIs', detail: 'New leads/week, Tours held/week, New enrollments/week, Occupancy %' },
+          { label: 'Owner', detail: 'You (Visionary)' },
+          { label: 'Scope', detail: 'Where NexGen is going, what we stand for, what we will never be' },
+          { label: 'Cadence', detail: 'Annual planning · Quarterly pulse with Integrator' },
+          { label: 'Output', detail: 'Written 3-Year Picture, Core Values, Core Focus (purpose + niche)' },
         ],
       },
       {
-        pillar: 'Experience & Retention',
-        subtitle: 'Fulfillment + CS + HR',
+        pillar: 'Culture, Brand & Relationships',
+        subtitle: 'The voice of NexGen',
+        color: '#7C3AED',
+        items: [
+          { label: 'Owner', detail: 'You + Robyn for execution' },
+          { label: 'Scope', detail: 'Brand positioning, community, major partners, hero families, press' },
+          { label: 'KPIs', detail: 'Reviews, community mentions, partner relationships, culture health' },
+        ],
+      },
+      {
+        pillar: 'R&D + New Bets',
+        subtitle: 'Ideas → Experiments',
         color: '#059669',
         items: [
-          { label: 'Owner', detail: 'Rachel (Director) + Robyn' },
-          { label: 'Scope', detail: 'Classroom quality, TRS, parent happiness, kid retention' },
-          { label: 'KPIs', detail: '% classrooms green on TRS, Staff attendance, Family churn %, Parent complaints' },
-        ],
-      },
-      {
-        pillar: 'Cash & Admin',
-        subtitle: 'Targets + Tech',
-        color: '#DC2626',
-        items: [
-          { label: 'Owner', detail: 'You (+ bookkeeper/admin)' },
-          { label: 'Scope', detail: 'Billing, collections, payroll, basic HR paperwork' },
-          { label: 'KPIs', detail: 'Total revenue & net profit, Avg revenue/child, Payroll % of revenue, On-time collection rate' },
+          { label: 'Owner', detail: 'You generate · Integrator filters + executes' },
+          { label: 'Scope', detail: 'New programs, pricing experiments, second location, new offers' },
+          { label: 'Rule', detail: "Don't chase more than one bet at a time without Integrator buy-in" },
         ],
       },
     ],
     responsibilities: [
-      'Own the financial health of NexGen — revenue, expenses, profit margin',
-      'Set the vision, quarterly goals, and growth strategy',
-      'Run the 3-function model: Enrollment, Experience & Retention, Cash & Admin',
-      'Review 10–12 KPIs weekly and monthly — not more',
-      'Conduct Monthly Finance Review with Robyn (60–90 min)',
-      'Lead Weekly Leadership Memos with Robyn and Rachel (45–60 min)',
-      'Request 3 reports monthly from bookkeeper by the 15th: P&L, Balance Sheet, Aged Receivables',
-      'Make one specific finance decision every monthly review',
-      'Build and improve the systems that let the business run without you in the room',
+      'Own the Vision — 3-Year Picture, Core Values, Core Focus, 10-Year Target',
+      'Generate ideas and hand them to the Integrator — do not execute them yourself',
+      'Lead culture and brand — you are the voice and the face of NexGen',
+      'Manage the biggest relationships: major partners, top families, community, press',
+      'Walk the building regularly — feel the culture, then report signals to the Integrator',
+      'Meet weekly 1:1 with your Integrator (the Same Page Meeting) — resolve the top 3 issues',
+      'Make the final call on the handful of decisions only the founder can make',
+      'Hold the Integrator accountable to the Scorecard — do not run the Scorecard yourself',
+      'Protect your time for vision work — if you are firefighting, the Integrator is missing something',
     ],
-    note: "You don't 'just monitor it.' You monitor + decide. Your job is to stare at a few key numbers and have the courage to pull the obvious lever: raise price, fill more seats, or cut dumb costs.",
+    note: "Rocket Fuel rule: The Visionary owns the 'who, why, and what.' The Integrator owns the 'how, when, and where.' If you're doing both, you don't have an Integrator yet — you have an assistant.",
+  },
+  {
+    id: 'integrator',
+    label: 'Integrator',
+    emoji: '⚙️',
+    color: '#1E3A8A',
+    tagline: 'You run the machine. You make the vision real, day after day.',
+    overview:
+      "The Integrator is the Rocket Fuel counterpart to the Visionary. Your job is to harmoniously integrate the major functions of NexGen, run the leadership team through LMA (Leadership, Management, Accountability), and turn the Visionary's ideas into a predictable operating rhythm. You filter ideas, remove obstacles, run the Scorecard, and resolve the issues between departments that nobody else can. If the Visionary is the gas, you are the engine — without you, the rocket fuel just burns.",
+    focusAreas: [
+      {
+        pillar: 'LMA — Leadership Team',
+        subtitle: 'Leadership + Management + Accountability',
+        color: '#1E3A8A',
+        items: [
+          { label: 'Owner', detail: 'You (Integrator)' },
+          { label: 'Direct Reports', detail: 'Director, Front Desk Manager, Marketing lead, Bookkeeper' },
+          { label: 'Rhythm', detail: 'Weekly L10 leadership meeting · Quarterly 1:1 conversations' },
+          { label: 'Rule', detail: 'Right people in right seats. Address wrong seats within a quarter.' },
+        ],
+      },
+      {
+        pillar: 'Run the 3-Function Machine',
+        subtitle: 'Enrollment · Experience · Cash',
+        color: '#2563EB',
+        items: [
+          { label: 'Scope', detail: 'Enrollment funnel, Experience & Retention, Cash & Admin' },
+          { label: 'KPIs owned', detail: 'All 10–12 weekly Scorecard numbers — you chase the red ones' },
+          { label: 'Deliverable', detail: 'Weekly Scorecard review, monthly P&L review, quarterly Rocks' },
+        ],
+      },
+      {
+        pillar: 'Filter Ideas + Remove Obstacles',
+        subtitle: 'Protect the team from noise',
+        color: '#DC2626',
+        items: [
+          { label: 'Scope', detail: "Triage Visionary's ideas — say 'not now' more than 'yes'" },
+          { label: 'Issue solving', detail: 'Use IDS (Identify · Discuss · Solve) on the top 3 issues weekly' },
+          { label: 'Escalate', detail: 'Only the handful of calls that truly require the Visionary' },
+        ],
+      },
+    ],
+    responsibilities: [
+      'Run the weekly Level 10 leadership meeting — the heartbeat of the business',
+      'Own the Scorecard — 10–12 numbers, reviewed every week, red numbers become issues',
+      'Turn the Visionary\'s 3-Year Picture into 90-day Rocks and weekly priorities',
+      'Lead the leadership team through LMA — Leadership, Management, Accountability',
+      'Resolve cross-functional issues between Director, Front Desk, Marketing, and Kitchen',
+      'Filter incoming ideas from the Visionary — protect the team from whiplash',
+      'Run the Monthly Finance Review with the Visionary — own the deck',
+      'Make sure every direct report has clear quarterly Rocks and a weekly scorecard',
+      'Remove obstacles for the Director so she can run the floor without friction',
+      'Meet weekly 1:1 with the Visionary (Same Page Meeting) — stay on the same page',
+    ],
+    note: "Rocket Fuel rule: An Integrator is not a COO, not a chief of staff, and not an assistant. You have the authority to run the company day-to-day. If you're asking the Visionary to sign off on operational decisions, you don't have enough rope — fix that conversation first.",
   },
   {
     id: 'operator',
@@ -88,10 +144,24 @@ const ROLES = [
           { label: 'Tours', detail: 'Conversion rates, tour quality, and follow-up execution' },
         ],
       },
+      {
+        pillar: 'Operating System Ownership',
+        subtitle: 'The way NexGen runs',
+        color: '#0F172A',
+        items: [
+          { label: 'Metric Ownership', detail: 'Own the Scorecard — every KPI has an owner, a target, and a weekly number. You set it and enforce it.' },
+          { label: 'Meeting Cadence', detail: 'Level 10 leadership meeting weekly, Same Page with Visionary, quarterly Rocks review, annual planning.' },
+          { label: 'Organizational Hierarchy', detail: 'Maintain the accountability chart — every seat has one owner, every owner knows their five roles.' },
+          { label: 'Key Performance Standards', detail: 'Set the non-negotiables for safety, TRS, parent communication, curriculum delivery, and financial health.' },
+          { label: 'Risk & Continuity', detail: 'Crisis protocols, business continuity, emergency procedures — nothing should surprise you.' },
+        ],
+      },
     ],
     responsibilities: [
       'Set the vision, goals, and quarterly priorities for NexGen',
       'Oversee all department leads and hold them accountable to their KPIs',
+      'Own and maintain the NexGen Operating System — the scorecard, meeting cadence, org chart, and performance standards that keep every department aligned',
+      'Ensure every department lead runs their lane inside the Operating System (updates their numbers, shows up to L10, executes their Rocks)',
       'Manage business finances, enrollment targets, and growth strategy',
       'Build and maintain the systems that make the business run without you in the room',
       'Make hiring decisions for leadership-level roles',
@@ -99,7 +169,8 @@ const ROLES = [
       'Identify problems before they become crises',
       'Ensure the Director has everything they need to execute daily operations',
     ],
-    note: "Your job is to work ON the business, not IN it. If you're solving problems that someone else should own, that's a systems gap to fix.",
+    note: "Your job is to work ON the business, not IN it. The Operating System IS the business running without you — if something keeps breaking, the OS has a gap to fix.",
+    operatingSystem: true,
   },
   {
     id: 'director',
@@ -350,13 +421,15 @@ const RoleCard = ({ role, isActive, onClick }) => (
 )
 
 export default function WhatDoIDoPage() {
-  const [activeRole, setActiveRole] = useState(ROLES[0])
+  const [selectedId] = useSelectedRoleId()
+  const activeRole = ROLES.find((r) => r.id === selectedId) || ROLES[0]
   const navigate = useNavigate()
+  const { mobileMode } = useViewMode()
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Page Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center gap-4 mb-3">
           <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center">
             <ClipboardList className="w-6 h-6 text-white" />
@@ -389,47 +462,41 @@ export default function WhatDoIDoPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div style={{ display: 'flex', gap: '1.75rem', alignItems: 'flex-start' }}>
-        {/* Role Selector */}
-        <div
-          style={{
-            width: 200,
-            flexShrink: 0,
-            background: '#fff',
-            border: '1px solid #E2E8F0',
-            borderRadius: '14px',
-            padding: '1rem 0.75rem',
-            position: 'sticky',
-            top: '1rem',
-          }}
-        >
-          <p
-            style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: '#94A3B8',
-              margin: '0 0.5rem 0.75rem',
-            }}
-          >
-            Select Your Role
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {ROLES.map((role) => (
-              <RoleCard
-                key={role.id}
-                role={role}
-                isActive={activeRole.id === role.id}
-                onClick={() => setActiveRole(role)}
-              />
-            ))}
-          </div>
-        </div>
+      {/* Choose a different Role button */}
+      <button
+        onClick={() => navigate('/dashboard/who-am-i')}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '0.5rem 0.95rem',
+          borderRadius: 10,
+          border: '1.5px solid #E2E8F0',
+          background: '#fff',
+          color: '#475569',
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          marginBottom: '1rem',
+          transition: 'all .15s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#CBD5E1'
+          e.currentTarget.style.background = '#F8FAFC'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#E2E8F0'
+          e.currentTarget.style.background = '#fff'
+        }}
+      >
+        <UserCircle size={14} /> Choose a different Role
+      </button>
 
+      {/* Main Content */}
+      <div>
         {/* Role Detail */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ minWidth: 0 }}>
           {/* Role Header */}
           <div
             style={{
@@ -524,7 +591,7 @@ export default function WhatDoIDoPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: `repeat(${activeRole.focusAreas.length > 2 ? 3 : 2}, 1fr)`,
+                gridTemplateColumns: mobileMode ? '1fr' : `repeat(${activeRole.focusAreas.length > 2 ? 3 : 2}, 1fr)`,
                 gap: '1rem',
                 marginBottom: '1rem',
               }}
@@ -627,7 +694,7 @@ export default function WhatDoIDoPage() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                  gridTemplateColumns: mobileMode ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))',
                   gap: '0.65rem',
                 }}
               >
@@ -769,6 +836,67 @@ export default function WhatDoIDoPage() {
               </p>
             </div>
           </div>
+
+          {/* Operating System CTA — Operator only */}
+          {activeRole.operatingSystem && (
+            <button
+              onClick={() => navigate('/operating-system')}
+              style={{
+                background: '#0F172A',
+                border: '1px solid #0F172A',
+                borderRadius: '12px',
+                padding: '1.25rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontFamily: "'DM Sans', sans-serif",
+                color: '#F8FAFC',
+                width: '100%',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <span style={{ fontSize: '1.6rem' }}>⚙️</span>
+                <div>
+                  <p
+                    style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: '#60A5FA',
+                      margin: 0,
+                    }}
+                  >
+                    Your Accountability
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: '#F8FAFC',
+                      margin: '0.1rem 0 0.2rem',
+                    }}
+                  >
+                    Open the NexGen Operating System
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '0.78rem',
+                      color: '#94A3B8',
+                      margin: 0,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Scorecard, meeting cadence, hierarchy, performance standards — the full system you own and enforce.
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5" style={{ color: '#60A5FA', flexShrink: 0 }} />
+            </button>
+          )}
         </div>
       </div>
     </div>

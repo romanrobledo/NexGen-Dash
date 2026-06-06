@@ -1,20 +1,36 @@
-import { useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, UserCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useViewMode } from '../contexts/ViewModeContext'
+import { useSelectedRoleId } from '../hooks/useSelectedRole'
 
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
 const ROLES = [
   {
-    id: 'founder',
-    label: 'Founder',
+    id: 'visionary',
+    label: 'Visionary',
     emoji: '👑',
     color: '#0F172A',
-    headline: 'Because if the business isn\'t healthy, nothing else survives.',
-    body: "Every classroom, every teacher, every meal served, every child who walks through these doors — it all depends on the financial health and strategic clarity of this business. Without revenue, there is no payroll. Without systems, there is no consistency. Without someone watching the numbers and having the courage to make hard decisions, the whole operation drifts. You are not running the daily operation — that is the Operator and Director. But you are running the machine that makes the daily operation possible. The families who trust NexGen are trusting that someone at the top is building something that will last. That someone is you. The real constraint is filling seats profitably. Everything else is noise. When you collapse to 3 core functions, track only 10–12 numbers, and make one clear decision every month — you are protecting every child, every family, and every team member in this building.",
-    weight: "Pricing changes are usually the highest-ROI lever by far. Your job is to stare at a few key numbers every month and have the courage to pull the obvious lever.",
+    headline: "Because without a compelling vision, every team loses the plot.",
+    body: "Per Gino Wickman's Rocket Fuel: a company without a Visionary is a company without a direction, a culture, or a soul. A company without an Integrator is a company without an engine. You are the Visionary seat — the one that protects the future while everyone else protects today. Your job is not to run NexGen. Your job is to point NexGen at the right horizon and make sure the culture, the brand, and the biggest relationships are worthy of what we claim to be. When you stop generating ideas, stop walking the building, stop meeting with community partners, and stop pressure-testing the 3-Year Picture — NexGen starts drifting. The families we serve don't know your name. But they feel the difference between a school with a Visionary who still cares and a school run purely by managers. That difference is why they stay. Your job is to keep that difference intact.",
+    weight: "If you're solving daily problems, you've collapsed into the Integrator seat. Step back out. The highest-leverage thing you can do today is one culture walk, one conversation with your Integrator, and one idea captured for later.",
     stats: [
-      { label: 'Core functions you oversee', value: '3' },
-      { label: 'KPIs across the entire operation', value: '10–12' },
-      { label: 'Finance decisions per monthly review', value: '1 minimum' },
+      { label: 'Ideas you should generate per week', value: '10–20' },
+      { label: 'Top relationships you personally own', value: '~20' },
+      { label: 'Meetings with your Integrator per week', value: '1 Same Page' },
+    ],
+  },
+  {
+    id: 'integrator',
+    label: 'Integrator',
+    emoji: '⚙️',
+    color: '#1E3A8A',
+    headline: "Because vision without execution is just a daydream.",
+    body: "Per Rocket Fuel: the Integrator is the reason ideas become outcomes, chaos becomes rhythm, and leadership teams become actual teams. Without you, the Visionary's best ideas die in a Slack thread and the Director is left to invent the business from the floor up. You are the one who turns the 3-Year Picture into 90-day Rocks, runs the weekly Level 10, owns the Scorecard, and makes sure every leader has what they need. You also do the job nobody wants: telling the Visionary 'not yet' when an idea would break the team. The families who trust NexGen are trusting that someone is making sure staffing is right, finances are healthy, and the classroom experience is consistent — every single day. That person is you. When you do your job well, the Visionary gets to stay in their seat, the Director gets to run her floor, and the children get a school that actually delivers on its promises.",
+    weight: "If the Scorecard is red for 3 weeks in a row and it hasn't become an Issue in the L10, you're managing symptoms instead of leading. Rocket Fuel rule: the Integrator chases red — the Visionary does not.",
+    stats: [
+      { label: 'Weekly numbers you own on the Scorecard', value: '10–12' },
+      { label: 'Company Rocks per quarter', value: '3–7' },
+      { label: 'Level 10 leadership meetings per year', value: '50+' },
     ],
   },
   {
@@ -205,12 +221,15 @@ const RoleButton = ({ role, isActive, onClick }) => (
 )
 
 export default function WhyIsItImportantPage() {
-  const [activeRole, setActiveRole] = useState(ROLES[0])
+  const [selectedId] = useSelectedRoleId()
+  const activeRole = ROLES.find((r) => r.id === selectedId) || ROLES[0]
+  const navigate = useNavigate()
+  const { mobileMode } = useViewMode()
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Page Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center gap-4 mb-3">
           <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center">
             <AlertTriangle className="w-6 h-6 text-white" />
@@ -243,47 +262,70 @@ export default function WhyIsItImportantPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div style={{ display: 'flex', gap: '1.75rem', alignItems: 'flex-start' }}>
-        {/* Role Selector */}
-        <div
-          style={{
-            width: 200,
-            flexShrink: 0,
-            background: '#fff',
-            border: '1px solid #E2E8F0',
-            borderRadius: '14px',
-            padding: '1rem 0.75rem',
-            position: 'sticky',
-            top: '1rem',
-          }}
-        >
-          <p
-            style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: '#94A3B8',
-              margin: '0 0.5rem 0.75rem',
-            }}
-          >
-            Select Your Role
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {ROLES.map((role) => (
-              <RoleButton
-                key={role.id}
-                role={role}
-                isActive={activeRole.id === role.id}
-                onClick={() => setActiveRole(role)}
-              />
-            ))}
+      {/* Current Role + Change Role Button */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{ fontSize: '1.3rem' }}>{activeRole.emoji}</span>
+          <div>
+            <p
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: '#94A3B8',
+                margin: 0,
+              }}
+            >
+              Current Role
+            </p>
+            <p
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                color: activeRole.color,
+                margin: 0,
+              }}
+            >
+              {activeRole.label}
+            </p>
           </div>
         </div>
+        <button
+          onClick={() => navigate('/dashboard/who-am-i')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.55rem 1rem',
+            background: '#fff',
+            border: '1.5px solid #E2E8F0',
+            borderRadius: '10px',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: '#475569',
+            cursor: 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          <UserCircle className="w-4 h-4" />
+          Choose a different Role
+        </button>
+      </div>
 
+      {/* Main Content */}
+      <div>
         {/* Content */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Headline Card */}
           <div
             style={{
@@ -353,7 +395,7 @@ export default function WhyIsItImportantPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
+              gridTemplateColumns: mobileMode ? '1fr' : 'repeat(3, 1fr)',
               gap: '0.85rem',
             }}
           >

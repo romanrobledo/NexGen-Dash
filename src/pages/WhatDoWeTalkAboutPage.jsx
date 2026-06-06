@@ -1,28 +1,44 @@
 import { useState } from "react"
-import { MessageSquare } from "lucide-react"
+import { MessageSquare, UserCircle } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useViewMode } from "../contexts/ViewModeContext"
+import { useSelectedRoleId } from "../hooks/useSelectedRole"
 
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
 const ROLES = [
   {
-    id: "founder",
-    label: "Founder",
+    id: "visionary",
+    label: "Visionary",
     emoji: "👑",
     color: "#0F172A",
-    tagline: "You talk about numbers, strategy, and what needs to change at the system level.",
+    tagline: "You talk about vision, culture, big ideas, and the 3-year picture. You talk TO the Integrator — not around them.",
     channels: [
       {
-        id: "down",
-        label: "You Talk To: Operator + Director",
-        icon: "🔗",
+        id: "integrator",
+        label: "You Talk To: The Integrator",
+        icon: "🤝",
         direction: "down",
-        dirLabel: "Founder → Leadership Team",
+        dirLabel: "Visionary → Integrator (Same Page Meeting)",
         color: "#0F172A",
         topics: [
-          { topic: "Weekly Scoreboard — 4 key numbers", context: "Every Monday with Robyn — Occupancy %, Enrollments, Payroll, Cash in Bank" },
-          { topic: "KPI review and accountability", context: "Weekly Leadership Memos — circle anything red, assign owners" },
-          { topic: "Finance decisions and pricing strategy", context: "Monthly Finance Review — one decision per meeting, no exceptions" },
-          { topic: "Quarterly goals and strategic direction", context: "Quarterly — cascade across all 3 core functions" },
-          { topic: "Vision, culture, and what we're building toward", context: "Full staff meetings — you close with the big picture" },
+          { topic: "Vision, Core Values, and 10-Year Target", context: "Weekly Same Page Meeting — make sure the Integrator understands WHY, not just WHAT" },
+          { topic: "New ideas — captured, not forced", context: "Drop ideas to the Integrator; they filter and decide timing. You do not push every idea into execution" },
+          { topic: "Big bets and R&D directions", context: "Same Page Meeting — what new bets are worth exploring this quarter" },
+          { topic: "Culture, brand, and the feel of the school", context: "Ongoing — name what you see, name what's drifting" },
+          { topic: "Disagreements — surfaced privately", context: "Same Page Meeting — never let daylight show between Visionary and Integrator in front of the team" },
+        ],
+      },
+      {
+        id: "team",
+        label: "You Talk To: The Leadership Team",
+        icon: "👥",
+        direction: "down",
+        dirLabel: "Visionary → Operator + Director",
+        color: "#1E3A8A",
+        topics: [
+          { topic: "Vision reinforcement and the big picture", context: "Weekly L10 — attend, contribute vision context, but let the Integrator run the agenda" },
+          { topic: "Culture and values — named out loud", context: "Full staff meetings — you close with the big picture" },
+          { topic: "Recognition — catch people doing it right", context: "Culture walks and in-the-moment" },
         ],
       },
       {
@@ -30,26 +46,91 @@ const ROLES = [
         label: "You Talk To: External",
         icon: "🌐",
         direction: "out",
-        dirLabel: "Founder → Community / Partners",
+        dirLabel: "Visionary → Community / Partners",
         color: "#0891B2",
         topics: [
-          { topic: "NexGen's vision and positioning", context: "Community events, partner conversations" },
-          { topic: "Growth plans and expansion", context: "When evaluating second location readiness" },
-          { topic: "Strategic partnerships", context: "Technology, community organizations, referral sources" },
+          { topic: "NexGen's vision and positioning", context: "Community events, partner conversations — you are the face of the vision" },
+          { topic: "Top 20 relationships — cultivated monthly", context: "Referral sources, major families, community leaders — Rocket Fuel says the Visionary owns the relationships" },
+          { topic: "Growth plans and second-location vision", context: "When evaluating expansion readiness" },
         ],
       },
     ],
     never: [
-      "Bypass the Operator or Director to manage individual staff — route it through them",
-      "Handle billing, collections, or payroll directly — delegate to bookkeeper/admin",
-      "Get pulled into daily fires that the Operator should be solving",
-      "Skip the monthly finance review — no meeting ends without a specific finance decision",
+      "Bypass the Integrator to directly manage Operator or Director — it undermines the seat and confuses the team",
+      "Push every new idea into execution — drop it to the Integrator and let them filter",
+      "Run the Level 10 meeting — that's the Integrator's seat per Rocket Fuel",
+      "Get pulled into daily fires — that's what the Integrator exists to handle",
+      "Contradict the Integrator in front of the leadership team — handle it in the Same Page Meeting",
     ],
     systems: {
-      hub: "Slack",
-      hubNote: "Slack is the central communication platform for NexGen. Every team, every function, every department routes through it. If it's not in Slack, it didn't happen.",
-      focal: "NexGen Operating System",
-      focalNote: "This software is the single source of truth for role clarity, procedures, KPIs, escalation paths, and meeting cadences. Slack is where you communicate. The NexGen OS is where you operate.",
+      hub: "Same Page Meeting",
+      hubNote: "Your primary communication channel is the weekly Same Page Meeting with the Integrator. Everything else — ideas, disagreements, new bets — flows through that meeting. Slack is for async; the Same Page Meeting is for alignment.",
+      focal: "The V/TO (Vision/Traction Organizer)",
+      focalNote: "The V/TO is the shared document between Visionary and Integrator that holds Core Values, Core Focus, 10-Year Target, Marketing Strategy, 3-Year Picture, and 1-Year Plan. You own the top half (vision); the Integrator owns the bottom half (traction).",
+    },
+  },
+  {
+    id: "integrator",
+    label: "Integrator",
+    emoji: "⚙️",
+    color: "#1E3A8A",
+    tagline: "You talk about Rocks, the Scorecard, the Issues List, and what's breaking. You are the voice of execution — and the filter between the Visionary and the team.",
+    channels: [
+      {
+        id: "visionary",
+        label: "You Talk To: The Visionary",
+        icon: "🤝",
+        direction: "up",
+        dirLabel: "Integrator → Visionary (Same Page Meeting)",
+        color: "#0F172A",
+        topics: [
+          { topic: "Reality check on new ideas", context: "Same Page Meeting — which ideas are feasible, which are noise, which are brilliant" },
+          { topic: "Team health and LMA gaps", context: "Which leaders are struggling with Leadership/Management/Accountability" },
+          { topic: "Rock progress and what's off-track", context: "Weekly — keep the Visionary informed without dragging them into the weeds" },
+          { topic: "Disagreements — surfaced privately", context: "Same Page Meeting — push back on ideas that would break the machine" },
+        ],
+      },
+      {
+        id: "leadership",
+        label: "You Talk To: The Leadership Team",
+        icon: "📋",
+        direction: "down",
+        dirLabel: "Integrator → Operator + Director",
+        color: "#1E3A8A",
+        topics: [
+          { topic: "The Scorecard — 10–12 weekly numbers", context: "Every L10 Meeting — review, flag anything off-track, assign IDS" },
+          { topic: "Quarterly Rocks — 3–7 per quarter", context: "Quarterly Pulsing — set them, then weekly check in L10" },
+          { topic: "The Issues List — IDS until solved", context: "Weekly L10 — Identify, Discuss, Solve. Every issue resolved or scheduled" },
+          { topic: "Cross-functional obstacle removal", context: "Anytime a leader is blocked — you unblock them" },
+          { topic: "People Analyzer — GWC for every seat", context: "Does each leader Get it, Want it, have the Capacity? If not, coach or replace" },
+          { topic: "LMA — Leadership, Management, Accountability", context: "1:1s with direct reports — coach them on how to run their own team" },
+        ],
+      },
+      {
+        id: "external",
+        label: "You Talk To: External",
+        icon: "🌐",
+        direction: "out",
+        dirLabel: "Integrator → Vendors / Finance",
+        color: "#059669",
+        topics: [
+          { topic: "Bookkeeper and financial partners", context: "Monthly Finance Review — you build the deck, Visionary decides" },
+          { topic: "Vendors and operational partners", context: "Ongoing — the Integrator owns vendor relationships" },
+        ],
+      },
+    ],
+    never: [
+      "Make vision or strategy decisions without the Visionary — stay in your seat",
+      "Hide bad news from the Visionary — the Same Page Meeting is where it gets surfaced",
+      "Let the leadership team see daylight between you and the Visionary — always present a united front",
+      "Skip the weekly L10 — it's the heartbeat of the company per Rocket Fuel",
+      "Avoid the hard people conversations — the Integrator owns LMA and accountability",
+    ],
+    systems: {
+      hub: "The Level 10 Meeting",
+      hubNote: "Your primary communication channel is the weekly L10 with the leadership team. Same day, same time, same agenda, every week. Scorecard, Rocks, Issues, IDS, To-Dos. If it's not on the Issues List, it's not getting solved.",
+      focal: "The Scorecard + Issues List",
+      focalNote: "The Scorecard (10–12 numbers) tells you what's breaking before anyone can hide it. The Issues List is where everything that's off-track gets surfaced and solved. These two documents are your daily operating tools.",
     },
   },
   {
@@ -912,6 +993,7 @@ const DirectionBadge = ({ direction }) => {
 
 const ChannelCard = ({ channel, roleColor }) => {
   const [open, setOpen] = useState(true)
+  const { mobileMode } = useViewMode()
   return (
     <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden" }}>
       <button onClick={() => setOpen(!open)} style={{
@@ -940,7 +1022,7 @@ const ChannelCard = ({ channel, roleColor }) => {
         <div style={{ borderTop: `1px solid ${channel.color}20` }}>
           {/* Column headers */}
           <div style={{
-            display: "grid", gridTemplateColumns: "1fr 1.2fr",
+            display: mobileMode ? "none" : "grid", gridTemplateColumns: "1fr 1.2fr",
             padding: "0.5rem 1.25rem",
             background: "#F8FAFC",
             borderBottom: "1px solid #F1F5F9",
@@ -950,7 +1032,7 @@ const ChannelCard = ({ channel, roleColor }) => {
           </div>
           {channel.topics.map((t, i) => (
             <div key={i} style={{
-              display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "1rem",
+              display: "grid", gridTemplateColumns: mobileMode ? "1fr" : "1fr 1.2fr", gap: mobileMode ? "0.35rem" : "1rem",
               padding: "0.75rem 1.25rem",
               borderBottom: i < channel.topics.length - 1 ? "1px solid #F8FAFC" : "none",
               background: i % 2 === 0 ? "#fff" : "#FAFBFC",
@@ -973,7 +1055,10 @@ const ChannelCard = ({ channel, roleColor }) => {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function WhatDoWeTalkAboutPage() {
-  const [activeRole, setActiveRole] = useState(ROLES[0])
+  const [selectedId] = useSelectedRoleId()
+  const activeRole = ROLES.find((r) => r.id === selectedId) || ROLES[0]
+  const navigate = useNavigate()
+  const { mobileMode } = useViewMode()
 
   return (
     <div>
@@ -993,25 +1078,69 @@ export default function WhatDoWeTalkAboutPage() {
       {/* Meeting Agenda Framework */}
       <MeetingAgendaFramework />
 
-      <div style={{ display: "flex", gap: "1.75rem", alignItems: "flex-start" }}>
-        {/* Role Selector */}
-        <div style={{
-          width: 200, flexShrink: 0, background: "#fff",
-          border: "1px solid #E2E8F0", borderRadius: "14px",
-          padding: "1rem 0.75rem", position: "sticky", top: "1rem",
-        }}>
-          <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#94A3B8", margin: "0 0.5rem 0.75rem" }}>
-            Select Your Role
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            {ROLES.map(role => (
-              <RoleButton key={role.id} role={role} isActive={activeRole.id === role.id} onClick={() => setActiveRole(role)} />
-            ))}
+      {/* Current Role + Change Role Button */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{ fontSize: '1.3rem' }}>{activeRole.emoji}</span>
+          <div>
+            <p
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: '#94A3B8',
+                margin: 0,
+              }}
+            >
+              Current Role
+            </p>
+            <p
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                color: activeRole.color,
+                margin: 0,
+              }}
+            >
+              {activeRole.label}
+            </p>
           </div>
         </div>
+        <button
+          onClick={() => navigate('/dashboard/who-am-i')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.55rem 1rem',
+            background: '#fff',
+            border: '1.5px solid #E2E8F0',
+            borderRadius: '10px',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: '#475569',
+            cursor: 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          <UserCircle className="w-4 h-4" />
+          Choose a different Role
+        </button>
+      </div>
 
+      <div>
         {/* Content */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
           {/* Header */}
           <div style={{
             background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px",
@@ -1042,7 +1171,7 @@ export default function WhatDoWeTalkAboutPage() {
           {activeRole.systems && (
             <div style={{
               background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px",
-              padding: "1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem",
+              padding: "1.5rem", display: "grid", gridTemplateColumns: mobileMode ? "1fr" : "1fr 1fr", gap: "1rem",
             }}>
               <div style={{
                 background: "#4A154B08", border: "1.5px solid #4A154B25", borderRadius: "12px",

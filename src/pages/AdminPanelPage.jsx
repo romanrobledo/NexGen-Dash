@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useViewMode } from '../contexts/ViewModeContext'
+import { NAV_PERMISSIONS } from '../lib/navPermissions'
 import {
   Users,
   Shield,
@@ -17,6 +20,17 @@ import {
   Mail,
   KeyRound,
   Send,
+  Palette,
+  Plug,
+  Webhook,
+  Trash2,
+  Copy,
+  Check,
+  Calendar,
+  MessageSquare,
+  CreditCard,
+  Database,
+  MailPlus,
 } from 'lucide-react'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -27,20 +41,9 @@ const ALL_ROLES = [
   'kitchen-manager', 'asst-kitchen', 'bus-driver',
 ]
 
-const PERMISSION_KEYS = [
-  { key: 'dashboard', label: 'S.A.N.D.' },
-  { key: 'targets', label: 'Targets' },
-  { key: 'compass', label: 'Compass' },
-  { key: 'staff_database', label: 'Staff DB' },
-  { key: 'library', label: 'Library' },
-  { key: 'calendars', label: 'Calendars' },
-  { key: 'lesson_plans', label: 'Lessons' },
-  { key: 'families', label: 'Families' },
-  { key: 'classrooms', label: 'Classrooms' },
-  { key: 'books', label: 'Books' },
-  { key: 'billing', label: 'Billing' },
-  { key: 'admin_panel', label: 'Admin' },
-]
+// Permissions grid columns come straight from the shared nav-permissions list,
+// so adding a new top-level menu in the sidebar automatically adds a column here.
+const PERMISSION_KEYS = NAV_PERMISSIONS
 
 function roleBadgeColor(role) {
   const colors = {
@@ -68,7 +71,7 @@ function formatRole(role) {
 // ─── Tab Navigation ──────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'users', label: 'User Management', icon: Users },
+  { id: 'users', label: 'Staff Accounts', icon: Users },
   { id: 'permissions', label: 'Permissions', icon: Shield },
   { id: 'settings', label: 'System Settings', icon: Settings },
 ]
@@ -76,43 +79,42 @@ const TABS = [
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function AdminPanelPage() {
-  const [activeTab, setActiveTab] = useState('users')
+  const { mobileMode } = useViewMode()
+  const location = useLocation()
+
+  // Derive active view from URL path
+  const path = location.pathname
+  const activeTab =
+    path === '/admin/permissions' ? 'permissions' :
+    path === '/admin/settings/integrations' ? 'integrations' :
+    path === '/admin/settings/webhooks' ? 'webhooks' :
+    path === '/admin/settings/theme' || path === '/admin/settings' ? 'theme' :
+    'users'
+
+  // Dynamic page titles
+  const pageInfo = {
+    users: { title: 'Staff Management', subtitle: 'Manage staff accounts and profiles' },
+    permissions: { title: 'Permissions', subtitle: 'Manage role-based access controls' },
+    theme: { title: 'Theme & Appearance', subtitle: 'Customize how the dashboard looks and feels' },
+    integrations: { title: 'Integrations', subtitle: 'Connect external services and tools' },
+    webhooks: { title: 'Webhooks', subtitle: 'Send platform events to external endpoints' },
+  }
 
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{pageInfo[activeTab].title}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          Manage users, permissions, and system settings
+          {pageInfo[activeTab].subtitle}
         </p>
-      </div>
-
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6 w-fit">
-        {TABS.map((tab) => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.id
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          )
-        })}
       </div>
 
       {/* Tab content */}
       {activeTab === 'users' && <UsersTab />}
       {activeTab === 'permissions' && <PermissionsTab />}
-      {activeTab === 'settings' && <SettingsTab />}
+      {activeTab === 'theme' && <SettingsTab />}
+      {activeTab === 'integrations' && <IntegrationsTab />}
+      {activeTab === 'webhooks' && <WebhooksTab />}
     </div>
   )
 }
@@ -127,6 +129,8 @@ function UsersTab() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
   const [toast, setToast] = useState(null)
+  const { mobileMode } = useViewMode()
+  const navigate = useNavigate()
 
   const fetchStaff = useCallback(async () => {
     if (!supabase) return
@@ -159,18 +163,78 @@ function UsersTab() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className={`mb-4 ${mobileMode ? 'flex flex-col gap-3' : 'flex items-center justify-between'}`}>
         <h2 className="text-lg font-semibold text-gray-900">Staff Accounts</h2>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+          className={`flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors ${mobileMode ? 'w-full' : ''}`}
         >
           <UserPlus className="w-4 h-4" />
           Create User
         </button>
       </div>
 
-      {/* Table */}
+      {/* Mobile: stacked cards */}
+      {mobileMode ? (
+        <div className="space-y-3">
+          {loading ? (
+            <div className="text-center py-8 text-gray-400 text-sm">Loading staff...</div>
+          ) : staffList.length === 0 ? (
+            <div className="text-center py-8 text-gray-400 text-sm">No staff records found.</div>
+          ) : (
+            staffList.map((s) => (
+              <div
+                key={s.id}
+                onClick={() => navigate(`/staff/${s.id}`)}
+                className="bg-white border border-gray-200 rounded-xl p-4 space-y-3 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all"
+              >
+                {/* Top row: avatar + name + edit */}
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                    style={{ backgroundColor: s.avatar_color || '#6b7280' }}
+                  >
+                    {(s.first_name?.[0] || '') + (s.last_name?.[0] || '')}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 truncate">
+                      {s.full_name || `${s.first_name} ${s.last_name}`}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate mt-0.5">{s.email || '—'}</div>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingStaff(s) }}
+                    className="text-gray-400 hover:text-blue-600 transition-colors p-1.5 rounded-lg hover:bg-gray-100 shrink-0"
+                    title="Manage user"
+                  >
+                    <Settings2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Bottom row: role + status + login */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${roleBadgeColor(s.role)}`}>
+                    {formatRole(s.role)}
+                  </span>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                    s.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {s.status || 'active'}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    s.auth_user_id
+                      ? 'bg-emerald-50 text-emerald-600'
+                      : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {s.auth_user_id ? 'Linked' : 'No login'}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+      /* Desktop: Table */
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>
@@ -190,7 +254,7 @@ function UsersTab() {
               <tr><td colSpan={6} className="text-center py-8 text-gray-400 text-sm">No staff records found.</td></tr>
             ) : (
               staffList.map((s) => (
-                <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                <tr key={s.id} onClick={() => navigate(`/staff/${s.id}`)} className="border-b border-gray-50 hover:bg-blue-50/50 transition-colors cursor-pointer">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div
@@ -222,7 +286,7 @@ function UsersTab() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => setEditingStaff(s)}
+                      onClick={(e) => { e.stopPropagation(); setEditingStaff(s) }}
                       className="text-gray-400 hover:text-blue-600 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
                       title="Manage user"
                     >
@@ -235,6 +299,7 @@ function UsersTab() {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Create User Modal */}
       {showCreateModal && (
@@ -335,8 +400,8 @@ function CreateUserModal({ onClose, onSuccess, onError }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg my-auto max-h-[calc(100vh-2rem)] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900">Create New User</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -344,7 +409,7 @@ function CreateUserModal({ onClose, onSuccess, onError }) {
           </button>
         </div>
         <form onSubmit={handleCreate} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
               <input
@@ -547,8 +612,8 @@ function EditUserModal({ staff, onClose, onSuccess, onError }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg my-auto max-h-[calc(100vh-2rem)] overflow-y-auto">
         {/* Header with user info */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -634,7 +699,7 @@ function EditUserModal({ staff, onClose, onSuccess, onError }) {
           {/* Role & Status Section */}
           <div>
             <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Role & Status</h4>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                 <select
@@ -694,6 +759,7 @@ function PermissionsTab() {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
   const [dirty, setDirty] = useState(false)
+  const { mobileMode } = useViewMode()
 
   useEffect(() => {
     fetchPermissions()
@@ -777,7 +843,7 @@ function PermissionsTab() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className={`mb-4 ${mobileMode ? 'flex flex-col gap-3' : 'flex items-center justify-between'}`}>
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Role Permissions</h2>
           <p className="text-xs text-gray-400 mt-0.5">Toggle access for each role across all sections</p>
@@ -785,11 +851,11 @@ function PermissionsTab() {
         <button
           onClick={handleSave}
           disabled={!dirty || saving}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
             dirty
               ? 'bg-blue-600 hover:bg-blue-700 text-white'
               : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
+          } ${mobileMode ? 'w-full' : ''}`}
         >
           {saving ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -800,7 +866,61 @@ function PermissionsTab() {
         </button>
       </div>
 
-      {/* Permission Grid */}
+      {/* Mobile: per-role cards */}
+      {mobileMode ? (
+        <div className="space-y-3">
+          {ALL_ROLES.map((role) => {
+            const isFounder = role === 'founder'
+            return (
+              <div
+                key={role}
+                className="bg-white border border-gray-200 rounded-xl p-4"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${roleBadgeColor(role)}`}>
+                    {formatRole(role)}
+                  </span>
+                  {isFounder && (
+                    <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                      Full Access
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {PERMISSION_KEYS.map((p) => {
+                    const enabled = isFounder ? true : (permData[role]?.[p.key] ?? false)
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => togglePerm(role, p.key)}
+                        disabled={isFounder}
+                        className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                          isFounder
+                            ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-70'
+                            : enabled
+                              ? 'border-emerald-200 bg-emerald-50'
+                              : 'border-gray-200 bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="text-xs font-medium text-gray-700 truncate text-left">
+                          {p.label}
+                        </span>
+                        {enabled ? (
+                          <ToggleRight className="w-5 h-5 text-emerald-500 shrink-0" />
+                        ) : (
+                          <ToggleLeft className="w-5 h-5 text-gray-300 shrink-0" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+      /* Desktop: Permission Grid */
       <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -848,6 +968,7 @@ function PermissionsTab() {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   )
 }
@@ -988,6 +1109,435 @@ function SettingsTab() {
           {saving ? 'Saving...' : 'Save Settings'}
         </button>
       </form>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB 4 — Integrations
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Static catalog of integrations the platform supports. Flip `connected` to
+// true for any that are actually wired up — Supabase is the one live one today.
+const INTEGRATION_CATALOG = [
+  {
+    id: 'supabase',
+    name: 'Supabase',
+    description: 'Database, authentication, and realtime subscriptions.',
+    icon: Database,
+    iconBg: 'bg-emerald-50',
+    iconColor: 'text-emerald-600',
+    connected: true,
+    note: 'Core backend — always on.',
+  },
+  {
+    id: 'google-calendar',
+    name: 'Google Calendar',
+    description: 'Sync school events, staff anniversaries, and training schedules.',
+    icon: Calendar,
+    iconBg: 'bg-blue-50',
+    iconColor: 'text-blue-600',
+    connected: false,
+  },
+  {
+    id: 'slack',
+    name: 'Slack',
+    description: 'Push alerts for compliance issues, check-ins, and daily digests.',
+    icon: MessageSquare,
+    iconBg: 'bg-purple-50',
+    iconColor: 'text-purple-600',
+    connected: false,
+  },
+  {
+    id: 'smtp',
+    name: 'Email (SMTP)',
+    description: 'Send transactional emails — invoices, invites, password resets.',
+    icon: MailPlus,
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-600',
+    connected: false,
+  },
+  {
+    id: 'stripe',
+    name: 'Stripe',
+    description: 'Tuition billing, subscription plans, and automatic receipts.',
+    icon: CreditCard,
+    iconBg: 'bg-indigo-50',
+    iconColor: 'text-indigo-600',
+    connected: false,
+  },
+]
+
+function IntegrationsTab() {
+  const { mobileMode } = useViewMode()
+  const [toast, setToast] = useState(null)
+
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  return (
+    <div>
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${
+          toast.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {toast.msg}
+        </div>
+      )}
+
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Connected Services</h2>
+        <p className="text-xs text-gray-400 mt-0.5">Tap an integration to connect or manage.</p>
+      </div>
+
+      <div className={`grid gap-3 ${mobileMode ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'}`}>
+        {INTEGRATION_CATALOG.map((it) => {
+          const Icon = it.icon
+          return (
+            <div
+              key={it.id}
+              className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col hover:border-blue-200 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-lg ${it.iconBg} flex items-center justify-center shrink-0`}>
+                  <Icon className={`w-5 h-5 ${it.iconColor}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{it.name}</h3>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                      it.connected
+                        ? 'bg-emerald-50 text-emerald-600'
+                        : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {it.connected ? 'Connected' : 'Not Connected'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">{it.description}</p>
+                </div>
+              </div>
+
+              {it.note && (
+                <p className="text-[11px] text-gray-400 italic mb-3">{it.note}</p>
+              )}
+
+              <div className="mt-auto pt-2">
+                <button
+                  onClick={() => showToast(
+                    it.connected
+                      ? `${it.name} management coming soon.`
+                      : `${it.name} setup coming soon.`,
+                    'success'
+                  )}
+                  disabled={it.id === 'supabase'}
+                  className={`w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                    it.id === 'supabase'
+                      ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                      : it.connected
+                        ? 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {it.id === 'supabase' ? 'Managed' : it.connected ? 'Manage' : 'Connect'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <p className="text-xs text-gray-400 mt-5">
+        Need something else? Let us know and we'll add it to the roadmap.
+      </p>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB 5 — Webhooks
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Events the platform can emit. Kept in sync with what the app actually publishes.
+const WEBHOOK_EVENTS = [
+  { key: 'staff.checkin',         label: 'Staff check-in'        },
+  { key: 'staff.checkout',        label: 'Staff check-out'       },
+  { key: 'compliance.expiring',   label: 'Compliance expiring'   },
+  { key: 'compliance.expired',    label: 'Compliance expired'    },
+  { key: 'target.completed',      label: 'Target completed'      },
+  { key: 'task.completed',        label: 'Task completed'        },
+  { key: 'billing.invoice.paid',  label: 'Invoice paid'          },
+]
+
+function WebhooksTab() {
+  const { mobileMode } = useViewMode()
+  const [hooks, setHooks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [copiedId, setCopiedId] = useState(null)
+
+  const fetchHooks = useCallback(async () => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('webhooks')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) {
+      // Table might not exist yet — show empty state rather than erroring
+      console.warn('webhooks table unavailable:', error.message)
+      setHooks([])
+    } else {
+      setHooks(data || [])
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { fetchHooks() }, [fetchHooks])
+
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  async function handleDelete(id) {
+    if (!supabase) return
+    if (!confirm('Delete this webhook? External services will stop receiving events.')) return
+    const { error } = await supabase.from('webhooks').delete().eq('id', id)
+    if (error) {
+      showToast(error.message, 'error')
+      return
+    }
+    showToast('Webhook removed')
+    fetchHooks()
+  }
+
+  function handleCopy(id, url) {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 1500)
+    })
+  }
+
+  return (
+    <div>
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${
+          toast.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {toast.msg}
+        </div>
+      )}
+
+      <div className={`mb-4 ${mobileMode ? 'flex flex-col gap-3' : 'flex items-center justify-between'}`}>
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Outgoing Webhooks</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Forward platform events to an external URL as HTTP POST.</p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className={`flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors ${mobileMode ? 'w-full' : ''}`}
+        >
+          <Plus className="w-4 h-4" />
+          Add Webhook
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-gray-400 text-sm">Loading webhooks...</div>
+      ) : hooks.length === 0 ? (
+        <div className="bg-white border border-dashed border-gray-300 rounded-xl p-10 text-center">
+          <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Webhook className="w-6 h-6 text-blue-500" />
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900">No webhooks configured</h3>
+          <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+            Add a webhook to receive real-time notifications when staff check in, compliance
+            items expire, invoices are paid, and more.
+          </p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add your first webhook
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50/50">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Name</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">URL</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Events</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hooks.map((w) => (
+                <tr key={w.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-medium text-gray-900">{w.name || 'Unnamed'}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded truncate max-w-[260px]">{w.url}</code>
+                      <button
+                        onClick={() => handleCopy(w.id, w.url)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-gray-100"
+                        title="Copy URL"
+                      >
+                        {copiedId === w.id
+                          ? <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs text-gray-500">
+                      {Array.isArray(w.events) ? `${w.events.length} event${w.events.length === 1 ? '' : 's'}` : '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                      w.enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {w.enabled ? 'Active' : 'Paused'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => handleDelete(w.id)}
+                      className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50"
+                      title="Delete webhook"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showAddModal && (
+        <AddWebhookModal
+          onClose={() => setShowAddModal(false)}
+          onSuccess={(msg) => { showToast(msg); fetchHooks() }}
+          onError={(msg) => showToast(msg, 'error')}
+        />
+      )}
+    </div>
+  )
+}
+
+function AddWebhookModal({ onClose, onSuccess, onError }) {
+  const [name, setName] = useState('')
+  const [url, setUrl] = useState('')
+  const [events, setEvents] = useState([])
+  const [saving, setSaving] = useState(false)
+
+  function toggleEvent(key) {
+    setEvents((prev) => prev.includes(key) ? prev.filter((e) => e !== key) : [...prev, key])
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!supabase) return
+    if (events.length === 0) {
+      onError('Pick at least one event to subscribe to.')
+      return
+    }
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('webhooks').insert({
+        name,
+        url,
+        events,
+        enabled: true,
+      })
+      if (error) throw error
+      onSuccess(`Webhook "${name}" created`)
+      onClose()
+    } catch (err) {
+      onError(err.message || 'Failed to create webhook')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg my-auto max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">Add Webhook</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input
+              required value={name} onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Slack alerts, Zapier pipeline"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+            <input
+              type="url" required value={url} onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://hooks.example.com/..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">Must be HTTPS. Payloads sent as JSON POST.</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Events</label>
+            <div className="space-y-1.5 max-h-56 overflow-y-auto border border-gray-200 rounded-xl p-3">
+              {WEBHOOK_EVENTS.map((ev) => (
+                <label key={ev.key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900">
+                  <input
+                    type="checkbox"
+                    checked={events.includes(ev.key)}
+                    onChange={() => toggleEvent(ev.key)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>{ev.label}</span>
+                  <code className="ml-auto text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">{ev.key}</code>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
+              Cancel
+            </button>
+            <button
+              type="submit" disabled={saving}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+            >
+              {saving ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              {saving ? 'Creating...' : 'Create Webhook'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

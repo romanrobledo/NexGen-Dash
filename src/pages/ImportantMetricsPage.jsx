@@ -1,5 +1,8 @@
 import { useState } from "react"
-import { BarChart3 } from "lucide-react"
+import { BarChart3, UserCircle } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useViewMode } from "../contexts/ViewModeContext"
+import { useSelectedRoleId } from "../hooks/useSelectedRole"
 
 // ─── METRIC STATUS DEFINITIONS ────────────────────────────────────────────────
 const STATUS = {
@@ -20,56 +23,109 @@ const SCHOOL_METRICS = [
 // ─── ROLE METRICS ─────────────────────────────────────────────────────────────
 const ROLES = [
   {
-    id: "founder",
-    label: "Founder",
+    id: "visionary",
+    label: "Visionary",
     emoji: "\ud83d\udc51",
     color: "#0F172A",
-    tagline: "You track the health of the whole machine across 3 core functions.",
-    north_star: "Are we filling seats profitably \u2014 and is every function owner hitting their 3\u20134 numbers?",
-    cadence: "Weekly scoreboard with Robyn. Monthly finance review. Quarterly deep dive.",
+    tagline: "You don't run the Scorecard — the Integrator does. You watch 3–5 north-star numbers and the health of the V/TO.",
+    north_star: "Is the V/TO still true, is the Integrator hitting the Scorecard, and are we cultivating the right relationships?",
+    cadence: "Weekly Same Page Meeting (Integrator owns the deep numbers). Monthly finance review. Quarterly V/TO pulsing.",
     bigTargets: [
-      { label: "20 New Students", detail: "Shared target — Robyn + Robyne + Ed", icon: "🎯", color: "#2563EB" },
-      { label: "100 Customer Reviews", detail: "Google/Facebook — social proof for enrollment growth", icon: "⭐", color: "#EAB308" },
+      { label: "20 New Students", detail: "Shared target — cultural + brand pull", icon: "\ud83c\udfaf", color: "#2563EB" },
+      { label: "100 Customer Reviews", detail: "Google/Facebook — brand proof for enrollment growth", icon: "\u2b50", color: "#EAB308" },
+      { label: "Integrator Health", detail: "Weekly Same Page Meeting completion + GWC confidence", icon: "\u2699\ufe0f", color: "#1E3A8A" },
     ],
     metrics: [
       {
-        category: "Enrollment KPIs (Robyn \u2014 Weekly)",
-        icon: "\ud83d\udcc8",
+        category: "V/TO Health (Quarterly)",
+        icon: "\ud83c\udfaf",
         items: [
-          { label: "New Leads / Week", target: "Set baseline", green: "Above baseline", yellow: "At baseline", red: "Below baseline" },
-          { label: "Tours Held / Week", target: "Set baseline", green: "Above baseline", yellow: "At baseline", red: "Below baseline" },
-          { label: "New Enrollments / Week", target: "Set baseline", green: "Above baseline", yellow: "At baseline", red: "Below baseline" },
-          { label: "Occupancy %", target: "Enrolled \u00f7 175", green: "85%+", yellow: "70\u201384%", red: "Below 70%" },
+          { label: "Core Values Alive in the Team", target: "Named & reinforced weekly", green: "Named by team unprompted", yellow: "Only named by leadership", red: "Drift \u2014 no one cites them" },
+          { label: "Core Focus Still True", target: "Reviewed quarterly", green: "Still resonates", yellow: "Needs refresh", red: "We're drifting off-focus" },
+          { label: "10-Year Target Clarity", target: "Team can recite it", green: "Everyone knows it", yellow: "Leadership only", red: "Nobody can name it" },
+          { label: "3-Year Picture Alignment", target: "Matches current reality", green: "On track", yellow: "Needs adjustment", red: "Fundamentally stale" },
         ],
       },
       {
-        category: "Experience & Retention KPIs (Rachel \u2014 Weekly/Monthly)",
+        category: "Idea Flow & R&D (Weekly)",
+        icon: "\ud83d\udca1",
+        items: [
+          { label: "Ideas Captured This Week", target: "10\u201320 captured", green: "10+ captured", yellow: "5\u20139", red: "Less than 5 \u2014 you're not dreaming" },
+          { label: "Ideas Dropped to Integrator", target: "All ideas handed off, not forced", green: "Handed off cleanly", yellow: "Some pushed into execution", red: "You're running them yourself" },
+          { label: "Ideas Greenlit by Integrator", target: "1\u20132 per month make the cut", green: "Healthy filter", yellow: "Too many or too few", red: "Integrator rejecting everything or nothing" },
+        ],
+      },
+      {
+        category: "Culture, Brand & Relationships (Monthly)",
         icon: "\u2764\ufe0f",
         items: [
-          { label: "% Classrooms Green on TRS Checklist", target: "100%", green: "All green", yellow: "1\u20132 flagged", red: "3+ flagged" },
-          { label: "Staff Attendance / Call-Outs", target: "95%+ attendance", green: "95%+", yellow: "85\u201394%", red: "Below 85%" },
-          { label: "Family Churn %", target: "Below 5% monthly", green: "Below 5%", yellow: "5\u201310%", red: "Above 10%" },
-          { label: "Parent Complaints / Serious Issues", target: "Zero critical", green: "Zero", yellow: "1\u20132 minor", red: "Any critical or pattern" },
+          { label: "Top 20 Relationships Touched", target: "Monthly outreach", green: "18\u201320 touched", yellow: "10\u201317", red: "Below 10" },
+          { label: "Culture Walks Completed", target: "Weekly floor time", green: "Every week", yellow: "Every other week", red: "Monthly or less" },
+          { label: "Public Reviews (Google/FB)", target: "Growing toward 100", green: "Growing weekly", yellow: "Flat", red: "Declining" },
         ],
       },
       {
-        category: "Cash & Admin KPIs (You \u2014 Monthly)",
-        icon: "\ud83d\udcb0",
+        category: "Rocket Fuel Seat Integrity (Weekly)",
+        icon: "\u2699\ufe0f",
         items: [
-          { label: "Total Revenue & Net Profit", target: "Monthly P&L review", green: "At or above plan", yellow: "Within 10% below", red: "More than 10% below" },
-          { label: "Average Revenue per Child", target: "Revenue \u00f7 enrolled kids", green: "At or above target", yellow: "Slightly below", red: "Significantly below" },
-          { label: "Payroll % of Revenue", target: "~50\u201355%", green: "50\u201355%", yellow: "55\u201365%", red: "Above 65%" },
-          { label: "On-Time Collection Rate", target: "95%+", green: "95%+", yellow: "85\u201394%", red: "Below 85%" },
+          { label: "Same Page Meeting Held", target: "1x per week, non-negotiable", green: "Held this week", yellow: "Rescheduled but held", red: "Skipped" },
+          { label: "On the Same Page After SPM", target: "100% aligned out the door", green: "Fully aligned", yellow: "1 open item", red: "Walked out disagreeing" },
+          { label: "Integrator GWC Confidence", target: "Gets it, Wants it, Capacity", green: "All 3 strong", yellow: "1 dimension shaky", red: "Any dimension missing" },
         ],
       },
+    ],
+  },
+  {
+    id: "integrator",
+    label: "Integrator",
+    emoji: "\u2699\ufe0f",
+    color: "#1E3A8A",
+    tagline: "You own the Scorecard, the Rocks, the Issues List, and the health of the leadership team.",
+    north_star: "Are all 10\u201312 Scorecard numbers green, are the quarterly Rocks on-track, and is the leadership team running LMA?",
+    cadence: "Daily huddle. Weekly L10. Weekly Same Page Meeting with Visionary. Monthly finance deck. Quarterly Rocks review.",
+    bigTargets: [
+      { label: "10\u201312 Scorecard Numbers Green", detail: "The Rocket Fuel standard \u2014 if it's not on the Scorecard, it's not measured", icon: "\ud83d\udcca", color: "#1E3A8A" },
+      { label: "3\u20137 Rocks / Quarter On-Track", detail: "Every Rock has an owner. Every Rock has a due date.", icon: "\ud83e\udea8", color: "#059669" },
+      { label: "50+ L10s / Year", detail: "Weekly drumbeat of execution. Same day, same time, same agenda.", icon: "\ud83d\udccb", color: "#7C3AED" },
+    ],
+    metrics: [
       {
-        category: "Weekly Scoreboard (Quick Check)",
+        category: "The Scorecard (Weekly)",
         icon: "\ud83d\udcca",
         items: [
-          { label: "Occupancy %", target: "Are seats filled?", green: "85%+", yellow: "70\u201384%", red: "Below 70%" },
-          { label: "New Enrollments / Withdrawals", target: "Net positive", green: "Net positive", yellow: "Flat", red: "Net negative" },
-          { label: "Total Payroll Dollars (that week)", target: "In budget", green: "In budget", yellow: "Slightly over", red: "Significantly over" },
+          { label: "Numbers on the Scorecard", target: "10\u201312 numbers", green: "10\u201312", yellow: "6\u20139 or 13\u201315", red: "Less than 6 or more than 15" },
+          { label: "Numbers Green This Week", target: "80%+ green", green: "80%+ green", yellow: "60\u201379%", red: "Below 60%" },
+          { label: "Red Numbers on the Issues List", target: "100% of reds on IL", green: "All surfaced", yellow: "1\u20132 missing", red: "Hiding red numbers" },
+          { label: "Scorecard Reviewed in L10", target: "Every single L10", green: "Every week", yellow: "Occasionally skipped", red: "Skipped multiple weeks" },
+        ],
+      },
+      {
+        category: "Rocks (Quarterly)",
+        icon: "\ud83e\udea8",
+        items: [
+          { label: "Company Rocks Set", target: "3\u20137 per quarter", green: "3\u20137 with owners", yellow: "More than 7 or less than 3", red: "No Rocks or unassigned" },
+          { label: "Rock Completion Rate", target: "80%+ done on-time", green: "80%+", yellow: "60\u201379%", red: "Below 60%" },
+          { label: "Rock Review in L10", target: "Every week", green: "Every week", yellow: "Occasionally", red: "Only at end of quarter" },
+        ],
+      },
+      {
+        category: "Leadership Team Health (Weekly / Monthly)",
+        icon: "\ud83d\udc65",
+        items: [
+          { label: "L10 Rating", target: "8+ out of 10", green: "8+", yellow: "6\u20137", red: "Below 6" },
+          { label: "Issues Solved per L10", target: "IDS to completion", green: "All solved or scheduled", yellow: "1\u20132 lingering", red: "Issues rolling week over week" },
+          { label: "People Analyzer / GWC on Direct Reports", target: "Quarterly check", green: "All seats strong", yellow: "1 seat shaky", red: "Multiple wrong-seat people" },
+          { label: "1:1s Held with Direct Reports", target: "Weekly or biweekly", green: "On schedule", yellow: "1\u20132 missed", red: "Chronically skipped" },
+        ],
+      },
+      {
+        category: "Financial Execution (Monthly)",
+        icon: "\ud83d\udcb0",
+        items: [
+          { label: "Monthly Finance Deck Delivered", target: "By the 20th, every month", green: "On time", yellow: "Within a week late", red: "Missed the month" },
+          { label: "Payroll % of Revenue", target: "50\u201355%", green: "50\u201355%", yellow: "55\u201365%", red: "Above 65%" },
           { label: "Cash in Bank", target: "Above 1 month expenses", green: "Yes", yellow: "Tight", red: "Below 1 month" },
+          { label: "Finance Decision Made Each Month", target: "One clear decision", green: "Made", yellow: "Deferred once", red: "Punted multiple months" },
         ],
       },
     ],
@@ -457,10 +513,12 @@ const RoleButton = ({ role, isActive, onClick }) => (
   </button>
 )
 
-const MetricRow = ({ item, color }) => (
+const MetricRow = ({ item, color }) => {
+  const { mobileMode } = useViewMode()
+  return (
   <div style={{
-    display: "grid", gridTemplateColumns: "1.4fr 0.8fr 0.9fr 0.9fr 0.9fr",
-    gap: "0.5rem", padding: "0.7rem 1.1rem", alignItems: "center",
+    display: "grid", gridTemplateColumns: mobileMode ? "1fr" : "1.4fr 0.8fr 0.9fr 0.9fr 0.9fr",
+    gap: mobileMode ? "0.35rem" : "0.5rem", padding: "0.7rem 1.1rem", alignItems: mobileMode ? "flex-start" : "center",
     borderBottom: "1px solid #F8FAFC",
   }}>
     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -484,10 +542,12 @@ const MetricRow = ({ item, color }) => (
       {"\u2717"} {item.red}
     </span>
   </div>
-)
+  )
+}
 
 const CategoryBlock = ({ cat, color }) => {
   const [open, setOpen] = useState(true)
+  const { mobileMode } = useViewMode()
   return (
     <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden", marginBottom: "0.75rem" }}>
       <button onClick={() => setOpen(!open)} style={{
@@ -506,7 +566,7 @@ const CategoryBlock = ({ cat, color }) => {
         <div>
           {/* Column Headers */}
           <div style={{
-            display: "grid", gridTemplateColumns: "1.4fr 0.8fr 0.9fr 0.9fr 0.9fr",
+            display: mobileMode ? "none" : "grid", gridTemplateColumns: "1.4fr 0.8fr 0.9fr 0.9fr 0.9fr",
             gap: "0.5rem", padding: "0.45rem 1.1rem",
             borderBottom: "2px solid #E2E8F0", background: "#FAFBFC",
           }}>
@@ -527,8 +587,11 @@ const CategoryBlock = ({ cat, color }) => {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function ImportantMetricsPage() {
-  const [activeRole, setActiveRole] = useState(ROLES[0])
+  const [selectedId] = useSelectedRoleId()
+  const activeRole = ROLES.find((r) => r.id === selectedId) || ROLES[0]
   const [showSchool, setShowSchool] = useState(true)
+  const navigate = useNavigate()
+  const { mobileMode } = useViewMode()
 
   return (
     <div>
@@ -545,25 +608,69 @@ export default function ImportantMetricsPage() {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: "1.75rem", alignItems: "flex-start" }}>
-        {/* Role Selector */}
-        <div style={{
-          width: 200, flexShrink: 0, background: "#fff",
-          border: "1px solid #E2E8F0", borderRadius: "14px",
-          padding: "1rem 0.75rem", position: "sticky", top: "1rem",
-        }}>
-          <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#94A3B8", margin: "0 0.5rem 0.75rem" }}>
-            Select Your Role
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            {ROLES.map(role => (
-              <RoleButton key={role.id} role={role} isActive={activeRole.id === role.id} onClick={() => setActiveRole(role)} />
-            ))}
+      {/* Current Role + Change Role Button */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{ fontSize: '1.3rem' }}>{activeRole.emoji}</span>
+          <div>
+            <p
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: '#94A3B8',
+                margin: 0,
+              }}
+            >
+              Current Role
+            </p>
+            <p
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                color: activeRole.color,
+                margin: 0,
+              }}
+            >
+              {activeRole.label}
+            </p>
           </div>
         </div>
+        <button
+          onClick={() => navigate('/dashboard/who-am-i')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.55rem 1rem',
+            background: '#fff',
+            border: '1.5px solid #E2E8F0',
+            borderRadius: '10px',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: '#475569',
+            cursor: 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          <UserCircle className="w-4 h-4" />
+          Choose a different Role
+        </button>
+      </div>
 
+      <div>
         {/* Content */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
           {/* Header */}
           <div style={{
             background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px",
@@ -612,7 +719,7 @@ export default function ImportantMetricsPage() {
 
           {/* Big Targets (Founder only) */}
           {activeRole.bigTargets && (
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${activeRole.bigTargets.length}, 1fr)`, gap: "0.75rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: mobileMode ? "1fr" : `repeat(${activeRole.bigTargets.length}, 1fr)`, gap: "0.75rem" }}>
               {activeRole.bigTargets.map((t) => (
                 <div key={t.label} style={{
                   background: "#fff", border: `2px solid ${t.color}30`, borderRadius: "14px",
@@ -652,7 +759,7 @@ export default function ImportantMetricsPage() {
             {showSchool && (
               <div>
                 <div style={{
-                  display: "grid", gridTemplateColumns: "1.4fr 0.8fr 0.9fr 0.9fr 0.9fr",
+                  display: mobileMode ? "none" : "grid", gridTemplateColumns: "1.4fr 0.8fr 0.9fr 0.9fr 0.9fr",
                   gap: "0.5rem", padding: "0.45rem 1.1rem",
                   borderBottom: "2px solid #E2E8F0", background: "#FAFBFC",
                 }}>

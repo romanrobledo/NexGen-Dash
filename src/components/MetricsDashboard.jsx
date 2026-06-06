@@ -10,7 +10,6 @@ import {
   UserX,
   Loader2,
 } from 'lucide-react'
-
 const iconMap = {
   Users,
   UserPlus,
@@ -63,10 +62,21 @@ export default function MetricsDashboard() {
       }
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from('metrics')
-          .select('*')
-          .order('sort_order', { ascending: true })
+        // Hard 8-second timeout so a hung query can't leave the dashboard stuck
+        const withTimeout = (p) =>
+          Promise.race([
+            p,
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Metrics fetch timed out')), 8000)
+            ),
+          ])
+
+        const { data, error: fetchError } = await withTimeout(
+          supabase
+            .from('metrics')
+            .select('*')
+            .order('sort_order', { ascending: true })
+        )
 
         if (fetchError) throw fetchError
 
@@ -125,6 +135,10 @@ export default function MetricsDashboard() {
           ))}
         </div>
       </section>
+
+      {/* Team Pulse section removed alongside the broader time-clock /
+          payroll cleanup — it depended on daily_checkins/daily_checkouts
+          data, which is no longer being collected. */}
     </div>
   )
 }

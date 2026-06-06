@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ViewModeProvider, useViewMode } from './contexts/ViewModeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Sidebar from './components/Sidebar'
 import TopToolbar from './components/TopToolbar'
+import MobileBottomNav from './components/MobileBottomNav'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import StaffResponsesPage from './pages/StaffResponsesPage'
@@ -12,12 +14,15 @@ import StaffProfilePage from './pages/StaffProfilePage'
 import ContentCalendarPage from './pages/ContentCalendarPage'
 import TrainingsDashboardPage from './pages/TrainingsDashboardPage'
 import TrainingsOnboardingPage from './pages/TrainingsOnboardingPage'
+import TrainingsRoleClarityPage from './pages/TrainingsRoleClarityPage'
+import TrainingsTrsPage from './pages/TrainingsTrsPage'
 import TrainingsToolsPage from './pages/TrainingsToolsPage'
 import TrainingsHowTosPage from './pages/TrainingsHowTosPage'
 import TrainingsAdminPage from './pages/TrainingsAdminPage'
 import TrainingsViewerPage from './pages/TrainingsViewerPage'
 import DashboardGuidePage from './pages/DashboardGuidePage'
 import WhoAreWePage from './pages/WhoAreWePage'
+import WhoAmIPage from './pages/WhoAmIPage'
 import WhatDoIDoPage from './pages/WhatDoIDoPage'
 import HowDoIDoItPage from './pages/HowDoIDoItPage'
 import WhyIsItImportantPage from './pages/WhyIsItImportantPage'
@@ -29,18 +34,60 @@ import WhereDoWeGoPage from './pages/WhereDoWeGoPage'
 import ImportantMetricsPage from './pages/ImportantMetricsPage'
 import TargetTaskDashboardPage from './pages/TargetTaskDashboardPage'
 import TargetTaskSubmitPage from './pages/TargetTaskSubmitPage'
+import TargetsProgressPage from './pages/TargetsProgressPage'
+import TasksPage from './pages/TasksPage'
 import TrainingCategoryPage from './pages/TrainingCategoryPage'
 import AdminPanelPage from './pages/AdminPanelPage'
-import CheckinPage from './pages/CheckinPage'
-import CheckoutPage from './pages/CheckoutPage'
 import OperatingSystemPage from './pages/OperatingSystemPage'
 import HandbooksPage from './pages/HandbooksPage'
 import ApplicationsPage from './pages/ApplicationsPage'
 import TrsDocumentsPage from './pages/TrsDocumentsPage'
+import SopLibraryPage from './pages/SopLibraryPage'
+import SopChapterPage from './pages/SopChapterPage'
+import SopDetailPage from './pages/SopDetailPage'
 import QuickFocusPage from './pages/QuickFocusPage'
+import MarketingOffersPage from './pages/MarketingOffersPage'
+import FinanceDashboardPage from './pages/FinanceDashboardPage'
+import FacilityDashboardPage from './pages/FacilityDashboardPage'
+import FacilityEngagementPage from './pages/FacilityEngagementPage'
+import PerformanceCompliancePage from './pages/PerformanceCompliancePage'
+import BillingDashboardPage from './pages/BillingDashboardPage'
+import MarketingDashboardPage from './pages/MarketingDashboardPage'
+import LeadsDashboardPage from './pages/LeadsDashboardPage'
+import LeadsToursPage from './pages/LeadsToursPage'
+import LeadsProceduresPage from './pages/LeadsProceduresPage'
+import AIChatPage from './pages/AIChatPage'
+import DataIntegrityPage from './pages/admin/data-integrity'
+import MetricDetailPage from './pages/admin/data-integrity/MetricDetailPage'
 
 function AppShell({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { mobileMode } = useViewMode()
+
+  if (mobileMode) {
+    // Mobile mode = mobile chrome (hamburger toolbar, slide-out sidebar,
+    // bottom nav). We deliberately do NOT clamp the container width —
+    // content fills whatever width the browser gives it. On an actual
+    // phone viewport that means a phone-shaped layout; on a wide desktop
+    // with the toggle on you'll see wide content + mobile chrome.
+    //
+    // pb-20 leaves room for the fixed MobileBottomNav so scrollable content
+    // clears the bar.
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        <Sidebar
+          mobileOpen={mobileMenuOpen}
+          onMobileClose={() => setMobileMenuOpen(false)}
+        />
+        <TopToolbar onMenuToggle={() => setMobileMenuOpen(true)} />
+        <main className="flex-1 p-4 pb-20">
+          {children}
+        </main>
+        <MobileBottomNav />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -61,8 +108,9 @@ function AppShell({ children }) {
 
 function App() {
   return (
-    <AuthProvider>
-      <Routes>
+    <ViewModeProvider>
+      <AuthProvider>
+        <Routes>
         {/* Public route — Login */}
         <Route path="/login" element={<LoginPage />} />
 
@@ -73,15 +121,39 @@ function App() {
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/targets" element={<TargetTaskDashboardPage />} />
+                <Route path="/targets/progress" element={<TargetsProgressPage />} />
+                <Route path="/targets/tasks" element={<TasksPage />} />
                 <Route path="/targets/submit" element={<TargetTaskSubmitPage />} />
-                <Route path="/checkin" element={<CheckinPage />} />
-                <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="/ai-chat" element={<AIChatPage />} />
                 <Route path="/operating-system" element={<OperatingSystemPage />} />
                 <Route path="/handbooks" element={<HandbooksPage />} />
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/trs/documents" element={<TrsDocumentsPage />} />
+                {/* SOP Library — chapter index + per-chapter list + per-SOP detail.
+                    The specific `chapter/:chapterNum` route is registered BEFORE
+                    the catch-all `:sopId` so that drilling into a chapter
+                    resolves to the chapter page rather than being interpreted
+                    as an SOP with id "chapter". sop_ids follow the
+                    "{chapter_num}.{order}" format so they can never collide
+                    with the literal word "chapter" anyway — this is
+                    belt-and-suspenders. */}
+                <Route path="/sop-library" element={<SopLibraryPage />} />
+                <Route path="/sop-library/chapter/:chapterNum" element={<SopChapterPage />} />
+                <Route path="/sop-library/:sopId" element={<SopDetailPage />} />
                 <Route path="/quick-focus" element={<QuickFocusPage />} />
+                <Route path="/finance" element={<FinanceDashboardPage />} />
+                <Route path="/facility" element={<FacilityDashboardPage />} />
+                <Route path="/facility/engagement" element={<FacilityEngagementPage />} />
+                <Route path="/leads" element={<LeadsDashboardPage />} />
+                <Route path="/leads/tours" element={<LeadsToursPage />} />
+                <Route path="/leads/procedures" element={<LeadsProceduresPage />} />
+                <Route path="/billing" element={<BillingDashboardPage />} />
+                <Route path="/marketing" element={<MarketingDashboardPage />} />
+                <Route path="/marketing/offers" element={<MarketingOffersPage />} />
+                <Route path="/marketing/offers/:category" element={<MarketingOffersPage />} />
+                <Route path="/marketing/offers/:category/:subcategory" element={<MarketingOffersPage />} />
                 <Route path="/dashboard/who-are-we" element={<WhoAreWePage />} />
+                <Route path="/dashboard/who-am-i" element={<WhoAmIPage />} />
                 <Route path="/dashboard/what-do-i-do" element={<WhatDoIDoPage />} />
                 <Route path="/dashboard/how-do-i-do-it" element={<HowDoIDoItPage />} />
                 <Route path="/dashboard/why-is-it-important" element={<WhyIsItImportantPage />} />
@@ -98,6 +170,16 @@ function App() {
                 <Route path="/calendars/content" element={<ContentCalendarPage />} />
                 <Route path="/trainings" element={<TrainingsDashboardPage />} />
                 <Route path="/trainings/onboarding" element={<TrainingsOnboardingPage />} />
+                {/* Role Clarity landing — must be registered before the generic
+                    /trainings/:category route below, otherwise that dynamic
+                    pattern would swallow "role-clarity" and show the wrong
+                    page. */}
+                <Route path="/trainings/role-clarity" element={<TrainingsRoleClarityPage />} />
+                {/* TRS landing — same reasoning: registered before the
+                    /trainings/:category catch-all so "trs" resolves to the
+                    landing page, while /trainings/trs/cat-1 etc. still match
+                    the :category/:subcategory route below. */}
+                <Route path="/trainings/trs" element={<TrainingsTrsPage />} />
                 <Route path="/trainings/tools" element={<TrainingsToolsPage />} />
                 <Route path="/trainings/howtos" element={<TrainingsHowTosPage />} />
                 <Route path="/trainings/admin" element={<TrainingsAdminPage />} />
@@ -109,12 +191,53 @@ function App() {
                     <AdminPanelPage />
                   </ProtectedRoute>
                 } />
+                <Route path="/admin/permissions" element={
+                  <ProtectedRoute requiredPermission="admin_panel">
+                    <AdminPanelPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/settings" element={
+                  <ProtectedRoute requiredPermission="admin_panel">
+                    <AdminPanelPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/settings/theme" element={
+                  <ProtectedRoute requiredPermission="admin_panel">
+                    <AdminPanelPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/settings/integrations" element={
+                  <ProtectedRoute requiredPermission="admin_panel">
+                    <AdminPanelPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/settings/webhooks" element={
+                  <ProtectedRoute requiredPermission="admin_panel">
+                    <AdminPanelPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/performance-compliance" element={
+                  <ProtectedRoute requiredPermission="admin_panel">
+                    <PerformanceCompliancePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/data-integrity" element={
+                  <ProtectedRoute requiredPermission="admin_panel">
+                    <DataIntegrityPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/data-integrity/metric/:metricName" element={
+                  <ProtectedRoute requiredPermission="admin_panel">
+                    <MetricDetailPage />
+                  </ProtectedRoute>
+                } />
               </Routes>
             </AppShell>
           </ProtectedRoute>
         } />
-      </Routes>
-    </AuthProvider>
+        </Routes>
+      </AuthProvider>
+    </ViewModeProvider>
   )
 }
 

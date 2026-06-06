@@ -316,15 +316,46 @@ export default function TrainingsViewerPage() {
             )}
 
             {/* Video embed */}
-            {step.video_url && (
-              <div className="mb-6 rounded-xl overflow-hidden bg-gray-900 aspect-video flex items-center justify-center">
-                <div className="text-center text-gray-400">
-                  <PlayCircle className="w-16 h-16 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">Video: {step.video_url}</p>
-                  <p className="text-xs mt-1 text-gray-500">Video playback coming in Phase 8</p>
-                </div>
-              </div>
-            )}
+            {step.video_url && (() => {
+              const url = step.video_url;
+              const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]+)/);
+              const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+              const loomMatch = url.match(/loom\.com\/(?:share|embed)\/([\w-]+)/);
+
+              if (ytMatch) {
+                return (
+                  <div className="mb-6 rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                    <div className="aspect-video">
+                      <iframe src={`https://www.youtube.com/embed/${ytMatch[1]}?rel=0`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Lesson Video" />
+                    </div>
+                  </div>
+                );
+              } else if (vimeoMatch) {
+                return (
+                  <div className="mb-6 rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                    <div className="aspect-video">
+                      <iframe src={`https://player.vimeo.com/video/${vimeoMatch[1]}`} className="w-full h-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title="Lesson Video" />
+                    </div>
+                  </div>
+                );
+              } else if (loomMatch) {
+                return (
+                  <div className="mb-6 rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                    <div className="aspect-video">
+                      <iframe src={`https://www.loom.com/embed/${loomMatch[1]}`} className="w-full h-full" allowFullScreen title="Lesson Video" />
+                    </div>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="mb-6 rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                    <video controls className="w-full aspect-video bg-gray-900">
+                      <source src={url} />
+                    </video>
+                  </div>
+                );
+              }
+            })()}
 
             {/* PDF attachment */}
             {step.pdf_url && (

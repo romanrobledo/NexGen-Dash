@@ -14,6 +14,7 @@ import {
   Award,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useViewMode } from '../contexts/ViewModeContext'
 
 // The 9 staff members
 const STAFF_MEMBERS = [
@@ -48,6 +49,7 @@ function getStatusBadge(percentage) {
 }
 
 export default function TrainingsAdminPage() {
+  const { mobileMode } = useViewMode()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [staffProgress, setStaffProgress] = useState([])
@@ -261,7 +263,7 @@ export default function TrainingsAdminPage() {
   return (
     <div>
       {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className={`${mobileMode ? 'flex flex-col gap-3 items-start' : 'flex items-center justify-between'} mb-6`}>
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Admin Dashboard</h2>
           <p className="text-sm text-gray-500 mt-1">
@@ -270,7 +272,7 @@ export default function TrainingsAdminPage() {
         </div>
         <button
           onClick={handleExportCSV}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          className={`flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors ${mobileMode ? 'w-full justify-center' : ''}`}
         >
           <Download className="w-4 h-4" />
           Export CSV
@@ -295,7 +297,7 @@ export default function TrainingsAdminPage() {
       )}
 
       {/* Summary stat cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className={`grid ${mobileMode ? 'grid-cols-2 gap-3' : 'grid-cols-4 gap-4'} mb-6`}>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-2 mb-2">
             <Users className="w-4 h-4 text-gray-400" />
@@ -330,11 +332,11 @@ export default function TrainingsAdminPage() {
       </div>
 
       {/* TRS Category progress bars */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+      <div className={`bg-white rounded-xl border border-gray-200 mb-6 ${mobileMode ? 'p-4' : 'p-5'}`}>
         <h3 className="text-sm font-semibold text-gray-900 mb-4">
           Company-Wide TRS Category Progress
         </h3>
-        <div className="grid grid-cols-4 gap-6">
+        <div className={`grid ${mobileMode ? 'grid-cols-1 gap-3' : 'grid-cols-4 gap-6'}`}>
           {TRS_CATEGORIES.map((cat) => {
             const catAvg =
               staffProgress.length > 0
@@ -372,23 +374,23 @@ export default function TrainingsAdminPage() {
       {/* Staff table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Table header controls */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-          <div className="relative">
+        <div className={`border-b border-gray-100 ${mobileMode ? 'flex flex-col gap-3 px-4 py-3' : 'flex items-center justify-between px-5 py-3'}`}>
+          <div className={`relative ${mobileMode ? 'w-full' : ''}`}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search staff..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none w-64"
+              className={`pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${mobileMode ? 'w-full' : 'w-64'}`}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Sort by:</span>
+          <div className={`flex items-center gap-2 ${mobileMode ? 'w-full' : ''}`}>
+            <span className="text-xs text-gray-500 flex-shrink-0">Sort by:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
+              className={`text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 ${mobileMode ? 'flex-1' : ''}`}
             >
               <option value="name">Name</option>
               <option value="progress-desc">Progress (High → Low)</option>
@@ -397,8 +399,89 @@ export default function TrainingsAdminPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile staff card list */}
+        {mobileMode && (
+          <div className="divide-y divide-gray-100">
+            {filteredStaff.map((staff) => {
+              const status = getStatusBadge(staff.overallProgress)
+              const initials = staff.name
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .slice(0, 2)
+              return (
+                <div key={staff.id} className="px-4 py-3.5">
+                  {/* Row 1: avatar + name + status */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-xs font-bold flex-shrink-0">
+                      {initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{staff.name}</p>
+                      {staff.lastActivity && (
+                        <p className="text-[10px] text-gray-400">
+                          Last active: {new Date(staff.lastActivity).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${status.bg}`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                      {status.label}
+                    </span>
+                  </div>
+                  {/* Row 2: overall progress */}
+                  <div className="mt-2.5 flex items-center gap-2.5 pl-12">
+                    <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${
+                          staff.overallProgress === 100
+                            ? 'bg-emerald-500'
+                            : staff.overallProgress >= 50
+                            ? 'bg-blue-500'
+                            : 'bg-amber-500'
+                        }`}
+                        style={{ width: `${staff.overallProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-semibold text-gray-700 w-10 text-right">
+                      {staff.overallProgress}%
+                    </span>
+                  </div>
+                  {/* Row 3: category chips */}
+                  <div className="mt-2.5 pl-12 grid grid-cols-4 gap-1.5">
+                    {TRS_CATEGORIES.map((cat) => {
+                      const catData = staff.categories[cat.key]
+                      const colors = {
+                        blue: 'bg-blue-50 text-blue-700 border-blue-100',
+                        green: 'bg-green-50 text-green-700 border-green-100',
+                        purple: 'bg-purple-50 text-purple-700 border-purple-100',
+                        orange: 'bg-orange-50 text-orange-700 border-orange-100',
+                      }[cat.color]
+                      return (
+                        <div
+                          key={cat.key}
+                          className={`rounded border text-center py-1 ${colors}`}
+                        >
+                          <div className="text-[9px] font-bold uppercase tracking-wide opacity-70">
+                            Cat {cat.key.replace('cat-', '')}
+                          </div>
+                          <div className="text-xs font-bold leading-tight">
+                            {catData.percentage}%
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Desktop table */}
+        <div className={mobileMode ? 'hidden' : 'overflow-x-auto'}>
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">

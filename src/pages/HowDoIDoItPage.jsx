@@ -1,35 +1,65 @@
-import { useState, useEffect } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Wrench, BookOpen, ArrowLeft } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Wrench, BookOpen, UserCircle, ArrowRight } from 'lucide-react'
+import { useSelectedRoleId } from '../hooks/useSelectedRole'
+import { useViewMode } from '../contexts/ViewModeContext'
 
 // ─── ROLE DATA ───────────────────────────────────────────────────────────────
 const ROLES = [
   {
-    id: 'founder',
-    label: 'Founder',
+    id: 'visionary',
+    label: 'Visionary',
     emoji: '👑',
     color: '#0F172A',
-    tagline: 'Monitor + decide. Read the dials, pull the levers.',
+    tagline: 'Vision, culture, brand, big bets. Hand execution to the Integrator.',
     sections: [
-      { title: 'Monthly Bookkeeper Request (By the 15th)', description: 'Request 3 reports: P&L (Profit & Loss) by month, Balance Sheet (cash position and debt), and Aged Receivables (subsidy vs. private pay breakdown). Group expenses into 5 buckets: Payroll, Facility, Food & Classroom, Admin/Software/Insurance, Other.' },
-      { title: 'Monthly Owner Finance Routine (60 min)', description: 'With Robyn (optionally bookkeeper on Zoom). Step A: Review last 3 months P&L — revenue trend up, flat, or down? Step B: Check 3 key ratios. Step C: Ask 3 diagnostic questions. Step D: Pick ONE finance decision.' },
-      { title: '3 Key Financial Ratios', description: 'Payroll % of Revenue (Target: ~50–55% — is labor cost under control?), Average Revenue per Child (are you charging enough?), Net Profit % (Target: ~20%+ — is the business healthy?).' },
-      { title: '3 Diagnostic Questions', description: 'Do we need to fill more seats? (Occupancy low). Do we need to raise prices? (Revenue per child too low). Do we need to control a cost bucket? (Payroll or facility out of line).' },
-      { title: 'Pick ONE Finance Decision', description: 'Every monthly meeting must end with a specific finance decision: "We are raising private-pay rates on [DATE]" or "We\'re cutting/renegotiating [EXPENSE]" or "We\'re going to push enrollment on [AGE GROUPS]." No meeting ends without a specific finance decision.' },
-      { title: 'Weekly Scoreboard (Quick Check)', description: 'Track 4 numbers with Robyn: Occupancy % (are seats filled?), New Enrollments/Withdrawals (trend direction), Total Payroll Dollars that week (largest expense in check?), Cash in Bank (above 1 month of expenses? Yes/No).' },
-      { title: 'Daily Huddle (10–15 min)', description: 'With Robyn + Rachel + Andrea. Cover: today\'s staffing/ratios, tours scheduled today, any fires (parent issues, staff issues). Goal: "Does today break anywhere?"' },
-      { title: 'Weekly Leadership Memos (45–60 min)', description: 'With Robyn + Rachel. Agenda: Scorecard Review (10–15 min — look at all KPIs, circle anything red), Wins/Losses (5 min), Top 3 Priorities (15–20 min — what to fix next week), Who/What/When (15 min — assign owners and due dates).' },
-      { title: '3 Core Functions Oversight', description: 'Enrollment (Robyn + Andrea): ads, inquiries, tours, enrollments. Experience & Retention (Rachel + Robyn): classroom quality, TRS, parent happiness, kid retention. Cash & Admin (You + bookkeeper): billing, collections, payroll, HR paperwork.' },
-      { title: 'Quarterly Planning Process', description: 'Set and cascade quarterly goals across all 3 functions. Create clear breakdown for each focus area: clear targets, clear responsibilities, clear tasks, clear deadlines.' },
+      { title: 'Annual Vision Building (1 day, January)', description: 'Alone or with Integrator. Write/refresh the 3-Year Picture, 10-Year Target, Core Values, and Core Focus (Purpose + Niche). This is the Rocket Fuel Vision/Traction Organizer (V/TO) work. Output: a one-page document the whole leadership team will rally around.' },
+      { title: 'Quarterly Pulse with Integrator (half day)', description: 'Review the V/TO against reality. Adjust the 3-Year Picture only if the world changed. Set 3–7 quarterly Rocks for the company. Hand the Rocks to the Integrator — do not assign them yourself.' },
+      { title: 'Weekly Same Page Meeting (60–90 min, 1:1 with Integrator)', description: 'Per Rocket Fuel: the two of you meet with no one else in the room. Walk through the top 3 issues on your mind and the top 3 on theirs. Use IDS (Identify, Discuss, Solve). Leave aligned — no surprises in the leadership meeting.' },
+      { title: 'Idea Capture Routine', description: 'Generate 10–20 ideas a week — that is the Visionary job. Drop them in one place (Slack thread, Notion inbox, voice memo). Do NOT hand-deliver every idea to the team. Review the list with the Integrator weekly. They filter; you let go.' },
+      { title: 'Culture & Brand Walks', description: 'Walk the building 2–3 times per week. Don\'t solve problems on the floor — observe. Note: how does the team talk to kids? Is the energy right? Are Core Values visible? Report what you saw to the Integrator in the Same Page meeting.' },
+      { title: 'Major Relationships (Ongoing)', description: 'You own the top 20 relationships: major community partners, referral sources, press, top 5 hero families, licensing leadership, potential investors, second-location landlords. Don\'t delegate these — maintain them.' },
+      { title: 'R&D + New Bets', description: 'Explore ONE new bet at a time — new program, new pricing model, new location, new offer. Prototype on paper, pressure-test with the Integrator. If they say "we don\'t have capacity," it\'s not yes — it\'s not yet.' },
+      { title: 'Hold the Integrator Accountable', description: 'In the Same Page meeting, review the Scorecard and Rocks the Integrator owns. If numbers are red for 3+ weeks, it\'s a conversation. Your job is to hold them to the vision — not to take the wheel yourself.' },
+      { title: 'Quarterly State of NexGen (30 min to full team)', description: 'You — not the Integrator — deliver the big-picture update to the whole team each quarter. Cover: where we are, where we\'re going, what we stand for, what the team should be proud of. This is culture work, not operations.' },
+      { title: 'Annual Personal Reset', description: 'Once a year, step out of the building for 2–3 days. Read, think, walk. Come back with a short list of what you believe the next year should be about. Bring it to the Integrator first — not the leadership team.' },
     ],
     toolStack: {
-      note: 'Slack is the central hub. Everything routes through it. The NexGen Operating System (this software) is the focal point for role clarity, procedures, and KPIs.',
+      note: 'Visionary tooling should be minimal. Don\'t live inside dashboards — that\'s the Integrator\'s job. Your tools exist to capture ideas and see the big picture.',
       functions: [
-        { name: 'Acquisition', emoji: '📈', tools: ['Bitsync', 'Facebook', 'Google Ads', 'Slack'], owner: 'Robyn + Robyne + Ed' },
-        { name: 'Delivery', emoji: '🏫', tools: ['Bitsync', 'Slack'], owner: 'Rachel + Teachers' },
-        { name: 'Marketing & Content', emoji: '🎨', tools: ['Slack', 'Canva', 'SurveyMonkey'], owner: 'Robyne + Ed' },
-        { name: 'Operations', emoji: '⚙️', tools: ['Slack', 'Google Workspace', 'Gusto'], owner: 'Robyn + Rachel' },
-        { name: 'Management', emoji: '👑', tools: ['Google Workspace', 'Gusto', 'Bitsync', 'SurveyMonkey', 'ClickUp', 'Slack'], owner: 'You (Founder)' },
+        { name: 'Vision / V-TO', emoji: '🎯', tools: ['Notion (V-TO page)', 'Google Docs'], owner: 'You' },
+        { name: 'Idea Capture', emoji: '💡', tools: ['Slack #visionary-ideas', 'Voice memos'], owner: 'You' },
+        { name: 'Culture & Brand', emoji: '🎨', tools: ['Canva', 'Instagram', 'Community events'], owner: 'You + Robyn for execution' },
+        { name: 'Relationships', emoji: '🤝', tools: ['Gmail', 'Phone', 'In-person'], owner: 'You' },
+        { name: 'Scorecard (read-only)', emoji: '📊', tools: ['NexGen OS Scorecard view'], owner: 'Integrator runs it; you read it' },
+      ],
+    },
+  },
+  {
+    id: 'integrator',
+    label: 'Integrator',
+    emoji: '⚙️',
+    color: '#1E3A8A',
+    tagline: 'LMA the leadership team. Run the Scorecard. Make the vision real.',
+    sections: [
+      { title: 'Weekly Level 10 Meeting (90 min, leadership team)', description: 'Rocket Fuel / EOS cornerstone. Same day, same time, every week. Agenda: Segue (5), Scorecard (5), Rock review (5), Customer/Employee headlines (5), To-Do list (5), IDS — Identify, Discuss, Solve (60), Conclude (5). Non-negotiable. You own the facilitation.' },
+      { title: 'Scorecard Ownership (10–12 numbers, weekly)', description: 'Build and maintain a single Scorecard with 10–12 weekly numbers covering Enrollment, Experience, and Cash. Every number has an owner and a weekly goal. Red 3 weeks in a row becomes an Issue in the L10. You chase red — not the Visionary.' },
+      { title: 'Weekly Same Page Meeting with Visionary (60–90 min)', description: 'Your one recurring meeting with the founder. Come prepared: top 3 issues, Scorecard summary, the ideas you are filtering, decisions you need. Leave with alignment and a short list of what only the Visionary can decide.' },
+      { title: 'Daily Huddle Routine', description: 'Lead a 10–15 min stand-up with Director and Front Desk. Three questions only: What did we win yesterday? What could break today? What do you need from me? No problem-solving in the huddle — capture for later.' },
+      { title: 'Quarterly Rocks Process', description: 'After Visionary + Integrator set the 3–7 company Rocks, break them down with the leadership team. Each leader owns 1–3 Rocks per quarter. Reviewed weekly in the L10 as On-Track / Off-Track. Off-Track two weeks in a row = issue.' },
+      { title: 'Monthly Finance Review (90 min, with Visionary)', description: 'You own the deck. Walk the P&L, 3 key ratios (Payroll %, Avg Revenue per Child, Net Profit %), and Aged Receivables. Bring a recommendation for the ONE finance decision of the month. The Visionary decides; you execute.' },
+      { title: 'LMA Your Direct Reports', description: 'Leadership, Management, Accountability for: Director, Front Desk Manager, Marketing lead, Bookkeeper. Weekly 1:1, quarterly conversations, annual review. Use the People Analyzer: right person (Core Values) + right seat (GWC — Gets it, Wants it, Capacity to do it).' },
+      { title: 'Idea Filter Protocol', description: 'When the Visionary drops an idea, your default answer is "interesting — let\'s park it and bring it to next Same Page." Only 1–2 out of 10 ideas should become Rocks. Protect the team from whiplash. If it\'s a no, say why using the Scorecard as evidence.' },
+      { title: 'Cross-Functional Issue Resolution (IDS)', description: 'When Director and Front Desk clash, when Marketing and Operations disagree — you mediate using IDS. Identify the real issue (not the symptom), Discuss (everyone talks once), Solve (one owner, one next action, one date). No issue stays open more than 2 L10s.' },
+      { title: 'Remove Obstacles for the Director', description: 'The Director runs the floor. Your job is to make that easy. Weekly ask: "What\'s in your way this week that only I can unblock?" Then go unblock it — tools, budget, permissions, people. Never let the Director hit the same wall twice.' },
+    ],
+    toolStack: {
+      note: 'Integrator tooling is where the real operating system lives. This is where the Scorecard, Rocks, and L10 run from.',
+      functions: [
+        { name: 'Scorecard & Rocks', emoji: '📊', tools: ['NexGen OS', 'Google Sheets (backup)'], owner: 'You (Integrator)' },
+        { name: 'L10 Meeting', emoji: '🗓️', tools: ['Google Meet', 'Notion agenda', 'Issues list'], owner: 'You' },
+        { name: 'LMA / 1:1s', emoji: '👥', tools: ['Notion 1:1 template', 'Gusto', 'People Analyzer'], owner: 'You' },
+        { name: 'Enrollment Funnel', emoji: '📈', tools: ['Bitsync', 'Slack #enrollment', 'Google Ads dashboards'], owner: 'You + Marketing lead' },
+        { name: 'Finance', emoji: '💰', tools: ['QuickBooks', 'Gusto', 'Bookkeeper reports'], owner: 'You + bookkeeper' },
       ],
     },
   },
@@ -50,7 +80,13 @@ const ROLES = [
       { title: 'Quarterly Planning Process', description: 'How to set and cascade quarterly goals across all departments.' },
       { title: 'Financial Review & Budget Management', description: 'How to review P&L, manage cash flow, and approve expenditures.' },
       { title: 'Systems Audit Checklist', description: 'Monthly audit of all operational systems to identify gaps.' },
+      { title: 'Running the Operating System — Scorecard', description: 'How to own the weekly Scorecard: assign KPI owners, set targets, and chase red numbers before they become issues.' },
+      { title: 'Running the Operating System — Meeting Cadence', description: 'How to run the Level 10 leadership meeting, Same Page with the Visionary, quarterly Rocks reviews, and annual planning.' },
+      { title: 'Running the Operating System — Org Hierarchy', description: 'How to maintain the accountability chart — one seat, one owner, five roles, clearly defined.' },
+      { title: 'Running the Operating System — Performance Standards', description: 'How to set and enforce the non-negotiables for safety, TRS, parent comms, curriculum, and financial health.' },
+      { title: 'Running the Operating System — Risk & Continuity', description: 'How to maintain crisis protocols, business continuity plans, and emergency procedures so nothing surprises you.' },
     ],
+    operatingSystem: true,
   },
   {
     id: 'director',
@@ -229,30 +265,15 @@ const RoleCard = ({ role, isActive, onClick }) => (
 )
 
 export default function HowDoIDoItPage() {
-  const [searchParams] = useSearchParams()
+  const [selectedId] = useSelectedRoleId()
+  const activeRole = ROLES.find((r) => r.id === selectedId) || ROLES[0]
   const navigate = useNavigate()
-  const roleParam = searchParams.get('role')
-
-  const [activeRole, setActiveRole] = useState(() => {
-    if (roleParam) {
-      const found = ROLES.find((r) => r.id === roleParam)
-      if (found) return found
-    }
-    return ROLES[0]
-  })
-
-  // Update active role when URL param changes
-  useEffect(() => {
-    if (roleParam) {
-      const found = ROLES.find((r) => r.id === roleParam)
-      if (found) setActiveRole(found)
-    }
-  }, [roleParam])
+  const { mobileMode } = useViewMode()
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Page Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center gap-4 mb-3">
           <div className="w-12 h-12 rounded-xl bg-pink-500 flex items-center justify-center">
             <Wrench className="w-6 h-6 text-white" />
@@ -284,68 +305,41 @@ export default function HowDoIDoItPage() {
         </div>
       </div>
 
+      {/* Choose a different Role button */}
+      <button
+        onClick={() => navigate('/dashboard/who-am-i')}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '0.5rem 0.95rem',
+          borderRadius: 10,
+          border: '1.5px solid #E2E8F0',
+          background: '#fff',
+          color: '#475569',
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          marginBottom: '1rem',
+          transition: 'all .15s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#CBD5E1'
+          e.currentTarget.style.background = '#F8FAFC'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#E2E8F0'
+          e.currentTarget.style.background = '#fff'
+        }}
+      >
+        <UserCircle size={14} /> Choose a different Role
+      </button>
+
       {/* Main Content */}
-      <div style={{ display: 'flex', gap: '1.75rem', alignItems: 'flex-start' }}>
-        {/* Role Selector */}
-        <div
-          style={{
-            width: 200,
-            flexShrink: 0,
-            background: '#fff',
-            border: '1px solid #E2E8F0',
-            borderRadius: '14px',
-            padding: '1rem 0.75rem',
-            position: 'sticky',
-            top: '1rem',
-          }}
-        >
-          <p
-            style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: '#94A3B8',
-              margin: '0 0.5rem 0.75rem',
-            }}
-          >
-            Select Your Role
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {ROLES.map((role) => (
-              <RoleCard
-                key={role.id}
-                role={role}
-                isActive={activeRole.id === role.id}
-                onClick={() => setActiveRole(role)}
-              />
-            ))}
-          </div>
-
-          {/* Back link */}
-          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #F1F5F9' }}>
-            <button
-              onClick={() => navigate(`/dashboard/what-do-i-do`)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                fontSize: '0.75rem',
-                color: '#94A3B8',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '0.3rem 0.5rem',
-              }}
-            >
-              <ArrowLeft style={{ width: 12, height: 12 }} />
-              Back to What Do I Do
-            </button>
-          </div>
-        </div>
-
+      <div>
         {/* Role Detail */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ minWidth: 0 }}>
           {/* Role Header */}
           <div
             style={{
@@ -499,6 +493,67 @@ export default function HowDoIDoItPage() {
             </div>
           </div>
 
+          {/* Operating System CTA — Operator only */}
+          {activeRole.operatingSystem && (
+            <button
+              onClick={() => navigate('/operating-system')}
+              style={{
+                background: '#0F172A',
+                border: '1px solid #0F172A',
+                borderRadius: '14px',
+                padding: '1.5rem 1.75rem',
+                marginBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontFamily: "'DM Sans', sans-serif",
+                width: '100%',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <span style={{ fontSize: '1.75rem' }}>⚙️</span>
+                <div>
+                  <p
+                    style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: '#60A5FA',
+                      margin: 0,
+                    }}
+                  >
+                    Run The System
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '1.05rem',
+                      fontWeight: 800,
+                      color: '#F8FAFC',
+                      margin: '0.15rem 0 0.25rem',
+                    }}
+                  >
+                    Open the NexGen Operating System
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '0.8rem',
+                      color: '#94A3B8',
+                      margin: 0,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    The full operating playbook you own — scorecard, meetings, hierarchy, standards, and continuity plans.
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5" style={{ color: '#60A5FA', flexShrink: 0 }} />
+            </button>
+          )}
+
           {/* Tool Stack (Founder only) */}
           {activeRole.toolStack && (
             <div
@@ -557,7 +612,7 @@ export default function HowDoIDoItPage() {
               </div>
 
               {/* Function Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: mobileMode ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
                 {activeRole.toolStack.functions.map((fn) => (
                   <div
                     key={fn.name}

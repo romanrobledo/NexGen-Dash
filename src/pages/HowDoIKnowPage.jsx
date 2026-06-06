@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { Award } from 'lucide-react'
+import { Award, UserCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useViewMode } from '../contexts/ViewModeContext'
+import { useSelectedRoleId } from '../hooks/useSelectedRole'
 
 // ─── SCORING HELPERS ──────────────────────────────────────────────────────────
 const SCORE_COLORS = {
@@ -17,59 +20,127 @@ const scoreColor = (score, max = 10) => {
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
 const ROLES = [
   {
-    id: 'founder',
-    label: 'Founder',
+    id: 'visionary',
+    label: 'Visionary',
     emoji: '👑',
     color: '#0F172A',
-    tagline: 'You are measured by the financial health and strategic clarity of the entire operation.',
+    tagline: 'You are measured by the clarity of the vision and the strength of the seat — not the day-to-day numbers.',
     categories: [
       {
-        id: 'financial',
-        label: 'Financial Health',
-        icon: '💰',
-        weight: 35,
-        description: 'Are you monitoring the right numbers and making decisions from them?',
-        indicators: [
-          { label: 'Monthly P&L reviewed with Robyn', green: 'Every month by the 20th', yellow: 'Occasionally delayed', red: 'Skipped or inconsistent' },
-          { label: 'Net profit margin tracking', green: '20%+ consistently', yellow: '10–19%', red: 'Below 10% or unknown' },
-          { label: 'Payroll % of revenue', green: '50–55%', yellow: '55–65%', red: 'Above 65%' },
-          { label: 'One specific finance decision made per monthly review', green: 'Every month', yellow: 'Most months', red: 'Rarely or never' },
-        ],
-      },
-      {
-        id: 'enrollment',
-        label: 'Enrollment & Growth',
-        icon: '📈',
+        id: 'vto',
+        label: 'Vision / V-TO Health',
+        icon: '🎯',
         weight: 30,
-        description: 'Is the enrollment function producing results under Robyn\'s ownership?',
+        description: 'Is the 3-Year Picture, Core Values, Core Focus, and 10-Year Target actually documented, current, and lived?',
         indicators: [
-          { label: 'Occupancy rate', green: '85%+', yellow: '70–84%', red: 'Below 70%' },
-          { label: 'Weekly enrollment KPIs reviewed', green: 'Every week with Robyn', yellow: 'Most weeks', red: 'Inconsistent' },
-          { label: 'Tour-to-enrollment conversion trend', green: 'Improving or stable', yellow: 'Flat', red: 'Declining' },
+          { label: 'V/TO document exists and is current', green: 'Updated within last quarter', yellow: 'Stale but exists', red: 'Missing or never written' },
+          { label: 'Core Values visible in the leadership team\'s behavior', green: 'Referenced in L10s and hiring', yellow: 'Posted but unused', red: 'Nobody remembers them' },
+          { label: '3-Year Picture is crisp and shared', green: 'Leadership team can recite it', yellow: 'You can, but they can\'t', red: 'No 3-Year Picture' },
         ],
       },
       {
-        id: 'experience',
-        label: 'Experience & Retention',
-        icon: '❤️',
+        id: 'ideas',
+        label: 'Idea Flow & Filtering',
+        icon: '💡',
         weight: 20,
-        description: 'Is the Director keeping classrooms excellent and families happy?',
+        description: 'Are you generating enough ideas — and handing them to the Integrator instead of executing them yourself?',
         indicators: [
-          { label: 'TRS compliance maintained', green: '4+ Star', yellow: '3 Star', red: 'Below 3 Star' },
-          { label: 'Family churn %', green: 'Below 5%/month', yellow: '5–10%', red: 'Above 10%' },
-          { label: 'Parent complaints resolved', green: 'All within 24 hrs', yellow: 'Most within 48 hrs', red: 'Unresolved or patterns' },
+          { label: 'Ideas captured per week', green: '10+ / week', yellow: '3–9 / week', red: 'Fewer than 3' },
+          { label: 'Ideas handed off (not executed) by Visionary', green: '90%+ handed off', yellow: 'Mixed', red: 'You are executing most of them' },
+          { label: 'Ideas refused by Integrator without drama', green: 'Regularly, with healthy dialogue', yellow: 'Sometimes', red: 'Every idea becomes a fight' },
         ],
       },
       {
-        id: 'systems',
-        label: 'Systems & Cadence',
-        icon: '⚙️',
-        weight: 15,
-        description: 'Are the weekly and monthly rhythms happening consistently?',
+        id: 'relationships',
+        label: 'Culture, Brand & Relationships',
+        icon: '🤝',
+        weight: 25,
+        description: 'Are you doing the relationship and culture work that only the Visionary can do?',
         indicators: [
-          { label: 'Daily Huddle happening', green: 'Every day', yellow: 'Most days', red: 'Sporadic' },
-          { label: 'Weekly Leadership Memos held', green: 'Every Tuesday', yellow: 'Most weeks', red: 'Inconsistent' },
-          { label: 'Monthly Finance Review completed', green: 'Every month', yellow: 'Most months', red: 'Skipped' },
+          { label: 'Top 20 relationships intentionally touched', green: 'All touched this quarter', yellow: 'Most touched', red: 'Relationships have gone cold' },
+          { label: 'Culture walks per week', green: '2–3 walks', yellow: '1 walk', red: 'None' },
+          { label: 'Long-form content produced (podcast/blog/video/talks)', green: '1+ per month', yellow: '1 per quarter', red: 'None this year' },
+        ],
+      },
+      {
+        id: 'seat',
+        label: 'Rocket Fuel Seat Integrity',
+        icon: '👑',
+        weight: 25,
+        description: 'Are you actually sitting in the Visionary seat — or have you collapsed back into running operations?',
+        indicators: [
+          { label: 'Same Page Meeting with Integrator held weekly', green: 'Every week, protected', yellow: 'Most weeks', red: 'Inconsistent or cancelled' },
+          { label: 'Time spent firefighting day-to-day ops', green: '<10% of your week', yellow: '10–25%', red: 'More than 25%' },
+          { label: 'Scorecard reviewed (not chased) by Visionary', green: 'Read weekly — Integrator chases red', yellow: 'You occasionally chase red', red: 'You are running the Scorecard' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'integrator',
+    label: 'Integrator',
+    emoji: '⚙️',
+    color: '#1E3A8A',
+    tagline: 'You are measured by the rhythm of the business and the strength of the leadership team — Rocket Fuel style.',
+    categories: [
+      {
+        id: 'l10',
+        label: 'L10 & Meeting Rhythm',
+        icon: '🗓️',
+        weight: 20,
+        description: 'Is the Level 10 meeting actually running every week with real IDS?',
+        indicators: [
+          { label: 'Weekly L10 held on time', green: 'Same day/time every week', yellow: 'Occasionally skipped', red: 'Inconsistent or cancelled' },
+          { label: 'Issues solved per L10 (IDS)', green: '3+ issues solved', yellow: '1–2', red: 'Issues pile up week over week' },
+          { label: 'Same Page Meeting with Visionary weekly', green: 'Every week', yellow: 'Most weeks', red: 'Skipped or reactive only' },
+        ],
+      },
+      {
+        id: 'scorecard',
+        label: 'Scorecard Ownership',
+        icon: '📊',
+        weight: 25,
+        description: 'Are the 10–12 weekly numbers current, assigned, and chased?',
+        indicators: [
+          { label: 'All Scorecard numbers updated weekly', green: '100% current', yellow: '80–99%', red: 'Missing or stale data' },
+          { label: 'Red numbers escalated to Issues within 3 weeks', green: 'Always', yellow: 'Sometimes', red: 'Red numbers ignored' },
+          { label: 'Scorecard tells the true story of the business', green: 'Yes — you can defend every number', yellow: 'Mostly', red: 'It\'s for show' },
+        ],
+      },
+      {
+        id: 'rocks',
+        label: 'Quarterly Rocks Completion',
+        icon: '🪨',
+        weight: 20,
+        description: 'Is the leadership team completing the Rocks they committed to each quarter?',
+        indicators: [
+          { label: 'Company Rocks completion rate', green: '80%+ complete', yellow: '60–79%', red: 'Below 60%' },
+          { label: 'Individual Rocks set for every leader', green: 'Every leader, 1–3 Rocks', yellow: 'Most leaders', red: 'No Rocks set' },
+          { label: 'Rocks reviewed weekly in L10', green: 'Every L10', yellow: 'Some L10s', red: 'Never reviewed' },
+        ],
+      },
+      {
+        id: 'lma',
+        label: 'LMA — Leadership Team Health',
+        icon: '👥',
+        weight: 20,
+        description: 'Right people in right seats (GWC) + real 1:1s + no lingering performance issues.',
+        indicators: [
+          { label: 'Weekly 1:1s with every direct report', green: 'Every week', yellow: 'Most weeks', red: 'Ad-hoc only' },
+          { label: 'People Analyzer current on leadership team', green: 'All green (right person / right seat)', yellow: '1–2 yellows', red: 'Any red unaddressed past 1 quarter' },
+          { label: 'GWC (Gets it, Wants it, Capacity) verified on every seat', green: 'Yes for every leader', yellow: 'Some', red: 'Never run' },
+        ],
+      },
+      {
+        id: 'finance',
+        label: 'Financial Execution',
+        icon: '💰',
+        weight: 15,
+        description: 'Is the business actually healthy on the numbers you run?',
+        indicators: [
+          { label: 'Monthly Finance Review held with Visionary', green: 'Every month, deck prepared', yellow: 'Some months', red: 'Skipped' },
+          { label: 'Payroll % of revenue', green: '50–55%', yellow: '55–65%', red: 'Above 65%' },
+          { label: 'Net profit margin', green: '20%+', yellow: '10–19%', red: 'Below 10%' },
         ],
       },
     ],
@@ -609,11 +680,13 @@ const RoleButton = ({ role, isActive, onClick }) => (
   </button>
 )
 
-const IndicatorRow = ({ indicator }) => (
+const IndicatorRow = ({ indicator }) => {
+  const { mobileMode } = useViewMode()
+  return (
   <div
     style={{
       display: 'grid',
-      gridTemplateColumns: '2fr 1fr 1fr 1fr',
+      gridTemplateColumns: mobileMode ? '1fr' : '2fr 1fr 1fr 1fr',
       gap: '0.5rem',
       alignItems: 'start',
       padding: '0.65rem 0',
@@ -669,10 +742,12 @@ const IndicatorRow = ({ indicator }) => (
       </span>
     </div>
   </div>
-)
+  )
+}
 
 const CategoryCard = ({ cat, color }) => {
   const [open, setOpen] = useState(false)
+  const { mobileMode } = useViewMode()
   return (
     <div
       style={{
@@ -740,7 +815,7 @@ const CategoryCard = ({ cat, color }) => {
           </p>
           <div
             style={{
-              display: 'grid',
+              display: mobileMode ? 'none' : 'grid',
               gridTemplateColumns: '2fr 1fr 1fr 1fr',
               gap: '0.5rem',
               padding: '0.4rem 0',
@@ -776,13 +851,16 @@ const CategoryCard = ({ cat, color }) => {
 }
 
 export default function HowDoIKnowPage() {
-  const [activeRole, setActiveRole] = useState(ROLES[0])
+  const [selectedId] = useSelectedRoleId()
+  const activeRole = ROLES.find((r) => r.id === selectedId) || ROLES[0]
   const [view, setView] = useState('rubric')
+  const navigate = useNavigate()
+  const { mobileMode } = useViewMode()
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Page Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center gap-4 mb-3">
           <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center">
             <Award className="w-6 h-6 text-white" />
@@ -815,48 +893,71 @@ export default function HowDoIKnowPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div style={{ display: 'flex', gap: '1.75rem', alignItems: 'flex-start' }}>
-        {/* Role Selector */}
-        <div
-          style={{
-            width: 200,
-            flexShrink: 0,
-            background: '#fff',
-            border: '1px solid #E2E8F0',
-            borderRadius: '14px',
-            padding: '1rem 0.75rem',
-            position: 'sticky',
-            top: '1rem',
-          }}
-        >
-          <p
-            style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: '#94A3B8',
-              margin: '0 0.5rem 0.75rem',
-            }}
-          >
-            Select Your Role
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {ROLES.map((role) => (
-              <RoleButton
-                key={role.id}
-                role={role}
-                isActive={activeRole.id === role.id}
-                onClick={() => setActiveRole(role)}
-              />
-            ))}
+      {/* Current Role + Change Role Button */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{ fontSize: '1.3rem' }}>{activeRole.emoji}</span>
+          <div>
+            <p
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: '#94A3B8',
+                margin: 0,
+              }}
+            >
+              Current Role
+            </p>
+            <p
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                color: activeRole.color,
+                margin: 0,
+              }}
+            >
+              {activeRole.label}
+            </p>
           </div>
         </div>
+        <button
+          onClick={() => navigate('/dashboard/who-am-i')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.55rem 1rem',
+            background: '#fff',
+            border: '1.5px solid #E2E8F0',
+            borderRadius: '10px',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: '#475569',
+            cursor: 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          <UserCircle className="w-4 h-4" />
+          Choose a different Role
+        </button>
+      </div>
 
+      {/* Main Content */}
+      <div>
         {/* Content */}
         <div
-          style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}
+          style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}
         >
           {/* Header */}
           <div

@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useViewMode } from '../contexts/ViewModeContext'
 import {
-  MessageCircle,
   LogIn,
   LogOut,
   Bell,
-  Search,
   Clock,
   Sun,
   Moon,
   CloudSun,
-  UserCheck,
-  UserX,
+  Menu,
 } from 'lucide-react'
+// The check-in / check-out / lunch-break hooks used to be wired in here
+// to drive the now-removed action pills. Both the hooks and the underlying
+// TimeClockPage have since been deleted along with the rest of the
+// payroll/time-clock subsystem.
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -31,6 +33,14 @@ function formatDate() {
   })
 }
 
+function formatDateShort() {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 function formatTime() {
   return new Date().toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -44,12 +54,13 @@ function formatRole(role) {
   return role.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-export default function TopToolbar() {
+export default function TopToolbar({ onMenuToggle }) {
   const [time, setTime] = useState(formatTime())
   const greeting = getGreeting()
   const GreetingIcon = greeting.icon
   const navigate = useNavigate()
   const { staff, signOut, session } = useAuth()
+  const { mobileMode } = useViewMode()
 
   // Update clock every minute
   useEffect(() => {
@@ -64,6 +75,69 @@ export default function TopToolbar() {
     } catch (err) {
       console.error('Logout error:', err)
     }
+  }
+
+  if (mobileMode) {
+    return (
+      <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-30">
+        {/* Top row: hamburger + greeting + avatar */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onMenuToggle}
+              className="p-2 -ml-1 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 truncate">
+                {greeting.text}{staff ? `, ${staff.first_name}` : ''}
+              </p>
+              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                <span className="truncate">{formatDateShort()}</span>
+                <span className="text-gray-300">•</span>
+                <span className="tabular-nums shrink-0">{time}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            <button className="relative p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
+            </button>
+            {session && staff ? (
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                  style={{ backgroundColor: staff.avatar_color || '#6b7280' }}
+                >
+                  {(staff.first_name?.[0] || '') + (staff.last_name?.[0] || '')}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+                  title="Sign out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => navigate('/login')}
+                className="p-2 rounded-xl text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Check-in / Check-out / Lunch actions intentionally omitted in mobile
+            mode — they live inside the Time Clock page instead to keep the
+            top chrome minimal. Desktop view still shows the pills below. */}
+      </div>
+    )
   }
 
   return (
@@ -82,15 +156,11 @@ export default function TopToolbar() {
           </div>
         </div>
 
-        {/* Center — Quick Actions */}
-        <div className="flex items-center gap-2">
-          <ToolbarButton icon={UserCheck} label="Check-in" color="green" onClick={() => navigate('/checkin')} />
-          <ToolbarButton icon={UserX} label="Check-out" color="red" onClick={() => navigate('/checkout')} />
-          <ToolbarButton icon={MessageCircle} label="Chat" color="blue" />
-          <ToolbarButton icon={Search} label="Search" color="gray" />
-        </div>
+        {/* Check-in / Check-out / Start Lunch action pills used to live
+            here. Removed alongside the broader time-clock/payroll
+            subsystem when the platform got refocused around training. */}
 
-        {/* Right — User info + Clock + Notifications */}
+        {/* Right — Clock + Notifications + User */}
         <div className="flex items-center gap-3">
           {/* Clock */}
           <div className="flex items-center gap-2 text-gray-500">
@@ -149,21 +219,3 @@ export default function TopToolbar() {
   )
 }
 
-function ToolbarButton({ icon: Icon, label, color, onClick }) {
-  const colorClasses = {
-    green: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100',
-    red: 'bg-red-50 text-red-500 hover:bg-red-100',
-    blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
-    gray: 'bg-gray-50 text-gray-500 hover:bg-gray-100',
-  }
-
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${colorClasses[color] || colorClasses.gray}`}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </button>
-  )
-}

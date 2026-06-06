@@ -88,7 +88,7 @@ CREATE TRIGGER tasks_updated_at BEFORE UPDATE ON tasks FOR EACH ROW EXECUTE FUNC
 
 -- ─── Targets ────────────────────────────────────────────
 INSERT INTO targets (label, detail, icon, color, sort_order) VALUES
-  ('20 New Students', 'Robyn + Robyne + Ed', '🎯', '#2563EB', 1),
+  ('20 New Students', 'Robyn + Ed', '🎯', '#2563EB', 1),
   ('100 Customer Reviews', 'Google / Facebook — social proof', '⭐', '#EAB308', 2);
 
 -- ─── Priorities ─────────────────────────────────────────

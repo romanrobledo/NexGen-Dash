@@ -21,6 +21,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { useTrainings } from '../hooks/useTrainings'
+import { useViewMode } from '../contexts/ViewModeContext'
 
 const ICON_MAP = {
   wave: HandMetal,
@@ -95,6 +96,7 @@ const STATIC_TOOLS = [
 
 export default function TrainingsToolsPage() {
   const { loading, error } = useTrainings('tools')
+  const { mobileMode } = useViewMode()
   // All original DB tools moved to How To's — Tools now only shows these static items
   const subjects = [...STATIC_TOOLS]
   const [searchQuery, setSearchQuery] = useState('')
@@ -159,30 +161,30 @@ export default function TrainingsToolsPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="flex items-center gap-6 mb-6">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <BookOpen className="w-4 h-4 text-blue-500" />
+      <div className={`${mobileMode ? 'grid grid-cols-3 gap-2' : 'flex items-center gap-6'} mb-6`}>
+        <div className={`flex items-center gap-2 text-gray-600 ${mobileMode ? 'text-xs bg-white border border-gray-200 rounded-lg px-2 py-2' : 'text-sm'}`}>
+          <BookOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
           <span>
-            <span className="font-semibold">{subjects.length}</span> tools available
+            <span className="font-semibold">{subjects.length}</span> tools
           </span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <FileText className="w-4 h-4 text-emerald-500" />
+        <div className={`flex items-center gap-2 text-gray-600 ${mobileMode ? 'text-xs bg-white border border-gray-200 rounded-lg px-2 py-2' : 'text-sm'}`}>
+          <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
           <span>
-            <span className="font-semibold">{totalSteps}</span> resources
+            <span className="font-semibold">{totalSteps}</span> {mobileMode ? 'res.' : 'resources'}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <CheckCircle2 className="w-4 h-4 text-teal-500" />
+        <div className={`flex items-center gap-2 text-gray-600 ${mobileMode ? 'text-xs bg-white border border-gray-200 rounded-lg px-2 py-2' : 'text-sm'}`}>
+          <CheckCircle2 className="w-4 h-4 text-teal-500 flex-shrink-0" />
           <span>
-            <span className="font-semibold">{completedSteps}</span> completed
+            <span className="font-semibold">{completedSteps}</span> done
           </span>
         </div>
       </div>
 
       {/* Search + filters bar */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative flex-1 max-w-md">
+      <div className={`${mobileMode ? 'flex flex-col gap-3' : 'flex items-center gap-4'} mb-6`}>
+        <div className={`relative ${mobileMode ? 'w-full' : 'flex-1 max-w-md'}`}>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
@@ -193,39 +195,41 @@ export default function TrainingsToolsPage() {
           />
         </div>
 
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-          {TRS_FILTERS.map((f) => (
+        <div className={`flex items-center gap-3 ${mobileMode ? 'w-full justify-between' : ''}`}>
+          <div className={`flex items-center gap-1 bg-gray-100 rounded-lg p-1 ${mobileMode ? 'overflow-x-auto scrollbar-hide flex-1' : ''}`}>
+            {TRS_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setActiveFilter(f.key)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap flex-shrink-0 ${
+                  activeFilter === f.key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5 flex-shrink-0">
             <button
-              key={f.key}
-              onClick={() => setActiveFilter(f.key)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                activeFilter === f.key
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'grid' ? 'bg-gray-100 text-gray-900' : 'text-gray-400'
               }`}
             >
-              {f.label}
+              <Grid3X3 className="w-4 h-4" />
             </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-1.5 rounded-md transition-colors ${
-              viewMode === 'grid' ? 'bg-gray-100 text-gray-900' : 'text-gray-400'
-            }`}
-          >
-            <Grid3X3 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-1.5 rounded-md transition-colors ${
-              viewMode === 'list' ? 'bg-gray-100 text-gray-900' : 'text-gray-400'
-            }`}
-          >
-            <List className="w-4 h-4" />
-          </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'list' ? 'bg-gray-100 text-gray-900' : 'text-gray-400'
+              }`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -238,7 +242,7 @@ export default function TrainingsToolsPage() {
           </p>
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-3 gap-5">
+        <div className={`grid gap-4 ${mobileMode ? 'grid-cols-2' : 'grid-cols-3 gap-5'}`}>
           {filteredTools.map((tool, idx) => {
             const IconComponent = ICON_MAP[tool.icon] || BookOpen
             const colorClass = CARD_COLORS[idx % CARD_COLORS.length]
@@ -270,24 +274,24 @@ export default function TrainingsToolsPage() {
                 </div>
 
                 {/* Card body */}
-                <div className="p-4">
-                  <p className="text-xs text-gray-500 line-clamp-2 mb-3 min-h-[2rem]">
+                <div className={mobileMode ? 'p-3' : 'p-4'}>
+                  <p className={`text-gray-500 line-clamp-2 mb-3 ${mobileMode ? 'text-[11px] min-h-[1.75rem]' : 'text-xs min-h-[2rem]'}`}>
                     {tool.description || 'Training resource'}
                   </p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <FileText className="w-3 h-3" />
+                  <div className={`flex items-center ${mobileMode ? 'flex-wrap gap-x-2 gap-y-1' : 'justify-between'}`}>
+                    <div className={`flex items-center text-gray-400 ${mobileMode ? 'gap-2 text-[10px] flex-wrap' : 'gap-3 text-xs'}`}>
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <FileText className="w-3 h-3 flex-shrink-0" />
                         {tool.step_count} steps
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <Clock className="w-3 h-3 flex-shrink-0" />
                         {tool.read_time.replace('~', '')}
                       </span>
                     </div>
                     {tool.progress > 0 && (
                       <span
-                        className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                        className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
                           tool.progress === 100
                             ? 'bg-emerald-50 text-emerald-600'
                             : 'bg-blue-50 text-blue-600'

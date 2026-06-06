@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Calendar } from "lucide-react"
+import { useViewMode } from "../contexts/ViewModeContext"
 
 // ─── MEETING DATA ─────────────────────────────────────────────────────────────
 const CADENCE_COLORS = {
@@ -11,7 +12,8 @@ const CADENCE_COLORS = {
 }
 
 const ROLE_COLORS = {
-  founder:        "#0F172A",
+  visionary:      "#0F172A",
+  integrator:     "#1E3A8A",
   operator:       "#2563EB",
   director:       "#7C3AED",
   teacher:        "#059669",
@@ -34,34 +36,77 @@ const ALL_MEETINGS = [
     day: "Every day",
     time: "Morning (first thing)",
     duration: "10–15 min",
-    owner: "founder",
-    description: "Quick alignment between Founder, Operator, Director, and Andrea. Not a strategy session — a pulse check. The only question: Does today break anywhere?",
+    owner: "integrator",
+    description: "The Integrator's pulse check. Per Rocket Fuel, the Integrator runs the daily rhythm — not the Visionary. Quick alignment between Integrator, Operator, and Director. The only question: Does today break anywhere?",
     agenda: [
       "Today's staffing and ratios — any gaps?",
       "Tours scheduled for today — is Tour Manager prepped?",
       "Any fires — parent issues, staff issues, anything urgent",
     ],
-    attendees: ["founder", "operator", "director"],
-    owner_note: "Founder initiates. Keep it tight — 15 minutes max. If it needs a deeper conversation, schedule it separately.",
+    attendees: ["integrator", "operator", "director"],
+    owner_note: "Integrator runs it. Keep it tight — 15 minutes max. If it needs a deeper conversation, schedule it separately. The Visionary does not attend this meeting.",
   },
   {
-    id: "weekly-leadership-memos",
-    title: "Weekly Leadership Memos",
+    id: "l10-meeting",
+    title: "Level 10 Meeting (L10)",
     emoji: "📋",
     cadence: "weekly",
     day: "Tuesday",
-    time: "After Operator ↔ Director check-in",
-    duration: "45–60 min",
-    owner: "founder",
-    description: "The strategic operating meeting for the leadership team. Review all KPIs, identify what's red, set priorities for the week, and assign clear ownership with deadlines.",
+    time: "Same day and time every week",
+    duration: "90 min",
+    owner: "integrator",
+    description: "The Rocket Fuel / EOS Level 10 Meeting. Same day, same time, same agenda, every single week. The Integrator runs it. This is where the leadership team reviews the Scorecard, checks Rock progress, surfaces Issues, and IDS's (Identify, Discuss, Solve) until every issue is resolved. Goal: rate the meeting a 10 on the way out.",
     agenda: [
-      "Scorecard Review (10–15 min) — Look at all KPIs. Circle anything red.",
-      "Wins / Losses (5 min) — 1–2 big wins, 1–2 issues",
-      "Top 3 Priorities (15–20 min) — What to fix next week",
-      "Who / What / When (15 min) — Assign owners and due dates",
+      "Segue (5 min) — personal & professional best news",
+      "Scorecard Review (5 min) — all 10–12 numbers, circle anything off-track",
+      "Rock Review (5 min) — on-track / off-track for each quarterly Rock",
+      "Customer & Employee Headlines (5 min) — wins and warnings",
+      "To-Do List (5 min) — review last week's 7-day action items",
+      "IDS — Identify, Discuss, Solve (60 min) — work the Issues List",
+      "Conclude (5 min) — recap To-Dos, cascading messages, rate the meeting",
     ],
-    attendees: ["founder", "operator", "director"],
-    owner_note: "Founder runs the agenda. Operator and Director come prepared with their numbers.",
+    attendees: ["visionary", "integrator", "operator", "director"],
+    owner_note: "Integrator runs the agenda. Visionary attends but does NOT run it. Everyone brings their Scorecard numbers and Rock updates ready. Rate the meeting on the way out — anything under an 8 means something's broken.",
+  },
+  {
+    id: "same-page-meeting",
+    title: "Same Page Meeting (Visionary ↔ Integrator)",
+    emoji: "🤝",
+    cadence: "weekly",
+    day: "Recurring weekly slot",
+    time: "Protected calendar block",
+    duration: "60–90 min",
+    owner: "visionary",
+    description: "The Rocket Fuel Same Page Meeting — a weekly 1:1 between the Visionary and the Integrator to ensure they are literally on the same page. No team, no audience. This is where vision gets translated into execution and where disagreements get surfaced privately so the leadership team never sees daylight between the two seats.",
+    agenda: [
+      "Personal check-in — how are we each doing, really?",
+      "Surface disagreements — anything where we're not aligned",
+      "IDS any issues between us — identify, discuss, solve",
+      "Walk out 100% on the same page — or schedule a follow-up",
+    ],
+    attendees: ["visionary", "integrator"],
+    owner_note: "Visionary and Integrator jointly own this. If you walk out NOT on the same page, the leadership team will feel it by Wednesday. Do not skip. Do not let anyone else attend.",
+  },
+  {
+    id: "quarterly-pulse",
+    title: "Quarterly Pulsing (V/TO Review)",
+    emoji: "📈",
+    cadence: "quarterly",
+    day: "First week of the new quarter",
+    time: "Half-day off-site",
+    duration: "4–8 hours",
+    owner: "integrator",
+    description: "The EOS Quarterly Pulsing session. Leadership team goes off-site to review last quarter, refresh the V/TO (Vision/Traction Organizer), set the next 3–7 Rocks for the quarter, and resolve the big Issues that cannot be solved in a weekly L10. This is where the next 90 days get built.",
+    agenda: [
+      "Check-in — personal & business best/worst of the quarter",
+      "Review Previous Quarter's Rocks — which were done, which missed, why",
+      "Review the V/TO — Core Values, Core Focus, 10-Year Target, Marketing Strategy, 3-Year Picture, 1-Year Plan still true?",
+      "Establish Next Quarter's Rocks — 3–7 company Rocks, assign an owner to each",
+      "Tackle Key Issues — long-form IDS on the biggest blockers",
+      "Next Steps — who does what by when, cascade to the team",
+    ],
+    attendees: ["visionary", "integrator", "operator", "director"],
+    owner_note: "Integrator runs the agenda using the V/TO as the backbone. Visionary drives the vision sections; Integrator drives the Rocks and Issues sections. Off-site, no phones, no interruptions.",
   },
   {
     id: "monthly-finance-review",
@@ -71,16 +116,16 @@ const ALL_MEETINGS = [
     day: "By the 20th of each month",
     time: "Scheduled",
     duration: "60–90 min",
-    owner: "founder",
-    description: "The Founder and Operator review the financial health of NexGen. Review last 3 months P&L, check 3 key ratios, ask 3 diagnostic questions, and make ONE specific finance decision. No meeting ends without a decision.",
+    owner: "integrator",
+    description: "The Integrator owns the financial deck (last 3 months P&L, key ratios, diagnostic questions). The Visionary attends, asks the hard questions, and makes the final call. Per Rocket Fuel, the Integrator runs the numbers; the Visionary decides.",
     agenda: [
-      "Review last 3 months P&L — revenue trend up, flat, or down?",
+      "Integrator presents: last 3 months P&L — revenue trend up, flat, or down?",
       "Check 3 key ratios: Payroll % of Revenue (~50–55%), Average Revenue per Child, Net Profit % (~20%+)",
       "Ask 3 diagnostic questions: Fill more seats? Raise prices? Control a cost bucket?",
-      "Pick ONE finance decision — pricing change, expense cut, or enrollment push",
+      "Visionary makes ONE finance decision — pricing change, expense cut, or enrollment push",
     ],
-    attendees: ["founder", "operator"],
-    owner_note: "Founder leads. Robyn brings the operational context. Bookkeeper optionally on Zoom. No meeting ends without a specific finance decision.",
+    attendees: ["visionary", "integrator", "operator"],
+    owner_note: "Integrator builds the deck and runs the meeting. Visionary decides. Bookkeeper optionally on Zoom. No meeting ends without a specific finance decision.",
   },
   {
     id: "operator-director",
@@ -100,7 +145,7 @@ const ALL_MEETINGS = [
       "Priorities for the coming week",
       "Anything the Director needs from the Operator to move forward",
     ],
-    attendees: ["founder", "operator", "director"],
+    attendees: ["integrator", "operator", "director"],
     owner_note: "Roman runs the agenda. Director comes prepared with updates.",
   },
   {
@@ -121,7 +166,7 @@ const ALL_MEETINGS = [
       "Open floor \u2014 questions and concerns (time-boxed to 10 min)",
       "Roman\u2019s close \u2014 vision, direction, what we\u2019re building toward",
     ],
-    attendees: ["founder", "operator", "director", "teacher", "teacher-assistant", "front-desk", "hiring-manager", "tour-manager", "lesson-plans", "kitchen-manager", "asst-kitchen", "bus-driver"],
+    attendees: ["visionary", "integrator", "operator", "director", "teacher", "teacher-assistant", "front-desk", "hiring-manager", "tour-manager", "lesson-plans", "kitchen-manager", "asst-kitchen", "bus-driver"],
     owner_note: "Director prepares the agenda by the Friday before. Roman sees it Monday morning.",
   },
   {
@@ -284,7 +329,8 @@ const ALL_MEETINGS = [
 // ─── ROLE VIEW ────────────────────────────────────────────────────────────────
 const ROLES = [
   { id: "all",              label: "All Meetings",     emoji: "\ud83d\udcc5", color: "#0F172A" },
-  { id: "founder",          label: "Founder",          emoji: "👑", color: "#0F172A" },
+  { id: "visionary",        label: "Visionary",        emoji: "👑", color: "#0F172A" },
+  { id: "integrator",       label: "Integrator",       emoji: "⚙️", color: "#1E3A8A" },
   { id: "operator",         label: "Operator",         emoji: "\ud83c\udfe2", color: "#2563EB" },
   { id: "director",         label: "Director",         emoji: "\ud83d\udccb", color: "#7C3AED" },
   { id: "teacher",          label: "Teacher",          emoji: "\ud83d\udcda", color: "#059669" },
@@ -444,7 +490,7 @@ const MeetingCard = ({ meeting, highlightRole }) => {
 // ─── CALENDAR OVERVIEW ────────────────────────────────────────────────────────
 const WEEK_MEETINGS = [
   { day: "Mon", items: ["Daily Huddle", "Full Staff (monthly)", "Bus Route Review (monthly)"] },
-  { day: "Tue", items: ["Daily Huddle", "Operator \u2194 Director", "Weekly Leadership Memos", "Hiring Pipeline Review"] },
+  { day: "Tue", items: ["Daily Huddle", "Operator \u2194 Director", "Level 10 Meeting (L10)", "Same Page Meeting", "Hiring Pipeline Review"] },
   { day: "Wed", items: ["Daily Huddle", "Director \u2194 Teacher 1:1s (bi-weekly)"] },
   { day: "Thu", items: ["Daily Huddle", "Lesson Plans distributed (async)"] },
   { day: "Fri", items: ["Daily Huddle", "Tour Debrief", "Menu Planning (monthly)"] },
@@ -454,6 +500,7 @@ const WEEK_MEETINGS = [
 export default function WhenDoWeMeetPage() {
   const [activeRole, setActiveRole] = useState(ROLES[0])
   const [view, setView] = useState("meetings")
+  const { mobileMode } = useViewMode()
 
   const filteredMeetings = activeRole.id === "all"
     ? ALL_MEETINGS
@@ -477,17 +524,19 @@ export default function WhenDoWeMeetPage() {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: "1.75rem", alignItems: "flex-start" }}>
+      <div style={{ display: "flex", flexDirection: mobileMode ? "column" : "row", gap: mobileMode ? "1rem" : "1.75rem", alignItems: "flex-start" }}>
         {/* Role Selector */}
         <div style={{
-          width: 200, flexShrink: 0, background: "#fff",
+          width: mobileMode ? "100%" : 200, flexShrink: 0, background: "#fff",
           border: "1px solid #E2E8F0", borderRadius: "14px",
-          padding: "1rem 0.75rem", position: "sticky", top: "1rem",
+          padding: "1rem 0.75rem", position: mobileMode ? "static" : "sticky", top: "1rem",
         }}>
           <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#94A3B8", margin: "0 0.5rem 0.75rem" }}>
             Filter by Role
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <div style={mobileMode
+            ? { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "6px" }
+            : { display: "flex", flexDirection: "column", gap: "2px" }}>
             {ROLES.map((role) => (
               <RoleButton key={role.id} role={role} isActive={activeRole.id === role.id} onClick={() => setActiveRole(role)} />
             ))}
@@ -580,7 +629,7 @@ export default function WhenDoWeMeetPage() {
               <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#94A3B8", margin: "0 0 1rem" }}>
                 Typical Week at a Glance
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.75rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: mobileMode ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: "0.75rem" }}>
                 {WEEK_MEETINGS.map((day) => (
                   <div key={day.day} style={{ background: "#F8FAFC", borderRadius: "12px", overflow: "hidden", border: "1px solid #E2E8F0" }}>
                     <div style={{
@@ -605,7 +654,7 @@ export default function WhenDoWeMeetPage() {
               </div>
 
               {/* Monthly + Quarterly */}
-              <div style={{ marginTop: "1.25rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              <div style={{ marginTop: "1.25rem", display: "grid", gridTemplateColumns: mobileMode ? "1fr" : "1fr 1fr", gap: "0.75rem" }}>
                 <div style={{ background: "#FAF5FF", border: "1px solid #D8B4FE", borderRadius: "12px", padding: "1rem" }}>
                   <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6B21A8", margin: "0 0 0.6rem" }}>Monthly</p>
                   {ALL_MEETINGS.filter(m => m.cadence === "monthly").map(m => (

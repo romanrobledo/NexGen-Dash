@@ -1,31 +1,70 @@
-import { useState } from 'react'
-import { Clock } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Clock, UserCircle, ArrowRight } from 'lucide-react'
+import { useSelectedRoleId } from '../hooks/useSelectedRole'
+import { useViewMode } from '../contexts/ViewModeContext'
 
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
 const ROLES = [
   {
-    id: 'founder',
-    label: 'Founder',
+    id: 'visionary',
+    label: 'Visionary',
     emoji: '👑',
     color: '#0F172A',
-    rhythm: 'Daily + Weekly + Monthly',
-    note: "Weekly is about staying out of trouble. Monthly is about making more money. Your job is to stare at a few key numbers and have the courage to pull the obvious lever.",
+    rhythm: 'Weekly (light) + Monthly + Quarterly + Annual',
+    note: "Per Rocket Fuel: if your calendar looks like an Integrator's, you're in the wrong seat. Protect huge blocks of unstructured time — that's where the vision actually happens.",
     daily: [
-      { time: 'Morning', task: 'Daily Huddle (10–15 min) with Robyn + Rachel + Andrea — staffing/ratios, tours scheduled today, any fires (parent issues, staff issues). Goal: Does today break anywhere?' },
+      { time: 'Whenever', task: 'Capture ideas as they come — Slack thread, voice memo, notebook. Do NOT deliver them to the team. Sit on them until the weekly Same Page meeting with the Integrator.' },
+      { time: '2–3× per week', task: 'Culture walk — walk the building without an agenda. Observe tone, energy, Core Values in action. Report signals to Integrator, do not fix things yourself.' },
     ],
     weekly: [
-      { day: 'Monday', tasks: ['Weekly Scoreboard with Robyn — 4 numbers: Occupancy %, New Enrollments/Withdrawals, Total Payroll Dollars, Cash in Bank'] },
-      { day: 'Tuesday', tasks: ['Weekly Leadership Memos (45–60 min) — You + Robyn + Rachel: Scorecard Review (10–15 min), Wins/Losses (5 min), Top 3 Priorities (15–20 min), Who/What/When (15 min)'] },
-      { day: 'Wednesday', tasks: ['Deep work — systems building, strategy, content, growth planning'] },
-      { day: 'Thursday', tasks: ['Follow up on action items from Tuesday memos', 'Review any operational flags'] },
-      { day: 'Friday', tasks: ['Weekly close — what got done, what moves to next week'] },
+      { day: 'Monday', tasks: ['Read the Scorecard — 10 min only. You do not chase red numbers; that is the Integrator.', 'Review your top 3 Issues for the Same Page meeting'] },
+      { day: 'Tuesday', tasks: ['Same Page Meeting with Integrator (60–90 min) — IDS the top 3 issues from each side. No other attendees.'] },
+      { day: 'Wednesday', tasks: ['Deep work / vision block — big ideas, brand, content, long-term thinking'] },
+      { day: 'Thursday', tasks: ['Relationship day — top partners, hero families, community, press, potential new bets'] },
+      { day: 'Friday', tasks: ['Idea triage — review the week\'s captured ideas, hand the best 2–3 to the Integrator, archive the rest'] },
     ],
     monthly: [
-      'Monthly Finance Review (60–90 min) with Robyn — Review last 3 months P&L, check 3 key ratios (Payroll % of Revenue, Avg Revenue per Child, Net Profit %), ask 3 diagnostic questions, pick ONE finance decision',
-      'Bookkeeper reports due by the 15th: P&L, Balance Sheet, Aged Receivables',
-      'Review all 10–12 KPIs across 3 functions — Enrollment, Experience & Retention, Cash & Admin',
-      'Progress check on quarterly goals',
-      'Full staff meeting close — vision, direction, what we are building toward',
+      'Monthly Finance Review (90 min) with Integrator — they own the deck; you decide the ONE finance move of the month',
+      'State of NexGen reflection — one page: what is working, what worries me, what I am excited about',
+      'One long-form content piece — podcast, blog, video, talk — you are the voice of NexGen',
+      'Cultural temperature check — are Core Values visible in how the team behaves?',
+      '📅 QUARTERLY: Quarterly Pulse with Integrator (half day) — review V/TO, set 3–7 company Rocks, adjust the 3-Year Picture only if the world changed',
+      '📅 QUARTERLY: Deliver State of NexGen to full team (30 min) — big picture only, no ops',
+      '📅 ANNUAL: 2–3 day personal reset out of the building. Come back with the next year\'s theme.',
+      '📅 ANNUAL: Refresh 10-Year Target, 3-Year Picture, Core Values, Core Focus (V/TO)',
+      '📅 ANNUAL: Rocket Fuel check-in with Integrator — are you both still in the right seats?',
+    ],
+  },
+  {
+    id: 'integrator',
+    label: 'Integrator',
+    emoji: '⚙️',
+    color: '#1E3A8A',
+    rhythm: 'Daily + Weekly + Monthly + Quarterly',
+    note: "Your calendar is the operating system. If the L10, the Scorecard review, and the Same Page meeting aren't on it every week at the same time, you don't have a rhythm — you have chaos.",
+    daily: [
+      { time: 'Morning', task: 'Daily Huddle (10–15 min) with Director + Front Desk — what did we win yesterday, what could break today, what do you need. No problem-solving in the huddle.' },
+      { time: 'Midday', task: 'Scorecard glance — 5 minutes. Any red numbers that need same-day action? Flag for the L10.' },
+      { time: 'End of day', task: 'Inbox zero for decisions — answer only the items that block someone. The rest waits for the L10 or Same Page.' },
+    ],
+    weekly: [
+      { day: 'Monday', tasks: ['Scorecard refresh (30 min) — all 10–12 numbers updated', 'Prep for the L10 — Scorecard, Rock review, Issues list'] },
+      { day: 'Tuesday', tasks: ['Level 10 Meeting (90 min) — leadership team. You facilitate: Segue, Scorecard, Rocks, Headlines, To-Dos, IDS, Conclude.', 'Same Page Meeting with Visionary (60–90 min) — IDS top 3 issues from each side'] },
+      { day: 'Wednesday', tasks: ['1:1s with direct reports — Director, Front Desk Manager, Marketing lead. LMA conversations.'] },
+      { day: 'Thursday', tasks: ['Cross-functional issue resolution — the stuck items that surfaced in the L10', 'Remove obstacles for the Director'] },
+      { day: 'Friday', tasks: ['Weekly close — Rocks on track? Scorecard updated? To-Dos completed?', 'Prep the Visionary for what\'s coming next week'] },
+    ],
+    monthly: [
+      'Monthly Finance Review (90 min) with Visionary — you own the deck: P&L, 3 key ratios (Payroll %, Avg Revenue/Child, Net Profit %), Aged Receivables, and your ONE recommended finance decision',
+      'Bookkeeper reports due by the 15th: P&L, Balance Sheet, Aged Receivables — you chase them, not the Visionary',
+      'People Analyzer on every direct report — right person (Core Values) + right seat (GWC)',
+      'Monthly Rock check — are the 3–7 company Rocks still on track? If not, IDS at the next L10.',
+      'One system improvement shipped — you owe the business one tangible system upgrade every month',
+      '📅 QUARTERLY: Quarterly Pulse with Visionary (half day) — bring Scorecard trends, Rock completion rate, people issues',
+      '📅 QUARTERLY: Break company Rocks into departmental Rocks with the leadership team',
+      '📅 QUARTERLY: Formal LMA conversations with every direct report',
+      '📅 QUARTERLY: Kill or ship any Rock that has been in the backlog for 2 quarters',
     ],
   },
   {
@@ -49,11 +88,11 @@ const ROLES = [
       { time: '→ Tours', task: 'Tours — Conversion rates, tour quality, follow-up execution' },
     ],
     weekly: [
-      { day: 'Monday', tasks: ["Review previous week's KPIs and enrollment numbers", 'Set weekly priorities and communicate to Director'] },
-      { day: 'Tuesday', tasks: ['All meetings stacked here — Director check-in, department leads, any external calls'] },
-      { day: 'Wednesday', tasks: ['Deep work — strategy, systems building, content, growth planning'] },
-      { day: 'Thursday', tasks: ['Follow up on action items from Tuesday meetings', 'Review any operational flags or issues'] },
-      { day: 'Friday', tasks: ["Weekly close — what got done, what didn't, what moves to next week", 'Financial snapshot review'] },
+      { day: 'Monday', tasks: ["Review previous week's KPIs and enrollment numbers", 'Set weekly priorities and communicate to Director', '⚙️ Operating System — Scorecard review: chase every red number from last week and assign an owner before noon'] },
+      { day: 'Tuesday', tasks: ['⚙️ Operating System — Run the Level 10 leadership meeting (Scorecard → Rocks → Headlines → To-Dos → Issues)', 'All other meetings stacked here — Director check-in, department leads, any external calls'] },
+      { day: 'Wednesday', tasks: ['Deep work — strategy, systems building, content, growth planning', '⚙️ Operating System — Walk the building through the lens of the performance standards: safety, ratios, parent comms, curriculum, finance'] },
+      { day: 'Thursday', tasks: ['Follow up on action items from Tuesday meetings', 'Review any operational flags or issues', '⚙️ Operating System — Verify every Rock owner updated their status; chase anyone who went silent'] },
+      { day: 'Friday', tasks: ["Weekly close — what got done, what didn't, what moves to next week", 'Financial snapshot review', '⚙️ Operating System — Update the Scorecard with this week\'s final numbers before you leave'] },
     ],
     monthly: [
       'Full financial review — revenue, expenses, enrollment vs. target',
@@ -61,7 +100,10 @@ const ROLES = [
       'Progress check on quarterly goals',
       'Hiring pipeline and staffing health review',
       'Identify one system to build, improve, or eliminate',
+      '⚙️ Operating System — Audit the accountability chart: does every seat still have one owner, and does every owner still fit their seat?',
+      '⚙️ Operating System — Review the risk & continuity plan: crisis protocols, emergency procedures, single points of failure',
     ],
+    operatingSystem: true,
   },
   {
     id: 'director',
@@ -418,8 +460,16 @@ const WeekRow = ({ day, tasks, color }) => (
 )
 
 export default function WhenDoIDoItPage() {
-  const [activeRole, setActiveRole] = useState(ROLES[0])
+  const [selectedId] = useSelectedRoleId()
+  const activeRole = ROLES.find((r) => r.id === selectedId) || ROLES[0]
   const [tab, setTab] = useState('daily')
+  const { mobileMode } = useViewMode()
+  const navigate = useNavigate()
+
+  // Reset tab whenever role changes
+  useEffect(() => {
+    setTab(activeRole.daily?.length > 0 ? 'daily' : 'weekly')
+  }, [activeRole.id])
 
   const hasDailySchedule = activeRole.daily && activeRole.daily.length > 0
   const hasWeeklySchedule = activeRole.weekly && activeRole.weekly.length > 0
@@ -433,7 +483,7 @@ export default function WhenDoIDoItPage() {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Page Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center gap-4 mb-3">
           <div className="w-12 h-12 rounded-xl bg-teal-500 flex items-center justify-center">
             <Clock className="w-6 h-6 text-white" />
@@ -466,51 +516,42 @@ export default function WhenDoIDoItPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div style={{ display: 'flex', gap: '1.75rem', alignItems: 'flex-start' }}>
-        {/* Role Selector */}
-        <div
-          style={{
-            width: 200,
-            flexShrink: 0,
-            background: '#fff',
-            border: '1px solid #E2E8F0',
-            borderRadius: '14px',
-            padding: '1rem 0.75rem',
-            position: 'sticky',
-            top: '1rem',
-          }}
-        >
-          <p
-            style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: '#94A3B8',
-              margin: '0 0.5rem 0.75rem',
-            }}
-          >
-            Select Your Role
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {ROLES.map((role) => (
-              <RoleButton
-                key={role.id}
-                role={role}
-                isActive={activeRole.id === role.id}
-                onClick={() => {
-                  setActiveRole(role)
-                  setTab(role.daily?.length > 0 ? 'daily' : 'weekly')
-                }}
-              />
-            ))}
-          </div>
-        </div>
+      {/* Choose a different Role button */}
+      <button
+        onClick={() => navigate('/dashboard/who-am-i')}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '0.5rem 0.95rem',
+          borderRadius: 10,
+          border: '1.5px solid #E2E8F0',
+          background: '#fff',
+          color: '#475569',
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          marginBottom: '1rem',
+          transition: 'all .15s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#CBD5E1'
+          e.currentTarget.style.background = '#F8FAFC'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#E2E8F0'
+          e.currentTarget.style.background = '#fff'
+        }}
+      >
+        <UserCircle size={14} /> Choose a different Role
+      </button>
 
+      {/* Main Content */}
+      <div>
         {/* Content */}
         <div
-          style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}
+          style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}
         >
           {/* Header */}
           <div
@@ -747,6 +788,66 @@ export default function WhenDoIDoItPage() {
               </p>
             </div>
           </div>
+
+          {/* Operating System CTA — Operator only */}
+          {activeRole.operatingSystem && (
+            <button
+              onClick={() => navigate('/operating-system')}
+              style={{
+                background: '#0F172A',
+                border: '1px solid #0F172A',
+                borderRadius: '12px',
+                padding: '1.25rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontFamily: "'DM Sans', sans-serif",
+                width: '100%',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <span style={{ fontSize: '1.6rem' }}>⚙️</span>
+                <div>
+                  <p
+                    style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: '#60A5FA',
+                      margin: 0,
+                    }}
+                  >
+                    Weekly Cadence Lives Here
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: '#F8FAFC',
+                      margin: '0.1rem 0 0.2rem',
+                    }}
+                  >
+                    Open the NexGen Operating System
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '0.78rem',
+                      color: '#94A3B8',
+                      margin: 0,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Every meeting, scorecard update, and monthly audit listed above lives inside the Operating System.
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5" style={{ color: '#60A5FA', flexShrink: 0 }} />
+            </button>
+          )}
         </div>
       </div>
     </div>

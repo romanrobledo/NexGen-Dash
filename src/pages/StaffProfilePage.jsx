@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCheckinResponses } from '../hooks/useCheckinResponses'
 import { ArrowLeft, Phone, Mail, Loader2 } from 'lucide-react'
+import StaffCertificationPanel from '../components/StaffCertificationPanel'
+import StaffDocumentsPanel from '../components/StaffDocumentsPanel'
 
 function RatingBadge({ value }) {
   const color =
@@ -113,7 +115,7 @@ export default function StaffProfilePage() {
       </div>
 
       {/* Daily Check-in & Out Responses */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Daily Check-in & Out Responses
         </h3>
@@ -191,6 +193,12 @@ export default function StaffProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Certifications & Training */}
+      <StaffCertificationPanel staffName={teacher.full_name} staffId={teacher.id} />
+
+      {/* Uploaded documents / certificates */}
+      <StaffDocumentsPanel staffId={teacher.id} />
     </div>
   )
 }
