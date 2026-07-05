@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Loader2,
   Shield,
@@ -12,6 +13,7 @@ import {
   BarChart3,
   TrendingUp,
   Award,
+  ArrowLeft,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useViewMode } from '../contexts/ViewModeContext'
@@ -49,6 +51,7 @@ function getStatusBadge(percentage) {
 }
 
 export default function TrainingsAdminPage() {
+  const navigate = useNavigate()
   const { mobileMode } = useViewMode()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -264,11 +267,21 @@ export default function TrainingsAdminPage() {
     <div>
       {/* Page header */}
       <div className={`${mobileMode ? 'flex flex-col gap-3 items-start' : 'flex items-center justify-between'} mb-6`}>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Admin Dashboard</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            TRS compliance tracking and staff training overview
-          </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/trainings')}
+            className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 transition-colors flex-shrink-0"
+            title="Back to Trainings"
+            aria-label="Back to Trainings"
+          >
+            <ArrowLeft className="w-4 h-4 text-gray-500" />
+          </button>
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold text-gray-900">Admin Dashboard</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              TRS compliance tracking and staff training overview
+            </p>
+          </div>
         </div>
         <button
           onClick={handleExportCSV}

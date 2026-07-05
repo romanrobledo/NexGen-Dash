@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useViewMode } from '../contexts/ViewModeContext'
 import { NAV_PERMISSIONS } from '../lib/navPermissions'
+import { TRAINING_PERMISSIONS } from '../lib/trainingPermissions'
 import {
   Users,
   Shield,
@@ -759,6 +760,11 @@ function PermissionsTab() {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
   const [dirty, setDirty] = useState(false)
+  // Role currently being configured in the per-category training modal, or null.
+  // The modal shares `permData` + `togglePerm` with the main matrix, so any
+  // toggles flipped inside it mark the page dirty and save via the same
+  // "Save Changes" button — no parallel save path.
+  const [editingTrainingsForRole, setEditingTrainingsForRole] = useState(null)
   const { mobileMode } = useViewMode()
 
   useEffect(() => {
@@ -783,14 +789,32 @@ function PermissionsTab() {
     setLoading(false)
   }
 
+  // Default state when no explicit row exists in role_permissions for this
+  // (role, key) pair. Standard keys default-deny; training_* keys default-allow
+  // (mirrors useAuth().hasPermission contract — see trainingPermissions.js).
+  function defaultForKey(key) {
+    return typeof key === 'string' && key.startsWith('training_')
+  }
+
+  // Read the effective on/off state for a (role, key) — respects the per-key
+  // default when no explicit row exists yet. Used by both the main matrix
+  // and the training-categories modal so they stay in sync.
+  function readPerm(role, key) {
+    if (role === 'founder') return true
+    const explicit = permData[role]?.[key]
+    if (typeof explicit === 'boolean') return explicit
+    return defaultForKey(key)
+  }
+
   function togglePerm(role, key) {
     // Don't allow changing founder permissions
     if (role === 'founder') return
+    const current = readPerm(role, key)
     setPermData((prev) => ({
       ...prev,
       [role]: {
         ...prev[role],
-        [key]: !(prev[role]?.[key] ?? false),
+        [key]: !current,
       },
     }))
     setDirty(true)
@@ -889,19 +913,64 @@ function PermissionsTab() {
                 <div className="grid grid-cols-2 gap-2">
                   {PERMISSION_KEYS.map((p) => {
                     const enabled = isFounder ? true : (permData[role]?.[p.key] ?? false)
+                    const isTrainingsCol = p.key === 'library'
+                    const cellClass = `flex items-center justify-between gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                      isFounder
+                        ? 'border-gray-100 bg-gray-50 opacity-70'
+                        : enabled
+                          ? 'border-emerald-200 bg-emerald-50'
+                          : 'border-gray-200 bg-white hover:bg-gray-50'
+                    }`
+
+                    // For the Trainings cell, render a row with the toggle on
+                    // the left and the gear icon on the right so an admin can
+                    // tap either independently. Other cells stay a single
+                    // tappable button — they don't have anything to configure.
+                    if (isTrainingsCol) {
+                      return (
+                        <div key={p.key} className={cellClass}>
+                          <button
+                            type="button"
+                            onClick={() => togglePerm(role, p.key)}
+                            disabled={isFounder}
+                            className={`flex items-center gap-2 flex-1 min-w-0 text-left ${
+                              isFounder ? 'cursor-not-allowed' : 'cursor-pointer'
+                            }`}
+                          >
+                            <span className="text-xs font-medium text-gray-700 truncate">
+                              {p.label}
+                            </span>
+                            {enabled ? (
+                              <ToggleRight className="w-5 h-5 text-emerald-500 shrink-0 ml-auto" />
+                            ) : (
+                              <ToggleLeft className="w-5 h-5 text-gray-300 shrink-0 ml-auto" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingTrainingsForRole(role)}
+                            disabled={isFounder || !enabled}
+                            className={`p-1 rounded-md shrink-0 ${
+                              isFounder || !enabled
+                                ? 'text-gray-200 cursor-not-allowed'
+                                : 'text-gray-500 hover:text-gray-800 hover:bg-white cursor-pointer'
+                            }`}
+                            title="Configure training categories"
+                            aria-label="Configure training categories"
+                          >
+                            <Settings2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )
+                    }
+
                     return (
                       <button
                         key={p.key}
                         type="button"
                         onClick={() => togglePerm(role, p.key)}
                         disabled={isFounder}
-                        className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                          isFounder
-                            ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-70'
-                            : enabled
-                              ? 'border-emerald-200 bg-emerald-50'
-                              : 'border-gray-200 bg-white hover:bg-gray-50'
-                        }`}
+                        className={`${cellClass} ${isFounder ? 'cursor-not-allowed' : ''}`}
                       >
                         <span className="text-xs font-medium text-gray-700 truncate text-left">
                           {p.label}
@@ -946,20 +1015,50 @@ function PermissionsTab() {
                 {PERMISSION_KEYS.map((p) => {
                   const enabled = permData[role]?.[p.key] ?? false
                   const isFounder = role === 'founder'
+                  const isTrainingsCol = p.key === 'library'
                   return (
                     <td key={p.key} className="px-3 py-3 text-center">
-                      <button
-                        onClick={() => togglePerm(role, p.key)}
-                        disabled={isFounder}
-                        className={`transition-colors ${isFounder ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-                        title={isFounder ? 'Founder always has full access' : `Toggle ${p.label} for ${formatRole(role)}`}
-                      >
-                        {enabled ? (
-                          <ToggleRight className="w-6 h-6 text-emerald-500" />
-                        ) : (
-                          <ToggleLeft className="w-6 h-6 text-gray-300" />
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          onClick={() => togglePerm(role, p.key)}
+                          disabled={isFounder}
+                          className={`transition-colors ${isFounder ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                          title={isFounder ? 'Founder always has full access' : `Toggle ${p.label} for ${formatRole(role)}`}
+                        >
+                          {enabled ? (
+                            <ToggleRight className="w-6 h-6 text-emerald-500" />
+                          ) : (
+                            <ToggleLeft className="w-6 h-6 text-gray-300" />
+                          )}
+                        </button>
+                        {/* Gear icon next to the Trainings toggle — opens the
+                            per-category modal so an admin can pick exactly
+                            which training tiles this role sees. Disabled when
+                            the master Trainings toggle is OFF (no point
+                            fine-tuning when the whole menu is hidden) or for
+                            Founder (always-on). */}
+                        {isTrainingsCol && (
+                          <button
+                            onClick={() => setEditingTrainingsForRole(role)}
+                            disabled={!isFounder && !enabled}
+                            className={`p-1 rounded-md transition-colors ${
+                              isFounder || !enabled
+                                ? 'text-gray-200 cursor-not-allowed'
+                                : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer'
+                            }`}
+                            title={
+                              isFounder
+                                ? 'Founder always has access to every training'
+                                : enabled
+                                  ? `Configure which training categories ${formatRole(role)} can see`
+                                  : 'Turn Trainings on to configure per-category access'
+                            }
+                            aria-label="Configure training categories"
+                          >
+                            <Settings2 className="w-4 h-4" />
+                          </button>
                         )}
-                      </button>
+                      </div>
                     </td>
                   )
                 })}
@@ -969,6 +1068,151 @@ function PermissionsTab() {
         </table>
       </div>
       )}
+
+      {/* Per-category training permissions modal — opened by clicking the
+          gear icon next to a role's Trainings toggle. Reads + writes the same
+          permData state as the main matrix, so the existing "Save Changes"
+          button at the top of the page persists everything in one round-trip. */}
+      {editingTrainingsForRole && (
+        <TrainingCategoriesModal
+          role={editingTrainingsForRole}
+          readPerm={readPerm}
+          togglePerm={togglePerm}
+          onClose={() => setEditingTrainingsForRole(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Training categories modal ───────────────────────────────────────────────
+
+/**
+ * Lightweight modal listing all 8 training_* category toggles for a single
+ * role. State + persistence are owned by PermissionsTab — this is presentation
+ * only. Closing the modal does NOT save; the parent's "Save Changes" button is
+ * the single source of truth for committing changes (so admins can tweak both
+ * the main matrix and a few category gears, then save once).
+ *
+ * Default-allow semantics: when `role_permissions` has no explicit row for a
+ * (role, training_*) pair, the toggle renders as ON. Flipping it OFF and
+ * saving writes an explicit `enabled: false` row.
+ *
+ * @param {{
+ *   role: string,
+ *   readPerm: (role: string, key: string) => boolean,
+ *   togglePerm: (role: string, key: string) => void,
+ *   onClose: () => void,
+ * }} props
+ */
+function TrainingCategoriesModal({ role, readPerm, togglePerm, onClose }) {
+  // Close on Escape for keyboard parity with native dialogs.
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const isFounder = role === 'founder'
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-md max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Configure training categories for ${formatRole(role)}`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+              <Settings2 className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-gray-900 truncate">
+                Training Access
+              </h2>
+              <p className="text-xs text-gray-500 truncate">
+                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${roleBadgeColor(role)}`}>
+                  {formatRole(role)}
+                </span>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 overflow-y-auto">
+          {isFounder ? (
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-sm text-purple-700">
+              Founder always has access to every training category. This list
+              is read-only for the Founder role.
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500 mb-4">
+                Toggle which training tiles {formatRole(role)} can see when
+                they open the Trainings menu. Categories left ON are visible;
+                OFF hides the tile entirely.
+              </p>
+              <div className="space-y-2">
+                {TRAINING_PERMISSIONS.map((tp) => {
+                  const on = readPerm(role, tp.key)
+                  return (
+                    <button
+                      key={tp.key}
+                      type="button"
+                      onClick={() => togglePerm(role, tp.key)}
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border transition-colors ${
+                        on
+                          ? 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
+                          : 'border-gray-200 bg-white hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-gray-800 text-left">
+                        {tp.label}
+                      </span>
+                      {on ? (
+                        <ToggleRight className="w-6 h-6 text-emerald-500 shrink-0" />
+                      ) : (
+                        <ToggleLeft className="w-6 h-6 text-gray-300 shrink-0" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-gray-100 shrink-0 flex items-center justify-between gap-3">
+          <p className="text-[11px] text-gray-400">
+            Changes save when you click <span className="font-semibold text-gray-600">Save Changes</span> on the main page.
+          </p>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors shrink-0"
+          >
+            Done
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

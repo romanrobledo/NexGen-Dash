@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Loader2,
   ChevronDown,
@@ -247,6 +248,7 @@ function parseKnowledgeCheckQuestions(html) {
 const CURRENT_STAFF_ID = '00000000-0000-0000-0000-000000000001'
 
 export default function TrainingsOnboardingPage() {
+  const navigate = useNavigate()
   const { subjects, loading, error } = useTrainings('onboarding')
   const { mobileMode } = useViewMode()
   const [selectedStep, setSelectedStep] = useState(null)
@@ -417,10 +419,25 @@ export default function TrainingsOnboardingPage() {
     <div>
       {/* Page header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Onboarding</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Complete each section in order to finish your onboarding training
-        </p>
+        <div className="flex items-center gap-3">
+          {/* Back to the Trainings dashboard — same standard back-arrow chip
+              used on the Role Clarity / TRS landing pages. Lets users return
+              to the tile grid without going through the sidebar. */}
+          <button
+            onClick={() => navigate('/trainings')}
+            className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 transition-colors flex-shrink-0"
+            title="Back to Trainings"
+            aria-label="Back to Trainings"
+          >
+            <ArrowLeft className="w-4 h-4 text-gray-500" />
+          </button>
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold text-gray-900">Onboarding</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Complete each section in order to finish your onboarding training
+            </p>
+          </div>
+        </div>
         {/* Overall progress bar */}
         <div className="flex items-center gap-3 mt-3">
           <div className="flex-1 bg-gray-100 rounded-full h-2.5 max-w-md">

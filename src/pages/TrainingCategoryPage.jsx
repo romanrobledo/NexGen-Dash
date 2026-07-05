@@ -177,12 +177,22 @@ export default function TrainingCategoryPage() {
         )}
       </nav>
 
-      {/* Header */}
-      <div className="flex items-start gap-4 mb-8">
-        <div className={`p-3 rounded-xl ${cat.iconBg}`}>
+      {/* Header — back button matches the pattern on Onboarding / Role Clarity /
+          TRS / How To's / Admin so users have a consistent way out of any
+          training subpage without scanning for the breadcrumbs. */}
+      <div className="flex items-start gap-3 mb-8">
+        <button
+          onClick={() => navigate('/trainings')}
+          className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 transition-colors flex-shrink-0 mt-1"
+          title="Back to Trainings"
+          aria-label="Back to Trainings"
+        >
+          <ArrowLeft className="w-4 h-4 text-gray-500" />
+        </button>
+        <div className={`p-3 rounded-xl ${cat.iconBg} flex-shrink-0`}>
           <BookOpen className="w-6 h-6" />
         </div>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
           <p className="text-gray-500 mt-1 text-sm max-w-2xl">{description}</p>
         </div>

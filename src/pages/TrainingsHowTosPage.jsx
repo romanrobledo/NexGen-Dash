@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Loader2,
   Search,
@@ -19,6 +20,7 @@ import {
   MessageSquare,
   AlertTriangle,
   HandMetal,
+  ArrowLeft,
 } from 'lucide-react'
 import { useTrainings } from '../hooks/useTrainings'
 
@@ -82,6 +84,7 @@ const STATIC_HOWTOS = [
 ]
 
 export default function TrainingsHowTosPage() {
+  const navigate = useNavigate()
   const { subjects: dbHowtos, loading: loadingHowtos, error: errorHowtos } = useTrainings('howtos')
   const { subjects: dbTools, loading: loadingTools, error: errorTools } = useTrainings('tools')
   const loading = loadingHowtos || loadingTools
@@ -168,10 +171,22 @@ export default function TrainingsHowTosPage() {
     <div>
       {/* Page header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">How To's</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Searchable knowledge base — find procedures, instructions, and guidelines
-        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/trainings')}
+            className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 transition-colors flex-shrink-0"
+            title="Back to Trainings"
+            aria-label="Back to Trainings"
+          >
+            <ArrowLeft className="w-4 h-4 text-gray-500" />
+          </button>
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold text-gray-900">How To's</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Searchable knowledge base — find procedures, instructions, and guidelines
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Search bar */}

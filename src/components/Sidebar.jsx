@@ -5,10 +5,8 @@ import { useViewMode } from '../contexts/ViewModeContext'
 import {
   LayoutDashboard,
 
-  DollarSign,
   GraduationCap,
   Users,
-  CreditCard,
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
@@ -19,9 +17,9 @@ import {
   CalendarDays,
   ClipboardList,
   Clock,
+  Gauge,
+  UserSearch,
   Zap,
-  Activity,
-  Megaphone,
   FolderOpen,
   UserPlus,
   Monitor,
@@ -40,190 +38,44 @@ const navItems = [
     path: '/ai-chat',
     // no permissionKey — accessible to every authenticated user
   },
+  // Pulse — high-level roadmap page. Rename history: Quick Focus → Roadmap
+  // → Pulse. Same route + same permission key (`quick_focus`) so existing
+  // role_permissions rows and any deep links to /quick-focus keep working;
+  // only the user-facing label evolved. NOTE: the current "Tasks" menu
+  // below was ALSO called "Pulse" earlier in this project's history — the
+  // name has just shuffled between the two pages. The QuickFocusPage.jsx
+  // filename stayed for git continuity.
   {
     icon: Zap,
-    label: 'Quick Focus',
+    label: 'Pulse',
     permissionKey: 'quick_focus',
     path: '/quick-focus',
   },
-  // "Clock in / out" and the entire time-clock/payroll subsystem were
-  // removed when the platform got refocused around training. Pages,
-  // routes, hooks, and the Team Pulse dashboard section have all been
-  // deleted. The Supabase tables (daily_checkins, daily_checkouts,
-  // lunch_breaks, payroll_submissions, time_edit_requests) still exist
-  // and hold any historical data, but nothing in the client reads them.
+  // Tasks — project status board (tile grid of initiatives). Rename
+  // history: Pulse → Tasks. The name "Pulse" was later reassigned to the
+  // Roadmap page above, but this Tasks page kept its Tasks label and
+  // /tasks URL. Icon was Activity (heartbeat line) to fit the original
+  // "Pulse" branding; now that Pulse is a different menu, the icon
+  // switched to ClipboardList — more semantic for a task board. The
+  // PulsePage.jsx filename stayed for git-history continuity.
   {
-    icon: Building2,
-    label: 'Facility',
-    permissionKey: 'facility',
-    children: [
-      { label: 'Dashboard', path: '/facility' },
-      { label: 'Engagement', path: '/facility/engagement' },
-      {
-        label: 'Rooms',
-        children: [
-          {
-            label: 'After School 1',
-            children: [
-              { label: 'Lesson Plans' },
-            ],
-          },
-          {
-            label: 'After School 2',
-            children: [
-              { label: 'Lesson Plans' },
-            ],
-          },
-          {
-            label: 'Infant Room',
-            children: [
-              { label: 'Lesson Plans' },
-            ],
-          },
-          {
-            label: 'Pre-Kinder Room',
-            children: [
-              { label: 'Lesson Plans' },
-            ],
-          },
-          {
-            label: 'Pre-School Room',
-            children: [
-              { label: 'Lesson Plans' },
-            ],
-          },
-          {
-            label: 'Toddler Room',
-            children: [
-              { label: 'Lesson Plans' },
-            ],
-          },
-          {
-            label: 'Young Toddler Room',
-            children: [
-              { label: 'Lesson Plans' },
-            ],
-          },
-        ],
-      },
-    ],
+    icon: ClipboardList,
+    label: 'Tasks',
+    path: '/tasks',
   },
-  {
-    icon: UserPlus,
-    label: 'Leads',
-    permissionKey: 'leads',
-    children: [
-      { label: 'Dashboard', path: '/leads' },
-      { label: 'Tours', path: '/leads/tours' },
-      { label: 'Procedures', path: '/leads/procedures' },
-    ],
-  },
-  {
-    icon: Users,
-    label: 'Families',
-    permissionKey: 'families',
-    children: [
-      { label: 'Guardians' },
-      { label: 'Students' },
-      { label: 'Paperwork' },
-    ],
-  },
+  // ── Visual break #1: separates the personal-context layer (AI Chat,
+  //     Pulse, Tasks) from the team-learning cluster (Trainings → Resources).
+  { separator: true },
+  // Trainings is intentionally a LEAF (no submenu). Clicking it lands on the
+  // tile-based /trainings dashboard where every training category — Onboarding,
+  // Role Clarity, TRS, How To's, Team Fulfillment / Administration / Improvement
+  // / Revenue — is its own clickable tile with a progress meter.
   {
     icon: GraduationCap,
     label: 'Trainings',
     permissionKey: 'library',
-    children: [
-      { label: 'Dashboard', path: '/trainings' },
-      { label: 'Onboarding', path: '/trainings/onboarding' },
-      {
-        label: 'Role Clarity',
-        children: [
-          { label: 'Who Are We', path: '/dashboard/who-are-we' },
-          { label: 'Who Am I', path: '/dashboard/who-am-i' },
-          { label: 'What Do I Do', path: '/dashboard/what-do-i-do' },
-          { label: 'How Do I Do It', path: '/dashboard/how-do-i-do-it' },
-          { label: 'When Do I Do It', path: '/dashboard/when-do-i-do-it' },
-          { label: 'Why Is It Important', path: '/dashboard/why-is-it-important' },
-          { label: 'How Do I Know I Am Doing A Good Job', path: '/dashboard/how-do-i-know' },
-          { label: 'When Do We Meet', path: '/dashboard/when-do-we-meet' },
-          { label: 'What Do We Talk About', path: '/dashboard/what-do-we-talk-about' },
-          { label: 'Where Do We Go If You Have Questions', path: '/dashboard/where-to-go' },
-          { label: 'What Are The Most Important Metrics', path: '/dashboard/important-metrics' },
-        ],
-      },
-      // TRS sits directly under Role Clarity so the two compliance/context
-      // groupings are visually adjacent in the sidebar. How To's intentionally
-      // drops below them — it's more of a reference/how-do tool than a
-      // structured training track.
-      {
-        label: 'TRS',
-        children: [
-          { label: 'Cat 1 — Staff Qualifications', path: '/trainings/trs/cat-1' },
-          { label: 'Cat 2 — Interactions', path: '/trainings/trs/cat-2' },
-          { label: 'Cat 3 — Program Admin', path: '/trainings/trs/cat-3' },
-          { label: 'Cat 4 — Environments', path: '/trainings/trs/cat-4' },
-        ],
-      },
-      { label: "How To's", path: '/trainings/howtos' },
-      {
-        label: 'Team Fulfillment',
-        children: [
-          {
-            label: 'Classrooms',
-            path: '/trainings/fulfillment',
-            children: [
-              { label: 'Infant Room', path: '/trainings/fulfillment/infant-room' },
-              { label: 'Older Infant Room', path: '/trainings/fulfillment/older-infant-room' },
-              { label: 'Young Toddler Room', path: '/trainings/fulfillment/young-toddler-room' },
-              { label: 'Toddler Room', path: '/trainings/fulfillment/toddler-room' },
-              { label: 'Pre-Kinder Room', path: '/trainings/fulfillment/pre-kinder-room' },
-              { label: 'Kinder Room', path: '/trainings/fulfillment/kinder-room' },
-              { label: 'Afterschool Room', path: '/trainings/fulfillment/afterschool-room' },
-            ],
-          },
-          { label: 'Tools', path: '/trainings/fulfillment/tools' },
-        ],
-      },
-      {
-        label: 'Team Administration',
-        children: [
-          { label: 'Admin', path: '/trainings/admin' },
-          { label: 'Tools', path: '/trainings/administration/tools' },
-        ],
-      },
-      {
-        label: 'Team Improvement',
-        children: [
-          { label: 'Support', path: '/trainings/support' },
-          { label: 'Tools', path: '/trainings/improvement/tools' },
-        ],
-      },
-      {
-        label: 'Team Revenue',
-        children: [
-          {
-            label: 'Sales',
-            path: '/trainings/sales',
-            children: [
-              { label: 'Playbook', path: '/trainings/sales/playbook' },
-              { label: 'Campaigns', path: '/trainings/sales/campaigns' },
-              { label: 'Routine', path: '/trainings/sales/routine' },
-            ],
-          },
-          { label: 'Marketing', path: '/trainings/marketing' },
-          { label: 'Tours', path: '/trainings/tours' },
-          { label: 'Offers', path: '/trainings/offers' },
-          { label: 'Tools', path: '/trainings/revenue/tools' },
-        ],
-      },
-    ],
+    path: '/trainings',
   },
-  // Calendars promoted from a sub-item under Resources to its own top-level
-  // menu. Keeping it close to Trainings (rather than buried inside Resources)
-  // so it's a one-click destination instead of a two-click drill-in. No
-  // permissionKey yet — visible to all authenticated users. If we later want
-  // to gate it, add a `calendars` entry to NAV_PERMISSIONS and attach it
-  // here.
   {
     icon: CalendarDays,
     label: 'Calendars',
@@ -244,70 +96,73 @@ const navItems = [
       { label: 'SOP Library', path: '/sop-library' },
     ],
   },
-  // ── Visual break between the operational modules (Facility, Trainings,
-  //     Resources) and the commercial modules (Billing, Marketing, Finance).
+  // ── Visual break #2: separates the team-learning cluster (Trainings,
+  //     Calendars, Resources) from the people-pipeline cluster (Leads +
+  //     Candidates — everyone touching the front of the enrollment / hiring
+  //     funnel).
   { separator: true },
   {
-    icon: CreditCard,
-    label: 'Billing',
-    permissionKey: 'billing',
+    icon: UserPlus,
+    label: 'Leads',
+    permissionKey: 'leads',
     children: [
-      { label: 'Dashboard', path: '/billing' },
-      { label: 'Invoices' },
-      { label: 'Payments' },
-      { label: 'Plans' },
+      { label: 'Dashboard', path: '/leads' },
+      { label: 'Tours', path: '/leads/tours' },
+      { label: 'Procedures', path: '/leads/procedures' },
     ],
+  },
+  // Candidates — placeholder top-level menu for the interview pipeline (no
+  // path yet). Lives next to Leads because they're parallel funnels: Leads
+  // is families coming in, Candidates is staff coming in. When the page is
+  // built, register the route in App.jsx and attach `path: '/candidates'`
+  // here. Add a `candidates` entry to NAV_PERMISSIONS if/when you want to
+  // gate it (probably Founder + Operator + Director + Hiring Manager).
+  {
+    icon: UserSearch,
+    label: 'Candidates',
+  },
+  // ── Visual break #3: separates the people-pipeline cluster from the
+  //     operations + commercial cluster (Facility → Admin).
+  { separator: true },
+  // Community — room-level capacity dashboard. Renders the tile grid (one
+  // per room from src/lib/rooms.js) at /facility; per-room detail lives at
+  // /facility/:roomId.
+  //
+  // Rename history: Capacity → Facility → Community. Each step only the
+  // user-facing label changed. The URL stayed /facility across the last
+  // rename so we don't churn deep links / bookmarks every time the
+  // menu label evolves. If you want the URL flipped to /community too,
+  // one word and I'll swap it in App.jsx + the two page files. The
+  // CapacityPage.jsx / CapacityRoomPage.jsx filenames stayed for
+  // git-history continuity.
+  //
+  // Earlier: the original Facility menu had a Dashboard + Engagement +
+  // Rooms→Lesson Plans tree backed by FacilityDashboardPage /
+  // FacilityEngagementPage. Those pages were deleted; the current tile
+  // grid (renamed twice now) replaces them.
+  {
+    icon: Building2,
+    label: 'Community',
+    path: '/facility',
   },
   {
-    icon: Megaphone,
-    label: 'Marketing',
-    permissionKey: 'marketing',
+    icon: Users,
+    label: 'Families',
+    permissionKey: 'families',
     children: [
-      { label: 'Dashboard', path: '/marketing' },
-      { label: 'Content Calendar', path: '/calendars/content' },
-      {
-        label: 'Offers',
-        path: '/marketing/offers',
-        children: [
-          {
-            label: 'Giveaways',
-            path: '/marketing/offers/giveaways',
-            children: [
-              { label: 'Bags', path: '/marketing/offers/giveaways/bags' },
-              { label: 'Kits', path: '/marketing/offers/giveaways/kits' },
-              { label: 'Baskets', path: '/marketing/offers/giveaways/baskets' },
-            ],
-          },
-          { label: 'Decoy', path: '/marketing/offers/decoy' },
-          { label: 'Buy X, Get Y', path: '/marketing/offers/buy-x-get-y' },
-          { label: 'Pay Less Now or Pay More Later', path: '/marketing/offers/pay-less-now' },
-          {
-            label: 'Free Goodwill Offer',
-            path: '/marketing/offers/free-goodwill',
-            children: [
-              { label: '3 Month Scholarship', path: '/marketing/offers/free-goodwill/3-month-scholarship' },
-            ],
-          },
-        ],
-      },
+      { label: 'Guardians' },
+      { label: 'Students' },
+      { label: 'Paperwork' },
     ],
   },
-  {
-    icon: DollarSign,
-    label: 'Finance',
-    permissionKey: 'finance',
-    children: [
-      { label: 'Dashboard', path: '/finance' },
-      {
-        label: 'Books',
-        children: [
-          { label: 'Accounts' },
-          { label: 'Transactions' },
-          { label: 'Reports' },
-        ],
-      },
-    ],
-  },
+  // Billing, Marketing, and Finance used to be top-level menus with their
+  // own permission keys (billing / marketing / finance). They now live as
+  // sub-menus under Admin, so access is implicitly gated by the
+  // `admin_panel` permission on the parent instead of three separate keys.
+  // Nested children (Offers → Giveaways etc. for Marketing, Books for
+  // Finance) are preserved so every previously-reachable route still has
+  // a nav path. The old billing/marketing/finance keys were dropped from
+  // NAV_PERMISSIONS — no code referenced them.
   {
     icon: ShieldCheck,
     label: 'Admin',
@@ -335,6 +190,61 @@ const navItems = [
           { label: 'Permissions', path: '/admin/permissions' },
           // Clocked Hours + Time Clock & Payroll entries removed alongside
           // the broader time-clock cleanup. Pages + DB tables are also gone.
+        ],
+      },
+      {
+        label: 'Billing',
+        children: [
+          { label: 'Dashboard', path: '/billing' },
+          { label: 'Invoices' },
+          { label: 'Payments' },
+          { label: 'Plans' },
+        ],
+      },
+      {
+        label: 'Marketing',
+        children: [
+          { label: 'Dashboard', path: '/marketing' },
+          { label: 'Content Calendar', path: '/calendars/content' },
+          {
+            label: 'Offers',
+            path: '/marketing/offers',
+            children: [
+              {
+                label: 'Giveaways',
+                path: '/marketing/offers/giveaways',
+                children: [
+                  { label: 'Bags', path: '/marketing/offers/giveaways/bags' },
+                  { label: 'Kits', path: '/marketing/offers/giveaways/kits' },
+                  { label: 'Baskets', path: '/marketing/offers/giveaways/baskets' },
+                ],
+              },
+              { label: 'Decoy', path: '/marketing/offers/decoy' },
+              { label: 'Buy X, Get Y', path: '/marketing/offers/buy-x-get-y' },
+              { label: 'Pay Less Now or Pay More Later', path: '/marketing/offers/pay-less-now' },
+              {
+                label: 'Free Goodwill Offer',
+                path: '/marketing/offers/free-goodwill',
+                children: [
+                  { label: '3 Month Scholarship', path: '/marketing/offers/free-goodwill/3-month-scholarship' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        label: 'Finance',
+        children: [
+          { label: 'Dashboard', path: '/finance' },
+          {
+            label: 'Books',
+            children: [
+              { label: 'Accounts' },
+              { label: 'Transactions' },
+              { label: 'Reports' },
+            ],
+          },
         ],
       },
       {
@@ -445,12 +355,12 @@ function NavItem({ item, collapsed }) {
     (item.label === 'Targets & Tasks' && location.pathname.startsWith('/targets')) ||
     (item.label === 'Admin' &&
       (location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff/'))) ||
-    (item.label === 'Quick Focus' && location.pathname === '/quick-focus') ||
+    (item.label === 'Pulse' && location.pathname === '/quick-focus') ||
     (item.label === 'Handbooks' && location.pathname === '/handbooks') ||
     (item.label === 'Applications' && location.pathname === '/applications') ||
     (item.label === 'Marketing' && location.pathname.startsWith('/marketing')) ||
-    (item.label === 'Facility' && location.pathname.startsWith('/facility')) ||
     (item.label === 'Leads' && location.pathname.startsWith('/leads')) ||
+    (item.label === 'Community' && location.pathname.startsWith('/facility')) ||
     (item.label === 'AI Chat' && location.pathname.startsWith('/ai-chat'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 

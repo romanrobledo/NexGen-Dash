@@ -46,10 +46,11 @@ import SopLibraryPage from './pages/SopLibraryPage'
 import SopChapterPage from './pages/SopChapterPage'
 import SopDetailPage from './pages/SopDetailPage'
 import QuickFocusPage from './pages/QuickFocusPage'
+import PulsePage from './pages/PulsePage'
+import CapacityPage from './pages/CapacityPage'
+import CapacityRoomPage from './pages/CapacityRoomPage'
 import MarketingOffersPage from './pages/MarketingOffersPage'
 import FinanceDashboardPage from './pages/FinanceDashboardPage'
-import FacilityDashboardPage from './pages/FacilityDashboardPage'
-import FacilityEngagementPage from './pages/FacilityEngagementPage'
 import PerformanceCompliancePage from './pages/PerformanceCompliancePage'
 import BillingDashboardPage from './pages/BillingDashboardPage'
 import MarketingDashboardPage from './pages/MarketingDashboardPage'
@@ -141,9 +142,18 @@ function App() {
                 <Route path="/sop-library/chapter/:chapterNum" element={<SopChapterPage />} />
                 <Route path="/sop-library/:sopId" element={<SopDetailPage />} />
                 <Route path="/quick-focus" element={<QuickFocusPage />} />
+                {/* Tasks page lives at /tasks — the PulsePage.jsx filename
+                    stayed for git-history continuity, only the URL changed. */}
+                <Route path="/tasks" element={<PulsePage />} />
+                {/* Facility dashboard + per-room detail. The route lives at
+                    /facility (was /capacity before the rename). Room id slugs
+                    live in src/lib/rooms.js — unknown ids land on a "Room not
+                    found" empty state inside CapacityRoomPage. The page
+                    component filenames stayed as Capacity* for git history;
+                    only the user-facing label + URL changed. */}
+                <Route path="/facility" element={<CapacityPage />} />
+                <Route path="/facility/:roomId" element={<CapacityRoomPage />} />
                 <Route path="/finance" element={<FinanceDashboardPage />} />
-                <Route path="/facility" element={<FacilityDashboardPage />} />
-                <Route path="/facility/engagement" element={<FacilityEngagementPage />} />
                 <Route path="/leads" element={<LeadsDashboardPage />} />
                 <Route path="/leads/tours" element={<LeadsToursPage />} />
                 <Route path="/leads/procedures" element={<LeadsProceduresPage />} />

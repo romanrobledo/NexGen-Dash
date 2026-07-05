@@ -264,6 +264,19 @@ export function AuthProvider({ children }) {
     // per-permission toggles in role_permissions.
     const normalizedRole = staff?.role?.toLowerCase?.()
     if (normalizedRole === 'founder') return true
+
+    // Training category keys (training_onboarding, training_trs, etc.) default
+    // to OPEN — if there's no explicit row in role_permissions for this key
+    // and role, treat the tile as visible. This matches the contract documented
+    // in src/lib/trainingPermissions.js: every existing role keeps current
+    // behavior on first deploy; admins only need to write rows when they want
+    // to DENY a specific category. An explicit `false` row still denies.
+    if (key && key.startsWith('training_')) {
+      return permissions[key] !== false
+    }
+
+    // Every other permission key uses standard "deny by default" semantics —
+    // a missing row means no access.
     return permissions[key] === true
   }
 
