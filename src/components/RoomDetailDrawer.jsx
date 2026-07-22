@@ -18,24 +18,23 @@ import { formatAge } from '../hooks/useChildren'
 
 /**
  * Right-side slide-in panel opened by clicking a room tile on the facility
- * floor plan. Lets you add teachers (with position), children, and per-room
- * incident reports for the day.
+ * floor plan. Two categories of adult staff:
+ *
+ *   1. Designated Teacher — the same person every day (from Supabase,
+ *      `room.teacherName`). Only the status changes: Present / Absent /
+ *      Vacation / Sick, with a reason field for the non-present cases.
+ *   2. Teacher Aides — floaters/substitutes that move between rooms during
+ *      the day. Added and removed here per period.
+ *
+ * Plus per-room walk-in children and incident reports.
  *
  * All state is lifted to the parent page (FacilityMapPage) — this drawer
  * only owns the local form inputs. Every list mutation goes through the
- * `onUpdate(next)` callback so the parent can update its store and re-flow
- * the floor plan badges + eventually build the Google Sheets payload.
- *
- * Standard childcare position labels; edit here if the center uses a
- * different vocabulary.
+ * `onUpdate(next)` / `onTeacherStatusChange(next)` callbacks so the parent
+ * can update its store and re-flow the floor plan badges + Google Sheets
+ * payload.
  */
-export const TEACHER_POSITIONS = [
-  'Lead Teacher',
-  'Assistant Teacher',
-  'Aide',
-  'Floater',
-  'Substitute',
-]
+export const AIDE_POSITIONS = ['Aide', 'Floater', 'Substitute']
 
 const INCIDENT_SEVERITIES = [
   { key: 'minor',    label: 'Minor',    chipClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', dotClass: 'bg-emerald-500' },
@@ -47,12 +46,15 @@ const INCIDENT_SEVERITIES = [
 /**
  * @param {{
  *   room: import('../hooks/useClassrooms').Room | null,
- *   entry: { teachers: any[], kids: any[], incidents: any[] } | null,
+ *   entry: { aides: any[], kids: any[], incidents: any[] } | null,
  *   enrolledChildren?: import('../hooks/useChildren').Child[],
  *   attendance?: Record<string, 'absent'>,
  *   onToggleAttendance?: (childId: string) => void,
+ *   teacherStatus?: { status: string, reason: string },
+ *   teacherStatusOptions?: Array<{ key: string, label: string, tone: string }>,
+ *   onTeacherStatusChange?: (next: { status: string, reason: string }) => void,
  *   onClose: () => void,
- *   onUpdate: (next: { teachers: any[], kids: any[], incidents: any[] }) => void,
+ *   onUpdate: (next: { aides: any[], kids: any[], incidents: any[] }) => void,
  * }} props
  */
 export default function RoomDetailDrawer({
@@ -61,20 +63,23 @@ export default function RoomDetailDrawer({
   enrolledChildren = [],
   attendance = {},
   onToggleAttendance,
+  teacherStatus = { status: 'present', reason: '' },
+  teacherStatusOptions = [],
+  onTeacherStatusChange,
   onClose,
   onUpdate,
 }) {
   // Local form state — cleared each time the drawer opens for a new room.
-  const [teacherName, setTeacherName] = useState('')
-  const [teacherPos, setTeacherPos] = useState(TEACHER_POSITIONS[0])
+  const [aideName, setAideName] = useState('')
+  const [aidePos, setAidePos] = useState(AIDE_POSITIONS[0])
   const [kidName, setKidName] = useState('')
   const [incidentSev, setIncidentSev] = useState('minor')
   const [incidentDesc, setIncidentDesc] = useState('')
 
   useEffect(() => {
     if (room) {
-      setTeacherName('')
-      setTeacherPos(TEACHER_POSITIONS[0])
+      setAideName('')
+      setAidePos(AIDE_POSITIONS[0])
       setKidName('')
       setIncidentSev('minor')
       setIncidentDesc('')
@@ -95,21 +100,24 @@ export default function RoomDetailDrawer({
 
   const theme = COLOR_THEMES[room.accent] || COLOR_THEMES.indigo
 
-  function addTeacher() {
-    const trimmed = teacherName.trim()
+  function addAide() {
+    const trimmed = aideName.trim()
     if (!trimmed) return
     onUpdate({
       ...entry,
-      teachers: [
-        ...entry.teachers,
-        { id: makeId(), name: trimmed, position: teacherPos },
+      aides: [
+        ...(entry.aides || []),
+        { id: makeId(), name: trimmed, position: aidePos },
       ],
     })
-    setTeacherName('')
+    setAideName('')
   }
 
-  function removeTeacher(id) {
-    onUpdate({ ...entry, teachers: entry.teachers.filter((t) => t.id !== id) })
+  function removeAide(id) {
+    onUpdate({
+      ...entry,
+      aides: (entry.aides || []).filter((a) => a.id !== id),
+    })
   }
 
   function addKid() {
@@ -152,11 +160,14 @@ export default function RoomDetailDrawer({
     })
   }
 
-  // Live ratio calculation — teacher-to-child math. If the room has a
-  // target ratio and there's at least one teacher, we can flag over/under.
+  // Live ratio calculation — designated teacher (if present) + aides
+  // versus present kids. Vacation/Absent/Sick designated teacher counts
+  // as zero for the ratio, which is the point of tracking status.
   const kidCount = entry.kids.length
-  const teacherCount = entry.teachers.length
-  const ratioNumber = teacherCount > 0 ? kidCount / teacherCount : null
+  const aideCount = (entry.aides || []).length
+  const designatedCount = teacherStatus.status === 'present' ? 1 : 0
+  const staffCount = designatedCount + aideCount
+  const ratioNumber = staffCount > 0 ? kidCount / staffCount : null
   const overRatio =
     room.targetRatio != null &&
     ratioNumber != null &&
@@ -207,12 +218,15 @@ export default function RoomDetailDrawer({
         </div>
 
         {/* Live ratio strip */}
-        <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-4 text-xs">
+        <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-4 text-xs flex-wrap">
           <span className="text-gray-500">
-            <strong className="text-gray-900 tabular-nums">{teacherCount}</strong> teacher{teacherCount === 1 ? '' : 's'}
+            <strong className="text-gray-900 tabular-nums">{designatedCount}</strong> designated
           </span>
           <span className="text-gray-500">
-            <strong className="text-gray-900 tabular-nums">{kidCount}</strong> {kidCount === 1 ? 'child' : 'children'}
+            <strong className="text-gray-900 tabular-nums">{aideCount}</strong> aide{aideCount === 1 ? '' : 's'}
+          </span>
+          <span className="text-gray-500">
+            <strong className="text-gray-900 tabular-nums">{kidCount}</strong> {kidCount === 1 ? 'walk-in' : 'walk-ins'}
           </span>
           {ratioNumber != null && (
             <span
@@ -234,6 +248,17 @@ export default function RoomDetailDrawer({
 
         {/* Body — scrollable */}
         <div className="flex-1 overflow-y-auto">
+          {/* Designated Teacher — auto-populated from Supabase. Status is
+              mutable in-app; a status other than Present reveals a reason
+              textarea and drops this teacher from the ratio calc. */}
+          <DesignatedTeacherSection
+            title={room.teacherTitle}
+            name={room.teacherName}
+            status={teacherStatus}
+            options={teacherStatusOptions}
+            onChange={onTeacherStatusChange}
+          />
+
           {/* Enrolled Roster — roster comes from Supabase (Sheet-synced,
               read-only), but attendance IS mutable in-app. Click a row to
               toggle a child between Present (default) and Absent. Absent
@@ -316,29 +341,34 @@ export default function RoomDetailDrawer({
             )
           })()}
 
-          {/* Teachers */}
-          <Section title="Teachers" icon={UserRound} count={teacherCount}>
-            {entry.teachers.length === 0 ? (
-              <EmptyLine text="No teachers added yet." />
+          {/* Teacher Aides */}
+          <Section
+            title="Teacher Aides"
+            icon={UserRound}
+            count={aideCount}
+            subtitle="Aides float between rooms — update this list each period as they shift."
+          >
+            {aideCount === 0 ? (
+              <EmptyLine text="No aides in this room right now." />
             ) : (
               <ul className="space-y-1.5 mb-3">
-                {entry.teachers.map((t) => (
+                {(entry.aides || []).map((a) => (
                   <li
-                    key={t.id}
+                    key={a.id}
                     className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
                   >
                     <UserRound className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <span className="font-medium text-gray-900 truncate">
-                      {t.name}
+                      {a.name}
                     </span>
                     <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex-shrink-0">
-                      {t.position}
+                      {a.position}
                     </span>
                     <button
-                      onClick={() => removeTeacher(t.id)}
+                      onClick={() => removeAide(a.id)}
                       className="ml-auto p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 flex-shrink-0"
                       title="Remove"
-                      aria-label="Remove teacher"
+                      aria-label="Remove aide"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -349,26 +379,26 @@ export default function RoomDetailDrawer({
             <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
-                value={teacherName}
-                onChange={(e) => setTeacherName(e.target.value)}
+                value={aideName}
+                onChange={(e) => setAideName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') addTeacher()
+                  if (e.key === 'Enter') addAide()
                 }}
-                placeholder="Teacher name"
+                placeholder="Aide name"
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
               />
               <select
-                value={teacherPos}
-                onChange={(e) => setTeacherPos(e.target.value)}
+                value={aidePos}
+                onChange={(e) => setAidePos(e.target.value)}
                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
               >
-                {TEACHER_POSITIONS.map((p) => (
+                {AIDE_POSITIONS.map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
               <button
-                onClick={addTeacher}
-                disabled={!teacherName.trim()}
+                onClick={addAide}
+                disabled={!aideName.trim()}
                 className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 <UserPlus className="w-4 h-4" />
@@ -498,6 +528,104 @@ export default function RoomDetailDrawer({
 }
 
 // ─── Small helpers ───────────────────────────────────────────────────────────
+
+// ─── Designated Teacher — top section of the drawer ──────────────────────
+//
+// The teacher name comes from Supabase (source of truth: the Google Sheet).
+// The status is per-day, per-room, in-app only — it doesn't sync back.
+// Status 'present' hides the reason field; the other three reveal it with
+// placeholder copy that changes per status.
+
+const STATUS_TONE_CLASSES = {
+  emerald: {
+    selected: 'bg-emerald-600 border-emerald-600 text-white',
+    ring: 'ring-emerald-200',
+  },
+  amber: {
+    selected: 'bg-amber-500 border-amber-500 text-white',
+    ring: 'ring-amber-200',
+  },
+  purple: {
+    selected: 'bg-purple-600 border-purple-600 text-white',
+    ring: 'ring-purple-200',
+  },
+  red: {
+    selected: 'bg-red-600 border-red-600 text-white',
+    ring: 'ring-red-200',
+  },
+}
+
+const REASON_PLACEHOLDERS = {
+  absent: 'Reason for absence (e.g., family emergency, no-show)',
+  vacation: 'Vacation dates and cover arrangements',
+  sick: 'Symptoms and expected return',
+}
+
+function DesignatedTeacherSection({ title, name, status, options, onChange }) {
+  return (
+    <section className="px-5 py-4 border-b border-gray-100">
+      <div className="flex items-center gap-2 mb-1">
+        <UserRound className="w-4 h-4 text-gray-400" />
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+          Designated Teacher
+        </h3>
+      </div>
+      <p className="text-[10px] text-gray-400 italic mb-2 ml-6">
+        From roster · auto-added · tap a status to change
+      </p>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0">
+          <UserRound className="w-5 h-5 text-indigo-600" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-gray-900 truncate">
+            {title} {name}
+          </p>
+          <p className="text-[10px] text-gray-400">Same person every day</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-1.5 mb-2">
+        {options.map((opt) => {
+          const selected = status.status === opt.key
+          const tone = STATUS_TONE_CLASSES[opt.tone] || STATUS_TONE_CLASSES.emerald
+          return (
+            <button
+              key={opt.key}
+              onClick={() =>
+                onChange &&
+                onChange({
+                  status: opt.key,
+                  // Wipe the reason when switching back to Present since it
+                  // no longer applies. Reason stays if switching among the
+                  // non-present statuses in case the same note fits.
+                  reason: opt.key === 'present' ? '' : status.reason,
+                })
+              }
+              className={`px-2 py-2 rounded-lg text-xs font-semibold border-2 transition-colors ${
+                selected
+                  ? tone.selected
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          )
+        })}
+      </div>
+      {status.status !== 'present' && (
+        <textarea
+          value={status.reason}
+          onChange={(e) =>
+            onChange && onChange({ status: status.status, reason: e.target.value })
+          }
+          placeholder={REASON_PLACEHOLDERS[status.status] || 'Reason / details'}
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none resize-none"
+        />
+      )}
+    </section>
+  )
+}
 
 function Section({ title, icon: Icon, count, subtitle, children }) {
   return (

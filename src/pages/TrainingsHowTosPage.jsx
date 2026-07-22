@@ -44,44 +44,12 @@ const CATEGORY_COLORS = {
   default: 'border-l-gray-300',
 }
 
-const STATIC_HOWTOS = [
-  {
-    id: 'static-facebook-ads',
-    title: 'Facebook Ads',
-    description: 'How to create, manage, and optimize Facebook ad campaigns for enrollment and brand awareness',
-    trs_category: 'all',
-    icon: 'star',
-    section: 'howtos',
-    required_for: 'Marketing',
-    order_index: 6,
-    topic_count: 0,
-    step_count: 0,
-    completed_steps: 0,
-    progress: 0,
-    total_minutes: 0,
-    remaining_minutes: 0,
-    read_time: 'Coming soon',
-    topics: [],
-  },
-  {
-    id: 'static-google-ads',
-    title: 'Google Ads',
-    description: 'How to set up and run Google ad campaigns to drive enrollment leads and local visibility',
-    trs_category: 'all',
-    icon: 'star',
-    section: 'howtos',
-    required_for: 'Marketing',
-    order_index: 7,
-    topic_count: 0,
-    step_count: 0,
-    completed_steps: 0,
-    progress: 0,
-    total_minutes: 0,
-    remaining_minutes: 0,
-    read_time: 'Coming soon',
-    topics: [],
-  },
-]
+// Facebook Ads and Google Ads used to be static tiles here. They moved to
+// the SOP Library under Chapter 18 (Marketing, Brand & Community Presence)
+// because they belong with the marketing SOPs, not in the How To's list.
+// Empty array kept so the spread in `subjects` below stays a no-op instead
+// of a null-check.
+const STATIC_HOWTOS = []
 
 export default function TrainingsHowTosPage() {
   const navigate = useNavigate()

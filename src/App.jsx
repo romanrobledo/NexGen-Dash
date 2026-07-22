@@ -58,6 +58,11 @@ import MarketingDashboardPage from './pages/MarketingDashboardPage'
 import LeadsDashboardPage from './pages/LeadsDashboardPage'
 import LeadsToursPage from './pages/LeadsToursPage'
 import LeadsProceduresPage from './pages/LeadsProceduresPage'
+import CandidatesDashboardPage from './pages/CandidatesDashboardPage'
+import CandidatesInterviewsPage from './pages/CandidatesInterviewsPage'
+import CandidatesProceduresPage from './pages/CandidatesProceduresPage'
+import CalendarPage from './pages/CalendarPage'
+import AdminMeetingsPage from './pages/AdminMeetingsPage'
 import AIChatPage from './pages/AIChatPage'
 import DataIntegrityPage from './pages/admin/data-integrity'
 import MetricDetailPage from './pages/admin/data-integrity/MetricDetailPage'
@@ -164,6 +169,17 @@ function App() {
                 <Route path="/leads" element={<LeadsDashboardPage />} />
                 <Route path="/leads/tours" element={<LeadsToursPage />} />
                 <Route path="/leads/procedures" element={<LeadsProceduresPage />} />
+                <Route path="/candidates" element={<CandidatesDashboardPage />} />
+                <Route path="/candidates/interviews" element={<CandidatesInterviewsPage />} />
+                <Route path="/candidates/procedures" element={<CandidatesProceduresPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/admin/meetings" element={<AdminMeetingsPage />} />
+                {/* Org Chart landing → reuses the existing role-selector page
+                    (WhoAmIPage). Each role click continues to open the
+                    per-section pages (What Do I Do, How Do I Do It, etc.)
+                    for now — merging those 5 pages into one combined page
+                    per role is the next iteration. */}
+                <Route path="/org-chart" element={<WhoAmIPage />} />
                 <Route path="/billing" element={<BillingDashboardPage />} />
                 <Route path="/marketing" element={<MarketingDashboardPage />} />
                 <Route path="/marketing/offers" element={<MarketingOffersPage />} />

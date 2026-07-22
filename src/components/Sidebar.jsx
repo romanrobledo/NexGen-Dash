@@ -27,6 +27,8 @@ import {
   X,
   Menu,
   BotMessageSquare,
+  BookOpen,
+  Network,
 } from 'lucide-react'
 
 // Each top-level item has a permissionKey that maps to role_permissions.
@@ -72,14 +74,33 @@ const navItems = [
     permissionKey: 'library',
     path: '/trainings',
   },
+  // Calendars → Calendar — singular menu, no submenus. The child items
+  // (School / Staff / Events) live INSIDE the /calendar page as left-column
+  // tabs alongside the Google Calendar integration surface (embed lands
+  // when auth is wired up).
   {
     icon: CalendarDays,
-    label: 'Calendars',
-    children: [
-      { label: 'School Calendar' },
-      { label: 'Staff Calendar' },
-      { label: 'Events' },
-    ],
+    label: 'Calendar',
+    path: '/calendar',
+  },
+  // Org Chart — single-leaf menu. Landing is the role selector (Who Am I)
+  // and each role opens a combined page with What Do I Do / How Do I Do It /
+  // When Do I Do It / Why Is It Important / How Do I Know I Am Doing A Good
+  // Job stacked as scroll sections. No sub-menus.
+  {
+    icon: Network,
+    label: 'Org Chart',
+    permissionKey: 'training_role_clarity',
+    path: '/org-chart',
+  },
+  // SOP Library — promoted from a nested Resources child to a top-level
+  // menu. Inherits the `resources` permission key so existing access rules
+  // don't change; only its position in the sidebar moves.
+  {
+    icon: BookOpen,
+    label: 'SOP Library',
+    permissionKey: 'resources',
+    path: '/sop-library',
   },
   {
     icon: FolderOpen,
@@ -89,7 +110,6 @@ const navItems = [
       { label: 'Handbooks', path: '/handbooks' },
       { label: 'Applications', path: '/applications' },
       { label: 'TRS', path: '/trs/documents' },
-      { label: 'SOP Library', path: '/sop-library' },
     ],
   },
   // ── Visual break #2: separates the team-learning cluster (Trainings,
@@ -107,15 +127,20 @@ const navItems = [
       { label: 'Procedures', path: '/leads/procedures' },
     ],
   },
-  // Candidates — placeholder top-level menu for the interview pipeline (no
-  // path yet). Lives next to Leads because they're parallel funnels: Leads
-  // is families coming in, Candidates is staff coming in. When the page is
-  // built, register the route in App.jsx and attach `path: '/candidates'`
-  // here. Add a `candidates` entry to NAV_PERMISSIONS if/when you want to
-  // gate it (probably Founder + Operator + Director + Hiring Manager).
+  // Candidates — the hiring twin of Leads. Same three-page shape
+  // (Dashboard / Interviews / Procedures) so anyone who knows the Leads
+  // section already knows this one. Shares `useCandidatesData` across
+  // the three pages so counts stay aligned. No permission key yet;
+  // add a `candidates` entry to NAV_PERMISSIONS when you want to gate
+  // it (probably Founder + Operator + Director + Hiring Manager).
   {
     icon: UserSearch,
     label: 'Candidates',
+    children: [
+      { label: 'Dashboard', path: '/candidates' },
+      { label: 'Interviews', path: '/candidates/interviews' },
+      { label: 'Procedures', path: '/candidates/procedures' },
+    ],
   },
   // Facility — daily interactive floor plan for what's happening in every
   // room right now. Different from the Community menu below: this is the
@@ -133,29 +158,12 @@ const navItems = [
     path: '/facility-map',
   },
   // ── Visual break #3: separates the people-pipeline cluster from the
-  //     operations + commercial cluster (Community → Admin).
+  //     operations + commercial cluster.
   { separator: true },
-  // Community — room-level capacity dashboard. Renders the tile grid (one
-  // per room from src/lib/rooms.js) at /facility; per-room detail lives at
-  // /facility/:roomId.
-  //
-  // Rename history: Capacity → Facility → Community. Each step only the
-  // user-facing label changed. The URL stayed /facility across the last
-  // rename so we don't churn deep links / bookmarks every time the
-  // menu label evolves. If you want the URL flipped to /community too,
-  // one word and I'll swap it in App.jsx + the two page files. The
-  // CapacityPage.jsx / CapacityRoomPage.jsx filenames stayed for
-  // git-history continuity.
-  //
-  // Earlier: the original Facility menu had a Dashboard + Engagement +
-  // Rooms→Lesson Plans tree backed by FacilityDashboardPage /
-  // FacilityEngagementPage. Those pages were deleted; the current tile
-  // grid (renamed twice now) replaces them.
-  {
-    icon: Building2,
-    label: 'Community',
-    path: '/facility',
-  },
+  // Community menu removed — its content (per-room capacity + child-to-
+  // teacher ratios) moved behind a "TRS Ratio" button on the Facility page
+  // header. Route /facility still resolves to CapacityPage.jsx so any
+  // in-app links from that button don't 404.
   {
     icon: Users,
     label: 'Families',
@@ -181,6 +189,10 @@ const navItems = [
     children: [
       { label: 'S.A.N.D.', path: '/' },
       { label: 'Compliance', path: '/admin/performance-compliance' },
+      // Meetings — holds "The Rhythm" (teams / cadence / meeting agenda /
+      // outcomes) that used to live on the Pulse page. Moved here because
+      // it's an operational rhythm doc, not a today-focus dashboard.
+      { label: 'Meetings', path: '/admin/meetings' },
       // Team Pulse and its /admin/team-pulse route were deleted alongside
       // the broader time-clock/payroll cleanup. The section previously on
       // the S.A.N.D. dashboard is gone too.
@@ -359,10 +371,19 @@ function NavItem({ item, collapsed }) {
   // Check if this item or any child is active
   const isDirectActive = item.path && location.pathname === item.path
   const isChildActive = hasChildren && hasActiveDescendant(item.children, location.pathname)
-  // For nested menus: also highlight when on nested routes
+  // For nested menus: also highlight when on nested routes.
+  // Training's nested check excludes /trainings/role-clarity because that
+  // page now lives under the Org Chart menu — Training should NOT light up
+  // while a user is on any Role Clarity or Org Chart page.
   const isNestedActive =
     (item.label === 'Training' &&
-      (location.pathname.startsWith('/trainings') || location.pathname.startsWith('/dashboard/'))) ||
+      ((location.pathname.startsWith('/trainings') &&
+        !location.pathname.startsWith('/trainings/role-clarity')) ||
+       location.pathname.startsWith('/dashboard/'))) ||
+    (item.label === 'Org Chart' &&
+      (location.pathname.startsWith('/org-chart') ||
+       location.pathname.startsWith('/trainings/role-clarity') ||
+       location.pathname.startsWith('/dashboard/'))) ||
     (item.label === 'Targets & Tasks' && location.pathname.startsWith('/targets')) ||
     (item.label === 'Admin' &&
       (location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff/'))) ||
@@ -371,11 +392,7 @@ function NavItem({ item, collapsed }) {
     (item.label === 'Applications' && location.pathname === '/applications') ||
     (item.label === 'Marketing' && location.pathname.startsWith('/marketing')) ||
     (item.label === 'Leads' && location.pathname.startsWith('/leads')) ||
-    // Community matches /facility exactly and /facility/:roomId, but NOT
-    // /facility-map (that's the separate Facility menu). The trailing slash
-    // on the startsWith check is what excludes /facility-map.
-    (item.label === 'Community' &&
-      (location.pathname === '/facility' || location.pathname.startsWith('/facility/'))) ||
+    (item.label === 'Candidates' && location.pathname.startsWith('/candidates')) ||
     (item.label === 'AI Chat' && location.pathname.startsWith('/ai-chat'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 

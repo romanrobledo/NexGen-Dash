@@ -3,14 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import {
   Loader2,
   ShieldCheck,
-  Users,
-  BookOpen,
   GraduationCap,
   ChevronRight,
   Briefcase,
   ClipboardList,
-  TrendingUp,
-  DollarSign,
 } from 'lucide-react'
 import { useTrainings } from '../hooks/useTrainings'
 import { useViewMode } from '../contexts/ViewModeContext'
@@ -26,21 +22,19 @@ import { useAuth } from '../contexts/AuthContext'
  *
  * Each tile carries its own progress meter so a teacher can scan their
  * remaining work at a glance. For categories backed by `training_subjects`
- * (Onboarding, TRS) we compute progress live. For static-content categories
- * (Role Clarity) and not-yet-tracked categories (How To's, the four Team
- * tracks) we show 0% / "tracking coming soon" without breaking the visual
- * rhythm of the page — every tile looks the same.
+ * (Onboarding, TRS) we compute progress live. For not-yet-tracked
+ * categories (How To's, the four Team tracks) we show 0% / "tracking
+ * coming soon" without breaking the visual rhythm of the page — every
+ * tile looks the same.
  *
  * To add a new category, add an entry to CATEGORIES below — `path` is where
  * the tile navigates, `getStats(allSubjects)` returns `{ done, total, unit }`.
  * No other plumbing needed.
+ *
+ * Role Clarity used to live here as a tile; it moved to the top-level
+ * Org Chart menu because it's org-structure content, not training. Its
+ * page + route (/trainings/role-clarity) stayed put for URL stability.
  */
-
-// Role Clarity is 11 static content pages under /dashboard/... — no DB
-// tracking yet. When per-page completion is wired up, return real numbers
-// from getStats and the tile updates automatically.
-const ROLE_CLARITY_TOTAL_PAGES = 11
-const ROLE_CLARITY_COMPLETED = 0
 
 /**
  * @typedef {Object} CategoryStat
@@ -73,21 +67,6 @@ const CATEGORIES = [
     },
   },
   {
-    key: 'role-clarity',
-    permissionKey: 'training_role_clarity',
-    title: 'Role Clarity',
-    description: 'Know your role, your impact, and how we work as a team.',
-    icon: Users,
-    iconClass: 'bg-pink-100 text-pink-600',
-    meterClass: 'bg-pink-500',
-    path: '/trainings/role-clarity',
-    getStats: () => ({
-      done: ROLE_CLARITY_COMPLETED,
-      total: ROLE_CLARITY_TOTAL_PAGES,
-      unit: 'pages',
-    }),
-  },
-  {
     key: 'trs',
     permissionKey: 'training_trs',
     title: 'TRS',
@@ -103,21 +82,14 @@ const CATEGORIES = [
       return { done, total, unit: 'steps' }
     },
   },
-  {
-    key: 'howtos',
-    permissionKey: 'training_howtos',
-    title: "How To's",
-    description: 'Quick reference walkthroughs for daily tasks.',
-    icon: BookOpen,
-    iconClass: 'bg-blue-100 text-blue-600',
-    meterClass: 'bg-blue-500',
-    path: '/trainings/howtos',
-    getStats: () => ({ done: 0, total: 0, unit: 'guides' }),
-  },
+  // Rename history: "Team Fulfillment" → "Teachers". Key, permissionKey,
+  // and path stayed the same so existing role_permissions rows and any
+  // deep links to /trainings/fulfillment keep working; only the label
+  // changed to reflect the audience (classroom teachers).
   {
     key: 'team-fulfillment',
     permissionKey: 'training_team_fulfillment',
-    title: 'Team Fulfillment',
+    title: 'Teachers',
     description: 'Classroom-specific training for every age group.',
     icon: Briefcase,
     iconClass: 'bg-emerald-100 text-emerald-600',
@@ -125,10 +97,12 @@ const CATEGORIES = [
     path: '/trainings/fulfillment',
     getStats: () => ({ done: 0, total: 0, unit: 'modules' }),
   },
+  // Rename history: "Team Administration" → "Administration". Same
+  // key/permission/path preservation as Teachers above.
   {
     key: 'team-administration',
     permissionKey: 'training_team_administration',
-    title: 'Team Administration',
+    title: 'Administration',
     description: 'Admin processes, policies, and operations.',
     icon: ClipboardList,
     iconClass: 'bg-purple-100 text-purple-600',
@@ -136,28 +110,11 @@ const CATEGORIES = [
     path: '/trainings/admin',
     getStats: () => ({ done: 0, total: 0, unit: 'modules' }),
   },
-  {
-    key: 'team-improvement',
-    permissionKey: 'training_team_improvement',
-    title: 'Team Improvement',
-    description: 'Growth, coaching, and ongoing support resources.',
-    icon: TrendingUp,
-    iconClass: 'bg-teal-100 text-teal-600',
-    meterClass: 'bg-teal-500',
-    path: '/trainings/support',
-    getStats: () => ({ done: 0, total: 0, unit: 'modules' }),
-  },
-  {
-    key: 'team-revenue',
-    permissionKey: 'training_team_revenue',
-    title: 'Team Revenue',
-    description: 'Sales, marketing, tours, and growth operations.',
-    icon: DollarSign,
-    iconClass: 'bg-orange-100 text-orange-600',
-    meterClass: 'bg-orange-500',
-    path: '/trainings/sales',
-    getStats: () => ({ done: 0, total: 0, unit: 'modules' }),
-  },
+  // "Team Improvement" and "Team Revenue" tiles removed — Vivid Digital
+  // and Bizsync handle those workstreams externally, so the center
+  // doesn't need in-house training tracks for them. Routes /trainings/
+  // support and /trainings/sales are still registered in App.jsx so
+  // deep links don't 404 for now; can be pruned in a future cleanup.
 ]
 
 export default function TrainingsDashboardPage() {
