@@ -9,9 +9,12 @@ import {
   Sun,
   Dumbbell,
   Users,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react'
 import { useViewMode } from '../contexts/ViewModeContext'
-import { ROOMS, COLOR_THEMES } from '../lib/rooms'
+import { COLOR_THEMES } from '../lib/rooms'
+import { useClassrooms } from '../hooks/useClassrooms'
 
 /**
  * Community dashboard — `/facility`.
@@ -48,6 +51,7 @@ const ICONS = {
 export default function CapacityPage() {
   const navigate = useNavigate()
   const { mobileMode } = useViewMode()
+  const { rooms, loading, error } = useClassrooms()
 
   return (
     <div className={mobileMode ? '' : 'max-w-6xl mx-auto'}>
@@ -89,7 +93,29 @@ export default function CapacityPage() {
         </div>
       </div>
 
-      {/* Tile grid */}
+      {/* Tile grid — loading / error / empty states first, then the grid */}
+      {loading ? (
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 flex items-center justify-center gap-3 text-gray-500">
+          <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+          <span className="text-sm">Loading classrooms…</span>
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-red-700">Couldn't load classrooms</p>
+            <p className="text-xs text-red-500 mt-0.5">{error}</p>
+          </div>
+        </div>
+      ) : rooms.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
+          <p className="text-sm font-semibold text-gray-700">No classrooms yet</p>
+          <p className="text-xs text-gray-500 mt-1">
+            The <code>classrooms</code> table is empty. Seed it in Supabase or
+            wait for the next n8n sync.
+          </p>
+        </div>
+      ) : (
       <div
         className={`grid gap-3 ${
           mobileMode
@@ -97,7 +123,7 @@ export default function CapacityPage() {
             : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
         }`}
       >
-        {ROOMS.map((room) => {
+        {rooms.map((room) => {
           const Icon = ICONS[room.iconName] || Users
           const theme = COLOR_THEMES[room.accent] || COLOR_THEMES.indigo
           const ratioLabel =
@@ -108,7 +134,7 @@ export default function CapacityPage() {
           return (
             <button
               key={room.id}
-              onClick={() => navigate(`/facility/${room.id}`)}
+              onClick={() => navigate(`/facility/${room.roomNumber}`)}
               className={`text-left bg-white border border-gray-200 border-l-4 ${theme.border} rounded-xl p-4 hover:border-indigo-300 hover:shadow-sm transition-all group min-w-0`}
             >
               {/* Top row — icon + name + chevron */}
@@ -168,6 +194,7 @@ export default function CapacityPage() {
           )
         })}
       </div>
+      )}
     </div>
   )
 }

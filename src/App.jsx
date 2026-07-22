@@ -49,6 +49,7 @@ import QuickFocusPage from './pages/QuickFocusPage'
 import PulsePage from './pages/PulsePage'
 import CapacityPage from './pages/CapacityPage'
 import CapacityRoomPage from './pages/CapacityRoomPage'
+import FacilityMapPage from './pages/FacilityMapPage'
 import MarketingOffersPage from './pages/MarketingOffersPage'
 import FinanceDashboardPage from './pages/FinanceDashboardPage'
 import PerformanceCompliancePage from './pages/PerformanceCompliancePage'
@@ -153,6 +154,12 @@ function App() {
                     only the user-facing label + URL changed. */}
                 <Route path="/facility" element={<CapacityPage />} />
                 <Route path="/facility/:roomId" element={<CapacityRoomPage />} />
+                {/* Facility Map — daily "what's happening in the building"
+                    view. Different from the /facility grid above (which is
+                    the Community capacity dashboard). /facility-map opens
+                    the interactive floor plan with per-room drawers for
+                    adding kids / teachers / incidents. */}
+                <Route path="/facility-map" element={<FacilityMapPage />} />
                 <Route path="/finance" element={<FinanceDashboardPage />} />
                 <Route path="/leads" element={<LeadsDashboardPage />} />
                 <Route path="/leads/tours" element={<LeadsToursPage />} />

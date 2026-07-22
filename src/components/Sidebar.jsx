@@ -14,8 +14,8 @@ import {
   ShieldCheck,
   FileText,
   Building2,
+  Map,
   CalendarDays,
-  ClipboardList,
   Clock,
   Gauge,
   UserSearch,
@@ -51,20 +51,16 @@ const navItems = [
     permissionKey: 'quick_focus',
     path: '/quick-focus',
   },
-  // Tasks — project status board (tile grid of initiatives). Rename
-  // history: Pulse → Tasks. The name "Pulse" was later reassigned to the
-  // Roadmap page above, but this Tasks page kept its Tasks label and
-  // /tasks URL. Icon was Activity (heartbeat line) to fit the original
-  // "Pulse" branding; now that Pulse is a different menu, the icon
-  // switched to ClipboardList — more semantic for a task board. The
-  // PulsePage.jsx filename stayed for git-history continuity.
-  {
-    icon: ClipboardList,
-    label: 'Tasks',
-    path: '/tasks',
-  },
+  // Tasks menu removed from the sidebar. Left intact for now:
+  //   - Route: /tasks still resolves (registered in src/App.jsx).
+  //   - Page: src/pages/PulsePage.jsx (renders the project tile board).
+  //   - Component: src/components/ProjectStatusBoard.jsx.
+  //   - Data: src/lib/projects.js.
+  // Nothing links to /tasks anymore — it's an undocumented deep-link path.
+  // If we want to delete the code entirely, drop the four files above and
+  // remove the /tasks Route from src/App.jsx in one pass.
   // ── Visual break #1: separates the personal-context layer (AI Chat,
-  //     Pulse, Tasks) from the team-learning cluster (Trainings → Resources).
+  //     Pulse) from the team-learning cluster (Trainings → Resources).
   { separator: true },
   // Trainings is intentionally a LEAF (no submenu). Clicking it lands on the
   // tile-based /trainings dashboard where every training category — Onboarding,
@@ -72,7 +68,7 @@ const navItems = [
   // / Revenue — is its own clickable tile with a progress meter.
   {
     icon: GraduationCap,
-    label: 'Trainings',
+    label: 'Training',
     permissionKey: 'library',
     path: '/trainings',
   },
@@ -121,8 +117,23 @@ const navItems = [
     icon: UserSearch,
     label: 'Candidates',
   },
+  // Facility — daily interactive floor plan for what's happening in every
+  // room right now. Different from the Community menu below: this is the
+  // live daily view (teachers, kids, per-room incidents, family incidents,
+  // eventual Google Sheets submission), while Community is the capacity /
+  // ratios reference grid.
+  //
+  // URL is /facility-map because Community already owns /facility (kept
+  // stable across earlier Capacity → Facility → Community renames). If
+  // you'd rather flip URLs, we can rename Community to /community and give
+  // this menu /facility.
+  {
+    icon: Map,
+    label: 'Facility',
+    path: '/facility-map',
+  },
   // ── Visual break #3: separates the people-pipeline cluster from the
-  //     operations + commercial cluster (Facility → Admin).
+  //     operations + commercial cluster (Community → Admin).
   { separator: true },
   // Community — room-level capacity dashboard. Renders the tile grid (one
   // per room from src/lib/rooms.js) at /facility; per-room detail lives at
@@ -350,7 +361,7 @@ function NavItem({ item, collapsed }) {
   const isChildActive = hasChildren && hasActiveDescendant(item.children, location.pathname)
   // For nested menus: also highlight when on nested routes
   const isNestedActive =
-    (item.label === 'Trainings' &&
+    (item.label === 'Training' &&
       (location.pathname.startsWith('/trainings') || location.pathname.startsWith('/dashboard/'))) ||
     (item.label === 'Targets & Tasks' && location.pathname.startsWith('/targets')) ||
     (item.label === 'Admin' &&
@@ -360,7 +371,11 @@ function NavItem({ item, collapsed }) {
     (item.label === 'Applications' && location.pathname === '/applications') ||
     (item.label === 'Marketing' && location.pathname.startsWith('/marketing')) ||
     (item.label === 'Leads' && location.pathname.startsWith('/leads')) ||
-    (item.label === 'Community' && location.pathname.startsWith('/facility')) ||
+    // Community matches /facility exactly and /facility/:roomId, but NOT
+    // /facility-map (that's the separate Facility menu). The trailing slash
+    // on the startsWith check is what excludes /facility-map.
+    (item.label === 'Community' &&
+      (location.pathname === '/facility' || location.pathname.startsWith('/facility/'))) ||
     (item.label === 'AI Chat' && location.pathname.startsWith('/ai-chat'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 

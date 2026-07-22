@@ -85,7 +85,7 @@ function buildNavItems({ staff, hasPermission }) {
   // remaining tabs still highlight correctly on nested routes.
   const BASE = [
     {
-      label: 'Trainings',
+      label: 'Training',
       icon: GraduationCap,
       path: '/trainings',
       // Trainings lights up on every /trainings/* page AND on the Roles pages

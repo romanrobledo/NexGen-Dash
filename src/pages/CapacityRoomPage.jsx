@@ -10,9 +10,11 @@ import {
   GraduationCap,
   Sun,
   Dumbbell,
+  Loader2,
 } from 'lucide-react'
 import { useViewMode } from '../contexts/ViewModeContext'
-import { getRoomById, COLOR_THEMES } from '../lib/rooms'
+import { COLOR_THEMES } from '../lib/rooms'
+import { useClassrooms, findRoomByNumber } from '../hooks/useClassrooms'
 
 /**
  * Per-room community detail page — `/facility/:roomId`.
@@ -50,8 +52,26 @@ export default function CapacityRoomPage() {
   const { roomId } = useParams()
   const navigate = useNavigate()
   const { mobileMode } = useViewMode()
+  const { rooms, loading } = useClassrooms()
 
-  const room = getRoomById(roomId)
+  // The URL param is the roomNumber (integer as string, e.g. "1" for Ruth).
+  // Old string-slug URLs like `/facility/infant` from the pre-Supabase era
+  // won't resolve and fall through to the "not found" state — expected.
+  const room = findRoomByNumber(rooms, roomId)
+
+  // While the classroom list is loading, show a spinner instead of the
+  // "Room not found" state — otherwise every reload flashes not-found for a
+  // frame before the fetch resolves.
+  if (loading) {
+    return (
+      <div className={mobileMode ? '' : 'max-w-4xl mx-auto'}>
+        <div className="bg-white border border-gray-200 rounded-2xl p-10 flex items-center justify-center gap-3 text-gray-500">
+          <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+          <span className="text-sm">Loading room…</span>
+        </div>
+      </div>
+    )
+  }
 
   // Unknown room id → friendly "not found" state with a way back. Keeps
   // typo'd or stale links from crashing the app.

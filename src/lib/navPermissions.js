@@ -19,7 +19,7 @@ export const NAV_PERMISSIONS = [
   // `time_clock` removed when the time-clock/payroll subsystem was retired.
   // Existing role_permissions rows with permission_key='time_clock' are
   // harmless — they just no longer correspond to any UI.
-  { key: 'library',     label: 'Trainings'   }, // legacy key name kept so existing role_permissions rows survive
+  { key: 'library',     label: 'Training'    }, // legacy key name kept so existing role_permissions rows survive
   { key: 'leads',       label: 'Leads'       },
   // `calendars` doesn't have a permission gate yet — Calendars is universal.
   // Add `{ key: 'calendars', label: 'Calendars' }` here AND attach the same
