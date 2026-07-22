@@ -12,9 +12,11 @@ import {
   Dumbbell,
   Loader2,
 } from 'lucide-react'
+import { Sparkles, BookMarked } from 'lucide-react'
 import { useViewMode } from '../contexts/ViewModeContext'
 import { COLOR_THEMES } from '../lib/rooms'
 import { useClassrooms, findRoomByNumber } from '../hooks/useClassrooms'
+import { useChildren, formatAge } from '../hooks/useChildren'
 
 /**
  * Per-room community detail page — `/facility/:roomId`.
@@ -53,11 +55,15 @@ export default function CapacityRoomPage() {
   const navigate = useNavigate()
   const { mobileMode } = useViewMode()
   const { rooms, loading } = useClassrooms()
+  const { childrenByRoom } = useChildren()
 
   // The URL param is the roomNumber (integer as string, e.g. "1" for Ruth).
   // Old string-slug URLs like `/facility/infant` from the pre-Supabase era
   // won't resolve and fall through to the "not found" state — expected.
   const room = findRoomByNumber(rooms, roomId)
+  const enrolledChildren = room
+    ? childrenByRoom.get(room.roomNumber) || []
+    : []
 
   // While the classroom list is loading, show a spinner instead of the
   // "Room not found" state — otherwise every reload flashes not-found for a
@@ -163,22 +169,69 @@ export default function CapacityRoomPage() {
         </div>
       </div>
 
-      {/* Roster placeholder */}
+      {/* Enrolled Roster — read-only from Supabase (Sheet-synced) */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5">
+        <div className="flex items-center gap-2 mb-1">
+          <BookMarked className="w-4 h-4 text-gray-400" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+            Enrolled Roster
+          </h2>
+          <span className="text-[11px] font-semibold text-gray-400 tabular-nums">
+            ({enrolledChildren.length})
+          </span>
+        </div>
+        <p className="text-[11px] text-gray-400 italic mb-3 ml-6">
+          From Google Sheet · edit there and the change appears here after
+          the next sync
+        </p>
+        {enrolledChildren.length === 0 ? (
+          <p className="text-xs text-gray-400 italic">
+            No children enrolled in this room yet.
+          </p>
+        ) : (
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {enrolledChildren.map((c) => {
+              const age = formatAge(c.dateOfBirth)
+              return (
+                <li
+                  key={c.id}
+                  className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                >
+                  <Users className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-gray-900 truncate leading-tight">
+                      {c.fullName}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      {age && <span>{age}</span>}
+                      {c.onCcms && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+                          <Sparkles className="w-2.5 h-2.5" />
+                          CCMS
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
+
+      {/* Daily Roster placeholder — comes with Phase 2 */}
       <div className="bg-white border border-gray-200 rounded-2xl p-7 text-center">
         <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto mb-3">
           <ClipboardList className="w-6 h-6 text-indigo-600" />
         </div>
         <p className="text-base font-semibold text-gray-900">
-          Daily Roster
+          Daily Attendance & Notes
         </p>
         <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
-          Coming next: enter each child in the room today, the teacher
-          assigned, and any issues with the child or their parent. Live
-          headcount and ratio status will update right here on this page
-          and on the tile in the Community grid.
-        </p>
-        <p className="text-[11px] text-gray-400 mt-3">
-          Schema design comes after the room list is locked in.
+          Coming next: mark who's present today, log assigned teachers, and
+          record any issues with a child or their parent. The enrolled
+          roster above stays canonical (from the Sheet); this section
+          captures what actually happens on the floor.
         </p>
       </div>
     </div>

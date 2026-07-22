@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useViewMode } from '../contexts/ViewModeContext'
 import { useClassrooms, findRoomByNumber } from '../hooks/useClassrooms'
+import { useChildren } from '../hooks/useChildren'
 import FacilityFloorPlan from '../components/FacilityFloorPlan'
 import RoomDetailDrawer from '../components/RoomDetailDrawer'
 
@@ -53,9 +54,34 @@ const FAMILY_SEVERITIES = [
   { key: 'critical',  label: 'Critical',  chipClass: 'bg-red-50 text-red-700 border-red-200',          dotClass: 'bg-red-500'     },
 ]
 
+// n8n webhook URL that receives the daily report payload and appends a row
+// to the "Daily Reports" tab of the NexGen Facility Google Sheet. Set in
+// Vercel env vars + local .env.local as VITE_FACILITY_DAILY_REPORT_WEBHOOK.
+// If unset, Submit falls back to logging the payload to the console.
+const DAILY_REPORT_WEBHOOK =
+  import.meta.env.VITE_FACILITY_DAILY_REPORT_WEBHOOK || ''
+
 export default function FacilityMapPage() {
   const { mobileMode } = useViewMode()
   const { rooms, loading: roomsLoading, error: roomsError } = useClassrooms()
+  const { children: allChildren, childrenByRoom } = useChildren()
+
+  // Attendance overlay on top of the enrolled roster. Keys are child IDs;
+  // values are 'absent' (marked by staff) OR undefined (implicit present).
+  // Default-present rather than default-absent because a normal day has 90%+
+  // showing up — staff only need to mark the exceptions.
+  const [attendance, setAttendance] = useState(
+    /** @type {Record<string, 'absent'>} */ ({})
+  )
+
+  function toggleAttendance(childId) {
+    setAttendance((prev) => {
+      const next = { ...prev }
+      if (next[childId] === 'absent') delete next[childId]
+      else next[childId] = 'absent'
+      return next
+    })
+  }
 
   // Per-room daily state, keyed by roomNumber (integer). The map is seeded
   // lazily as rooms arrive from the hook — we can't seed at mount because
@@ -126,34 +152,69 @@ export default function FacilityMapPage() {
   }
 
   // ── Aggregate totals for the summary strip + submit preview ──────────
+  // "kidsPresent" = enrolled kids not marked absent + any manually-added
+  // walk-ins from the drawer's Children section. "enrolledTotal" is the
+  // baseline from Supabase (Sheet-synced).
   const totals = useMemo(() => {
     let teachers = 0
-    let kids = 0
+    let extraKids = 0
     let roomIncidents = 0
     for (const key of Object.keys(entriesByRoom)) {
       teachers += entriesByRoom[key].teachers.length
-      kids += entriesByRoom[key].kids.length
+      extraKids += entriesByRoom[key].kids.length
       roomIncidents += entriesByRoom[key].incidents.length
     }
-    return { teachers, kids, roomIncidents, familyIncidents: familyIncidents.length }
-  }, [entriesByRoom, familyIncidents])
+    const enrolledTotal = allChildren.length
+    const enrolledAbsent = allChildren.filter(
+      (c) => attendance[c.id] === 'absent'
+    ).length
+    const enrolledPresent = enrolledTotal - enrolledAbsent
+    return {
+      teachers,
+      kidsPresent: enrolledPresent + extraKids,
+      enrolledTotal,
+      enrolledAbsent,
+      extraKids,
+      roomIncidents,
+      familyIncidents: familyIncidents.length,
+    }
+  }, [entriesByRoom, familyIncidents, allChildren, attendance])
 
-  // ── Submit (Phase 2: fire webhook) ────────────────────────────────────
+  // ── Submit: build payload + POST to n8n webhook ──────────────────────
   function buildPayload() {
     return {
       date: new Date().toISOString().slice(0, 10),
       submittedAt: new Date().toISOString(),
-      rooms: rooms.map((r) => ({
-        id: r.id,
-        roomNumber: r.roomNumber,
-        name: r.name,
-        teacherName: r.teacherName,
-        ageRange: r.ageRange,
-        targetRatio: r.targetRatio,
-        maxCapacity: r.maxCapacity,
-        enrolled: r.enrolled,
-        ...(entriesByRoom[r.roomNumber] || { teachers: [], kids: [], incidents: [] }),
-      })),
+      rooms: rooms.map((r) => {
+        const entry = entriesByRoom[r.roomNumber] || {
+          teachers: [],
+          kids: [],
+          incidents: [],
+        }
+        const enrolledHere = childrenByRoom.get(r.roomNumber) || []
+        const absentChildren = enrolledHere.filter(
+          (c) => attendance[c.id] === 'absent'
+        )
+        const presentChildren = enrolledHere.filter(
+          (c) => attendance[c.id] !== 'absent'
+        )
+        return {
+          id: r.id,
+          roomNumber: r.roomNumber,
+          name: r.name,
+          teacherName: r.teacherName,
+          ageRange: r.ageRange,
+          targetRatio: r.targetRatio,
+          maxCapacity: r.maxCapacity,
+          enrolled: r.enrolled,
+          presentCount: presentChildren.length,
+          absentCount: absentChildren.length,
+          absentChildren: absentChildren.map((c) => c.fullName),
+          teachers: entry.teachers,
+          extraKids: entry.kids, // manually added walk-ins
+          incidents: entry.incidents,
+        }
+      }),
       familyIncidents,
       totals,
     }
@@ -161,30 +222,75 @@ export default function FacilityMapPage() {
 
   async function handleSubmit() {
     setSubmitState('sending')
-    // Placeholder: Phase 2 will POST buildPayload() to an n8n webhook that
-    // writes to Google Sheets. For now we log + toast so the user can see
-    // the payload shape in DevTools.
-    // eslint-disable-next-line no-console
-    console.log('[FacilityMap] daily report payload:', buildPayload())
-    await new Promise((r) => setTimeout(r, 400))
-    setSubmitState('sent')
-    setToast({
-      tone: 'success',
-      message:
-        'Preview logged to console. Google Sheets webhook wiring is Phase 2.',
-    })
-    setTimeout(() => {
-      setToast(null)
+    const payload = buildPayload()
+
+    // If the webhook env var isn't set, log the payload + toast so the user
+    // can inspect the shape in DevTools. Same behavior as before wiring, so
+    // the app is usable even without n8n configured yet.
+    if (!DAILY_REPORT_WEBHOOK) {
+      // eslint-disable-next-line no-console
+      console.log('[FacilityMap] daily report payload (webhook not set):', payload)
+      await new Promise((r) => setTimeout(r, 300))
+      setSubmitState('sent')
+      setToast({
+        tone: 'success',
+        message:
+          'Payload logged to console. Set VITE_FACILITY_DAILY_REPORT_WEBHOOK to actually send.',
+      })
+      setTimeout(() => {
+        setToast(null)
+        setSubmitState('idle')
+      }, 3500)
+      return
+    }
+
+    try {
+      const res = await fetch(DAILY_REPORT_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(`Webhook returned ${res.status}: ${text.slice(0, 200)}`)
+      }
+      setSubmitState('sent')
+      setToast({
+        tone: 'success',
+        message: 'Daily report submitted to Google Sheets.',
+      })
+    } catch (err) {
+      console.error('[FacilityMap] submit failed:', err)
       setSubmitState('idle')
-    }, 3500)
+      setToast({
+        tone: 'error',
+        message:
+          err.message?.includes('Failed to fetch')
+            ? "Couldn't reach the webhook — check n8n workflow is active and the env var URL is correct."
+            : `Submit failed: ${err.message || 'unknown error'}`,
+      })
+    } finally {
+      setTimeout(() => {
+        setToast(null)
+        if (submitState === 'sent') setSubmitState('idle')
+      }, 3500)
+    }
   }
 
   return (
     <div className={mobileMode ? '' : 'max-w-6xl mx-auto'}>
       {/* Toast */}
       {toast && (
-        <div className="fixed top-4 right-4 z-[60] bg-gray-900 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg flex items-start gap-2 max-w-sm">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+        <div
+          className={`fixed top-4 right-4 z-[60] text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg flex items-start gap-2 max-w-sm ${
+            toast.tone === 'error' ? 'bg-red-600' : 'bg-gray-900'
+          }`}
+        >
+          {toast.tone === 'error' ? (
+            <AlertTriangle className="w-4 h-4 text-amber-300 mt-0.5 flex-shrink-0" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+          )}
           <span>{toast.message}</span>
         </div>
       )}
@@ -207,10 +313,33 @@ export default function FacilityMapPage() {
 
       {/* Totals strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <TotalStat icon={UsersRound} label="Teachers on floor" value={totals.teachers} />
-        <TotalStat icon={Baby} label="Children present" value={totals.kids} />
-        <TotalStat icon={AlertTriangle} label="Room incidents" value={totals.roomIncidents} tone={totals.roomIncidents > 0 ? 'orange' : 'default'} />
-        <TotalStat icon={AlertTriangle} label="Family incidents" value={totals.familyIncidents} tone={totals.familyIncidents > 0 ? 'red' : 'default'} />
+        <TotalStat
+          icon={UsersRound}
+          label="Teachers on floor"
+          value={totals.teachers}
+        />
+        <TotalStat
+          icon={Baby}
+          label="Children present"
+          value={totals.kidsPresent}
+          subValue={
+            totals.enrolledTotal > 0
+              ? `of ${totals.enrolledTotal} enrolled${totals.enrolledAbsent > 0 ? ` · ${totals.enrolledAbsent} absent` : ''}`
+              : undefined
+          }
+        />
+        <TotalStat
+          icon={AlertTriangle}
+          label="Room incidents"
+          value={totals.roomIncidents}
+          tone={totals.roomIncidents > 0 ? 'orange' : 'default'}
+        />
+        <TotalStat
+          icon={AlertTriangle}
+          label="Family incidents"
+          value={totals.familyIncidents}
+          tone={totals.familyIncidents > 0 ? 'red' : 'default'}
+        />
       </div>
 
       {/* Floor plan — shows a loading state while Supabase resolves, an
@@ -294,6 +423,11 @@ export default function FacilityMapPage() {
       <RoomDetailDrawer
         room={openRoom}
         entry={openRoom ? entriesByRoom[openRoom.roomNumber] : null}
+        enrolledChildren={
+          openRoom ? childrenByRoom.get(openRoom.roomNumber) || [] : []
+        }
+        attendance={attendance}
+        onToggleAttendance={toggleAttendance}
         onClose={() => setOpenRoomNumber(null)}
         onUpdate={(next) => openRoom && updateRoomEntry(openRoom.roomNumber, next)}
       />
@@ -303,7 +437,7 @@ export default function FacilityMapPage() {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function TotalStat({ icon: Icon, label, value, tone = 'default' }) {
+function TotalStat({ icon: Icon, label, value, tone = 'default', subValue }) {
   const tones = {
     default: 'text-gray-900',
     orange:  'text-orange-600',
@@ -318,6 +452,11 @@ function TotalStat({ icon: Icon, label, value, tone = 'default' }) {
         </p>
       </div>
       <p className={`text-xl font-bold tabular-nums ${tones[tone]}`}>{value}</p>
+      {subValue && (
+        <p className="text-[10px] text-gray-400 mt-0.5 tabular-nums truncate">
+          {subValue}
+        </p>
+      )}
     </div>
   )
 }

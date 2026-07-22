@@ -8,8 +8,13 @@ import {
   AlertTriangle,
   Trash2,
   Plus,
+  Sparkles,
+  BookMarked,
+  CheckCircle2,
+  CircleSlash,
 } from 'lucide-react'
 import { COLOR_THEMES } from '../lib/rooms'
+import { formatAge } from '../hooks/useChildren'
 
 /**
  * Right-side slide-in panel opened by clicking a room tile on the facility
@@ -41,13 +46,24 @@ const INCIDENT_SEVERITIES = [
 
 /**
  * @param {{
- *   room: import('../lib/rooms').Room | null,
+ *   room: import('../hooks/useClassrooms').Room | null,
  *   entry: { teachers: any[], kids: any[], incidents: any[] } | null,
+ *   enrolledChildren?: import('../hooks/useChildren').Child[],
+ *   attendance?: Record<string, 'absent'>,
+ *   onToggleAttendance?: (childId: string) => void,
  *   onClose: () => void,
  *   onUpdate: (next: { teachers: any[], kids: any[], incidents: any[] }) => void,
  * }} props
  */
-export default function RoomDetailDrawer({ room, entry, onClose, onUpdate }) {
+export default function RoomDetailDrawer({
+  room,
+  entry,
+  enrolledChildren = [],
+  attendance = {},
+  onToggleAttendance,
+  onClose,
+  onUpdate,
+}) {
   // Local form state — cleared each time the drawer opens for a new room.
   const [teacherName, setTeacherName] = useState('')
   const [teacherPos, setTeacherPos] = useState(TEACHER_POSITIONS[0])
@@ -218,6 +234,88 @@ export default function RoomDetailDrawer({ room, entry, onClose, onUpdate }) {
 
         {/* Body — scrollable */}
         <div className="flex-1 overflow-y-auto">
+          {/* Enrolled Roster — roster comes from Supabase (Sheet-synced,
+              read-only), but attendance IS mutable in-app. Click a row to
+              toggle a child between Present (default) and Absent. Absent
+              kids are captured in the Submit Daily Report payload for
+              Google Sheets. The roster itself doesn't change — that stays
+              in the Sheet. */}
+          {(() => {
+            const absentCount = enrolledChildren.filter(
+              (c) => attendance[c.id] === 'absent'
+            ).length
+            const presentCount = enrolledChildren.length - absentCount
+            return (
+              <Section
+                title="Enrolled Roster"
+                icon={BookMarked}
+                count={enrolledChildren.length}
+                subtitle={
+                  enrolledChildren.length > 0
+                    ? `Tap to mark absent · ${presentCount} present${absentCount > 0 ? ` · ${absentCount} absent` : ''}`
+                    : 'From Google Sheet · read-only in app'
+                }
+              >
+                {enrolledChildren.length === 0 ? (
+                  <EmptyLine text="No children enrolled in this room yet." />
+                ) : (
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {enrolledChildren.map((c) => {
+                      const age = formatAge(c.dateOfBirth)
+                      const isAbsent = attendance[c.id] === 'absent'
+                      return (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            onClick={() => onToggleAttendance && onToggleAttendance(c.id)}
+                            className={`w-full text-left flex items-start gap-2 border rounded-lg px-3 py-2 text-sm transition-colors ${
+                              isAbsent
+                                ? 'bg-amber-50 border-amber-200 hover:bg-amber-100'
+                                : 'bg-white border-gray-200 hover:bg-gray-50'
+                            }`}
+                            aria-pressed={isAbsent}
+                            title={isAbsent ? 'Marked absent — tap to mark present' : 'Present — tap to mark absent'}
+                          >
+                            {isAbsent ? (
+                              <CircleSlash className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                            ) : (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={`truncate leading-tight ${
+                                  isAbsent
+                                    ? 'text-amber-800 line-through'
+                                    : 'text-gray-900'
+                                }`}
+                              >
+                                {c.fullName}
+                              </p>
+                              <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                {age && <span>{age}</span>}
+                                {c.onCcms && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    CCMS
+                                  </span>
+                                )}
+                                {isAbsent && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 font-semibold">
+                                    Absent
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </Section>
+            )
+          })()}
+
           {/* Teachers */}
           <Section title="Teachers" icon={UserRound} count={teacherCount}>
             {entry.teachers.length === 0 ? (
@@ -401,10 +499,10 @@ export default function RoomDetailDrawer({ room, entry, onClose, onUpdate }) {
 
 // ─── Small helpers ───────────────────────────────────────────────────────────
 
-function Section({ title, icon: Icon, count, children }) {
+function Section({ title, icon: Icon, count, subtitle, children }) {
   return (
     <section className="px-5 py-4 border-b border-gray-100 last:border-b-0">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-1">
         <Icon className="w-4 h-4 text-gray-400" />
         <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
           {title}
@@ -413,6 +511,10 @@ function Section({ title, icon: Icon, count, children }) {
           ({count})
         </span>
       </div>
+      {subtitle && (
+        <p className="text-[10px] text-gray-400 italic mb-2 ml-6">{subtitle}</p>
+      )}
+      {!subtitle && <div className="mb-2" />}
       {children}
     </section>
   )
