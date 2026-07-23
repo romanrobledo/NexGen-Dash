@@ -1,324 +1,371 @@
-import { useNavigate } from 'react-router-dom'
-import { UserCircle, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { useState } from 'react'
+import { Network, Info } from 'lucide-react'
 import { useViewMode } from '../contexts/ViewModeContext'
-import { useSelectedRoleId } from '../hooks/useSelectedRole'
+import {
+  ROLE_CONTACTS,
+  ROLE_META,
+  TONE_CLASSES,
+} from '../lib/roleContent'
+import OrgRoleDrawer from '../components/OrgRoleDrawer'
 
 /**
- * Master list of roles used across the Compass pages.
- * The `id` values MUST match the ids used in each Compass sub-page's ROLES array
- * (WhatDoIDoPage, HowDoIDoItPage, etc.) so selecting here drives those pages.
+ * Org Chart landing — `/whoami` (route unchanged for backwards compat).
+ *
+ * Replaces the previous "Who Am I?" role selector. Now a spatial tree
+ * matching the physical org chart: Roman (Visionary) → Ryan (Integrator)
+ * → three branches (Operator · Executive Assistant · Sales Manager) →
+ * their reports and focus areas.
+ *
+ * Every tile is clickable and opens OrgRoleDrawer with the role's
+ * contact info + all five Compass sections (What / How / When / Why /
+ * How Do I Know) in a single scrollable view — matching the user ask
+ * of "one page per role, not a click-through flow."
+ *
+ * Legacy 7 roles that don't appear on the visual tree (Front Desk,
+ * Hiring Manager, Tour Manager, Lesson Plans Manager, Kitchen Manager,
+ * Asst. Kitchen Manager, Bus Driver) render below the tree in an "Other
+ * Roles" strip so their content stays reachable.
  */
-const ROLES = [
-  { id: 'visionary',        label: 'Visionary',             emoji: '👑', color: '#0F172A', tagline: 'You see the future. Your Integrator builds the road to it.' },
-  { id: 'integrator',       label: 'Integrator',            emoji: '⚙️', color: '#1E3A8A', tagline: 'You run the machine. You make the vision real.' },
-  { id: 'operator',         label: 'Operator',              emoji: '🏢', color: '#2563EB', tagline: 'You run the business. Everyone else runs their lane.' },
-  { id: 'director',         label: 'Director',              emoji: '📋', color: '#7C3AED', tagline: 'You are the bridge between vision and classroom.' },
-  { id: 'teacher',          label: 'Teacher',               emoji: '📚', color: '#059669', tagline: "You are the most important person in a child's day." },
-  { id: 'teacher-assistant',label: 'Teacher Assistant',     emoji: '🤝', color: '#0891B2', tagline: "You make the teacher's job possible." },
-  { id: 'front-desk',       label: 'Front Desk Manager',    emoji: '🖥️', color: '#D97706', tagline: 'You are the first impression families leave with.' },
-  { id: 'hiring-manager',   label: 'Hiring Manager',        emoji: '🔍', color: '#DC2626', tagline: 'You build the team that builds the school.' },
-  { id: 'tour-manager',     label: 'Tour Manager',          emoji: '🗺️', color: '#7C3AED', tagline: 'You turn curious families into enrolled families.' },
-  { id: 'lesson-plans',     label: 'Lesson Plans Manager',  emoji: '📝', color: '#059669', tagline: 'You give teachers the roadmap.' },
-  { id: 'kitchen-manager',  label: 'Kitchen Manager',       emoji: '🍽️', color: '#D97706', tagline: "You fuel every child's day." },
-  { id: 'asst-kitchen',     label: 'Asst. Kitchen Manager', emoji: '🥄', color: '#0891B2', tagline: 'You keep the kitchen running when it matters most.' },
-  { id: 'bus-driver',       label: 'Bus Driver',            emoji: '🚌', color: '#DC2626', tagline: "Every child on your route is someone's whole world." },
+
+// Tiles on the visual tree that have Compass content OR placeholder
+// scaffolding in the roleContent module. Keep this list in sync with the
+// tree hierarchy below.
+const TREE_ROLES = [
+  'visionary',
+  'integrator',
+  'operator',
+  'executive-assistant',
+  'sales-manager',
+  'director',
+  'facility-manager',
+  'teacher',
+  'teacher-assistant',
+  'scheduling',
+  'documentation',
+  'internal-communication',
+  'tours',
+  'follow-up',
+  'enrollment',
+  'community-outreach',
+  'classroom-operations',
+  'student-experience',
 ]
 
-/**
- * Pages in the Compass "thinking flow" — after picking a role, staff walk through
- * these questions in order. This gives them the option to continue linearly.
- */
-const FLOW = [
-  { path: '/dashboard/what-do-i-do',         label: 'What Do I Do' },
-  { path: '/dashboard/how-do-i-do-it',       label: 'How Do I Do It' },
-  { path: '/dashboard/when-do-i-do-it',      label: 'When Do I Do It' },
-  { path: '/dashboard/why-is-it-important',  label: 'Why Is It Important' },
-  { path: '/dashboard/how-do-i-know',        label: 'How Do I Know I\'m Doing A Good Job' },
+// Roles NOT in the visual tree — keep them reachable at the bottom.
+const OTHER_ROLES = [
+  'front-desk',
+  'hiring-manager',
+  'tour-manager',
+  'lesson-plans',
+  'kitchen-manager',
+  'asst-kitchen',
+  'bus-driver',
 ]
 
 export default function WhoAmIPage() {
-  const navigate = useNavigate()
   const { mobileMode } = useViewMode()
-  const [selectedId, setSelectedId] = useSelectedRoleId()
+  const [openRoleId, setOpenRoleId] = useState(null)
 
-  const selectedRole = ROLES.find((r) => r.id === selectedId) || null
+  return (
+    <div className={mobileMode ? '' : 'max-w-7xl mx-auto'}>
+      {/* Page header */}
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm">
+          <Network className="w-6 h-6 text-white" />
+        </div>
+        <div className="min-w-0">
+          <h1
+            className={`font-bold text-gray-900 ${
+              mobileMode ? 'text-xl' : 'text-2xl'
+            }`}
+          >
+            Org Chart
+          </h1>
+          <p className="text-sm text-gray-500">
+            Tap any tile to open the person's contact info and full role
+            clarity — one page per role.
+          </p>
+        </div>
+      </div>
 
-  const handleSelect = (role) => {
-    setSelectedId(role.id)
+      {/* Instruction strip */}
+      <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-5 flex items-start gap-3">
+        <Info className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-indigo-800 leading-relaxed">
+          <strong className="font-semibold">Recommended hierarchy:</strong>{' '}
+          Visionary at the top, Integrator directly beneath, all day-to-day
+          functions flow through the Integrator.
+        </p>
+      </div>
+
+      {/* Tree — horizontal scroll on narrow screens preserves the spatial
+          layout instead of stacking into an unreadable vertical column. */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5 overflow-x-auto">
+        <div className="min-w-[900px] flex flex-col items-center gap-3">
+          {/* Level 1 — Visionary */}
+          <TileRow>
+            <RoleTile roleId="visionary" size="lg" onClick={setOpenRoleId} />
+          </TileRow>
+          <Connector />
+
+          {/* Level 2 — Integrator */}
+          <TileRow>
+            <RoleTile roleId="integrator" size="lg" onClick={setOpenRoleId} />
+          </TileRow>
+          <Connector />
+
+          {/* Level 3 — 3 top-level branches */}
+          <div className="grid grid-cols-3 gap-6 w-full">
+            {/* Branch A — Operator → Director/Facility Manager */}
+            <Branch>
+              <RoleTile roleId="operator" onClick={setOpenRoleId} />
+              <Connector />
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <SubBranch>
+                  <RoleTile
+                    roleId="director"
+                    size="sm"
+                    onClick={setOpenRoleId}
+                  />
+                  <Connector short />
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    <RoleTile
+                      roleId="teacher"
+                      size="xs"
+                      onClick={setOpenRoleId}
+                    />
+                    <RoleTile
+                      roleId="teacher-assistant"
+                      size="xs"
+                      onClick={setOpenRoleId}
+                    />
+                  </div>
+                </SubBranch>
+                <SubBranch>
+                  <RoleTile
+                    roleId="facility-manager"
+                    size="sm"
+                    onClick={setOpenRoleId}
+                  />
+                  <Connector short />
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    <RoleTile
+                      roleId="classroom-operations"
+                      size="xs"
+                      onClick={setOpenRoleId}
+                    />
+                    <RoleTile
+                      roleId="student-experience"
+                      size="xs"
+                      onClick={setOpenRoleId}
+                    />
+                  </div>
+                </SubBranch>
+              </div>
+            </Branch>
+
+            {/* Branch B — Executive Assistant → focus areas */}
+            <Branch>
+              <RoleTile roleId="executive-assistant" onClick={setOpenRoleId} />
+              <Connector />
+              <div className="grid grid-cols-3 gap-2 w-full">
+                <RoleTile roleId="scheduling" size="xs" onClick={setOpenRoleId} />
+                <RoleTile
+                  roleId="documentation"
+                  size="xs"
+                  onClick={setOpenRoleId}
+                />
+                <RoleTile
+                  roleId="internal-communication"
+                  size="xs"
+                  onClick={setOpenRoleId}
+                />
+              </div>
+            </Branch>
+
+            {/* Branch C — Sales Manager → focus areas */}
+            <Branch>
+              <RoleTile roleId="sales-manager" onClick={setOpenRoleId} />
+              <Connector />
+              <div className="grid grid-cols-4 gap-2 w-full">
+                <RoleTile roleId="tours" size="xs" onClick={setOpenRoleId} />
+                <RoleTile roleId="follow-up" size="xs" onClick={setOpenRoleId} />
+                <RoleTile roleId="enrollment" size="xs" onClick={setOpenRoleId} />
+                <RoleTile
+                  roleId="community-outreach"
+                  size="xs"
+                  onClick={setOpenRoleId}
+                />
+              </div>
+            </Branch>
+          </div>
+        </div>
+      </div>
+
+      {/* Other roles — legacy tiles not on the tree */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5">
+        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-3">
+          Other Roles
+        </p>
+        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+          Roles that exist in the business but aren't on the primary org
+          tree — kitchen, transportation, and functional managers whose
+          role clarity content still lives in the Compass pages.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {OTHER_ROLES.map((id) => (
+            <RoleTile
+              key={id}
+              roleId={id}
+              size="sm"
+              onClick={setOpenRoleId}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Drawer */}
+      <OrgRoleDrawer roleId={openRoleId} onClose={() => setOpenRoleId(null)} />
+    </div>
+  )
+}
+
+// ─── Layout primitives ───────────────────────────────────────────────────
+
+function TileRow({ children }) {
+  return <div className="flex items-center justify-center">{children}</div>
+}
+
+function Connector({ short = false }) {
+  return (
+    <div
+      className={`w-px bg-gray-300 ${short ? 'h-3' : 'h-5'}`}
+      aria-hidden="true"
+    />
+  )
+}
+
+function Branch({ children }) {
+  return (
+    <div className="flex flex-col items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-3">
+      {children}
+    </div>
+  )
+}
+
+function SubBranch({ children }) {
+  return (
+    <div className="flex flex-col items-center gap-2 bg-white border border-gray-200 rounded-lg p-2">
+      {children}
+    </div>
+  )
+}
+
+// ─── Tile ───────────────────────────────────────────────────────────────
+
+/**
+ * A single clickable role tile. Sizes:
+ *   - lg: top-of-tree tiles (Visionary, Integrator) — large, prominent
+ *   - md (default): mid-tree roles (Operator, Exec Asst, Sales)
+ *   - sm: leaf-ish roles (Director, Facility Manager, other roles)
+ *   - xs: focus-area / class tiles (Teachers, Scheduling, etc.)
+ *
+ * Uses the ROLE_META tone to color the left border and icon background —
+ * matches the visual's blue/green split (Roman blue = Visionary indigo,
+ * Ryan green = Integrator emerald).
+ */
+function RoleTile({ roleId, size = 'md', onClick }) {
+  const contact = ROLE_CONTACTS[roleId] || {
+    name: roleId,
+    title: '',
   }
+  const meta = ROLE_META[roleId] || { emoji: '🧭', tagline: '', tone: 'indigo' }
+  const tone = TONE_CLASSES[meta.tone] || TONE_CLASSES.indigo
 
-  const handleClear = () => {
-    setSelectedId(null)
+  // `xs` uses a stacked (emoji-on-top) layout so the tile's full width is
+  // available for the label to wrap onto 2 lines. The larger sizes keep
+  // the horizontal (emoji-beside-label) layout — they've got room.
+  const isStacked = size === 'xs'
+
+  const sizeClasses = {
+    lg: 'p-4 min-w-[220px]',
+    md: 'p-3 w-full',
+    sm: 'p-2.5 w-full',
+    xs: 'p-2 w-full min-h-[68px]',
+  }
+  const emojiSizes = {
+    lg: 'text-2xl w-10 h-10',
+    md: 'text-lg w-8 h-8',
+    sm: 'text-base w-7 h-7',
+    xs: 'text-sm w-6 h-6',
+  }
+  const titleSizes = {
+    lg: 'text-base',
+    md: 'text-sm',
+    sm: 'text-xs',
+    xs: 'text-[10px]',
+  }
+  const captionSizes = {
+    lg: 'text-xs',
+    md: 'text-[11px]',
+    sm: 'text-[10px]',
+    xs: 'text-[9px]',
   }
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", maxWidth: 880, margin: '0 auto' }}>
-      {/* Page Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-3">
-          <div className="w-12 h-12 rounded-xl bg-indigo-500 flex items-center justify-center">
-            <UserCircle className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h2
-              style={{
-                fontSize: '1.75rem',
-                fontWeight: 800,
-                color: '#0F172A',
-                margin: 0,
-                letterSpacing: '-0.03em',
-              }}
-            >
-              Who Am I?
-            </h2>
-            <p
-              style={{
-                color: '#64748B',
-                marginTop: '0.35rem',
-                fontSize: '0.9rem',
-                lineHeight: 1.5,
-              }}
-            >
-              Choose your role once, then walk through the Compass flow as that role.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Intro / Instructions */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #EEF2FF 0%, #EFF6FF 100%)',
-          border: '1px solid #C7D2FE',
-          borderRadius: 14,
-          padding: mobileMode ? '1rem 1.1rem' : '1.15rem 1.5rem',
-          marginBottom: '1.25rem',
-        }}
-      >
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: '#3730A3',
-            margin: 0,
-            lineHeight: 1.65,
-            fontWeight: 500,
-          }}
-        >
-          <strong style={{ fontWeight: 700 }}>Think one role at a time.</strong>{' '}
-          Pick the role you're in today, then work through the Compass pages as that person.
-          You can always come back here to switch roles and go through the flow again.
-        </p>
-      </div>
-
-      {/* Role Selector Card */}
-      <div
-        style={{
-          background: '#fff',
-          border: '1px solid #E2E8F0',
-          borderRadius: 16,
-          padding: mobileMode ? '1.25rem 1rem' : '1.5rem 1.75rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,.04)',
-        }}
-      >
-        <p
-          style={{
-            fontSize: '0.7rem',
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: '#94A3B8',
-            margin: '0 0 1rem',
-          }}
-        >
-          Select Your Role
-        </p>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: mobileMode ? '1fr 1fr' : 'repeat(3, 1fr)',
-            gap: mobileMode ? 8 : 10,
-          }}
-        >
-          {ROLES.map((role) => {
-            const isActive = selectedId === role.id
-            return (
-              <button
-                key={role.id}
-                onClick={() => handleSelect(role)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  padding: mobileMode ? '0.65rem 0.75rem' : '0.75rem 0.9rem',
-                  borderRadius: 12,
-                  border: isActive ? `2px solid ${role.color}` : '1.5px solid #E2E8F0',
-                  background: isActive ? role.color + '10' : '#fff',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease',
-                  fontFamily: 'inherit',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = '#F8FAFC'
-                    e.currentTarget.style.borderColor = '#CBD5E1'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = '#fff'
-                    e.currentTarget.style.borderColor = '#E2E8F0'
-                  }
-                }}
-              >
-                <span style={{ fontSize: '1.2rem', lineHeight: 1, flexShrink: 0 }}>
-                  {role.emoji}
-                </span>
-                <span
-                  style={{
-                    fontSize: mobileMode ? '0.78rem' : '0.82rem',
-                    fontWeight: isActive ? 700 : 600,
-                    color: isActive ? role.color : '#374151',
-                    lineHeight: 1.3,
-                    flex: 1,
-                    minWidth: 0,
-                  }}
-                >
-                  {role.label}
-                </span>
-                {isActive && (
-                  <CheckCircle2
-                    size={16}
-                    color={role.color}
-                    style={{ flexShrink: 0 }}
-                  />
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Selected Role Confirmation + Continue */}
-      {selectedRole && (
-        <div
-          style={{
-            marginTop: '1.25rem',
-            background: '#fff',
-            border: `2px solid ${selectedRole.color}25`,
-            borderRadius: 16,
-            padding: mobileMode ? '1.25rem 1rem' : '1.5rem 1.75rem',
-            borderLeft: `4px solid ${selectedRole.color}`,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '1.75rem', lineHeight: 1 }}>{selectedRole.emoji}</span>
-            <div>
-              <p
-                style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  color: '#94A3B8',
-                  margin: 0,
-                }}
-              >
-                You selected
-              </p>
-              <h3
-                style={{
-                  fontSize: '1.15rem',
-                  fontWeight: 800,
-                  color: selectedRole.color,
-                  margin: 0,
-                  lineHeight: 1.2,
-                }}
-              >
-                {selectedRole.label}
-              </h3>
-            </div>
-          </div>
-          <p
-            style={{
-              fontSize: '0.85rem',
-              color: '#64748B',
-              margin: '0 0 1rem',
-              lineHeight: 1.6,
-              fontStyle: 'italic',
-            }}
-          >
-            {selectedRole.tagline}
-          </p>
-
-          {/* Flow shortcut buttons */}
-          <p
-            style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: '#94A3B8',
-              margin: '0 0 0.5rem',
-            }}
-          >
-            Continue the flow
-          </p>
+    <button
+      onClick={() => onClick(roleId)}
+      className={`text-left bg-white border-l-4 ${tone.border} border-y border-r border-gray-200 rounded-lg ${sizeClasses[size]} ${tone.ring} hover:shadow-sm transition-all group min-w-0 ${
+        contact.vacant ? 'ring-1 ring-amber-200' : ''
+      }`}
+    >
+      {isStacked ? (
+        // Stacked layout for xs tiles — emoji on top, full-width label
+        // wraps to 2 lines. Fits "Documentation", "Internal Communication",
+        // "Community Outreach", etc. without truncating.
+        <div className="flex flex-col items-start gap-1">
           <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: 8,
-            }}
+            className={`${emojiSizes[size]} rounded-md flex items-center justify-center flex-shrink-0 ${tone.iconBg}`}
           >
-            {FLOW.map((step, i) => (
-              <button
-                key={step.path}
-                onClick={() => navigate(step.path)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: i === 0 ? '0.7rem 1.1rem' : '0.55rem 0.9rem',
-                  borderRadius: 10,
-                  border: i === 0 ? 'none' : `1.5px solid ${selectedRole.color}30`,
-                  background: i === 0 ? selectedRole.color : selectedRole.color + '10',
-                  color: i === 0 ? '#fff' : selectedRole.color,
-                  fontSize: i === 0 ? '0.88rem' : '0.8rem',
-                  fontWeight: i === 0 ? 800 : 700,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  transition: 'all .15s ease',
-                  boxShadow: i === 0 ? `0 6px 14px -6px ${selectedRole.color}80` : 'none',
-                }}
-              >
-                {i === 0 ? `Start Here — ${step.label}?` : `${i + 1}. ${step.label}`}
-                {i === 0 && <ArrowRight size={15} />}
-              </button>
-            ))}
+            {meta.emoji}
           </div>
-
-          <button
-            onClick={handleClear}
-            style={{
-              marginTop: '1rem',
-              background: 'none',
-              border: 'none',
-              color: '#94A3B8',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: 0,
-              fontFamily: 'inherit',
-              textDecoration: 'underline',
-            }}
+          <p
+            className={`${titleSizes[size]} font-bold text-gray-900 leading-tight line-clamp-2 w-full`}
           >
-            Clear selection
-          </button>
+            {contact.name}
+          </p>
+        </div>
+      ) : (
+        <div className="flex items-start gap-2">
+          <div
+            className={`${emojiSizes[size]} rounded-md flex items-center justify-center flex-shrink-0 ${tone.iconBg}`}
+          >
+            {meta.emoji}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p
+              className={`${titleSizes[size]} font-bold text-gray-900 leading-tight truncate`}
+            >
+              {contact.name}
+              {contact.vacant && (
+                <span className="ml-1 text-[8px] font-semibold uppercase tracking-wider px-1 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 align-middle whitespace-nowrap">
+                  Vacant
+                </span>
+              )}
+            </p>
+            {(size === 'lg' || size === 'md') && contact.title && (
+              <p className={`${captionSizes[size]} text-gray-500 truncate`}>
+                {contact.title}
+              </p>
+            )}
+            {size === 'lg' && meta.tagline && (
+              <p className="text-[10px] text-gray-400 italic mt-0.5 truncate">
+                {meta.tagline}
+              </p>
+            )}
+          </div>
         </div>
       )}
-    </div>
+    </button>
   )
 }

@@ -5,7 +5,7 @@ import { useSelectedRoleId } from '../hooks/useSelectedRole'
 import { useViewMode } from '../contexts/ViewModeContext'
 
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
-const ROLES = [
+export const ROLES = [
   {
     id: 'visionary',
     label: 'Visionary',

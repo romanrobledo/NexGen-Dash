@@ -18,7 +18,7 @@ const scoreColor = (score, max = 10) => {
 }
 
 // ─── ROLE DATA ────────────────────────────────────────────────────────────────
-const ROLES = [
+export const ROLES = [
   {
     id: 'visionary',
     label: 'Visionary',
