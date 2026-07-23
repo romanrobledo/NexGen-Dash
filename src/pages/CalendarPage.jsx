@@ -6,51 +6,76 @@ import {
   Sparkles,
   ExternalLink,
   Info,
+  Link2,
+  Check,
 } from 'lucide-react'
 import { useViewMode } from '../contexts/ViewModeContext'
+import CalendarMonthView from '../components/CalendarMonthView'
 
 /**
- * Calendar landing page — `/calendar`.
+ * Calendars landing page — `/calendar`.
  *
- * Layout: left column of clickable calendar tabs (School / Staff / Events),
- * right column reserved for the Google Calendar iframe embed (per-calendar
- * URL slots into the src when the integration lands).
+ * Two distinct kinds of calendars live here, split by the `type` field on
+ * each entry:
  *
- * The sidebar no longer nests School / Staff / Events under Calendars —
- * they live inside this page so navigation is one click deep instead of
- * two, and switching between calendars doesn't force a full page load.
+ *   1. `type: 'sync'` — Google Calendar Sync. The one and only tab that
+ *      connects to an external Google account via OAuth. Its embed shows
+ *      the linked user's Google Calendar. Read-only from the app's
+ *      perspective (events are managed in Google).
+ *
+ *   2. everything else — School / Staff / Events. Fully in-app calendars.
+ *      Their events live in Supabase (schema TBD) and are created/edited
+ *      here by staff. No Google connection required. Each will get its
+ *      own month/week view + event CRUD UI in a follow-up.
+ *
+ * Right now every tab renders a placeholder because neither the Google
+ * OAuth nor the in-app calendar UI is built yet — but the placeholders are
+ * distinct so it's obvious which piece is missing (auth wiring vs the
+ * calendar UI itself).
  */
 
 const CALENDARS = [
+  // The only Google-connected tab. OAuth flow lives here; the embed shows
+  // the linked user's Google Calendar (external, read-only from the app).
+  {
+    key: 'sync',
+    type: 'sync',
+    label: 'Google Calendar Sync',
+    subtitle: 'Connect a Google account to view its calendar here',
+    icon: Link2,
+    accent: 'violet',
+  },
+  // The three below are in-app calendars — their events are stored in
+  // Supabase and edited here by staff. They are NOT populated by the Google
+  // Sync tab; each has its own event store and UI.
   {
     key: 'school',
+    type: 'internal',
     label: 'School Calendar',
     subtitle: 'Term dates, closures, and school-wide events',
     icon: School,
     accent: 'indigo',
-    // Placeholder — swap in the real Google Calendar embed URL when
-    // integration is wired up. See notes at the bottom of the file.
-    embedSrc: null,
   },
   {
     key: 'staff',
+    type: 'internal',
     label: 'Staff Calendar',
     subtitle: 'Shifts, PTO, training days, and staff meetings',
     icon: Users,
     accent: 'emerald',
-    embedSrc: null,
   },
   {
     key: 'events',
+    type: 'internal',
     label: 'Events',
     subtitle: 'Family events, community outreach, one-offs',
     icon: Sparkles,
     accent: 'amber',
-    embedSrc: null,
   },
 ]
 
 const ACCENTS = {
+  violet:  { chip: 'bg-violet-50',  icon: 'text-violet-600',  active: 'border-violet-300 bg-violet-50/50' },
   indigo:  { chip: 'bg-indigo-50',  icon: 'text-indigo-600',  active: 'border-indigo-300 bg-indigo-50/50' },
   emerald: { chip: 'bg-emerald-50', icon: 'text-emerald-600', active: 'border-emerald-300 bg-emerald-50/50' },
   amber:   { chip: 'bg-amber-50',   icon: 'text-amber-600',   active: 'border-amber-300 bg-amber-50/50' },
@@ -70,9 +95,9 @@ export default function CalendarPage() {
             <CalendarDays className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Calendar</h2>
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Calendars</h2>
             <p className="text-gray-500 mt-0.5 text-sm">
-              School, staff, and events in one place. Google Calendar embed lands here once auth is wired up.
+              Google Calendar Sync links an external Google account. School, Staff, and Events are in-app calendars — created and edited here by anyone with access.
             </p>
           </div>
         </div>
@@ -107,32 +132,34 @@ export default function CalendarPage() {
           })}
         </div>
 
-        {/* Right embed column */}
+        {/* Right column — the Sync tab gets a dedicated OAuth-connect panel;
+            the three internal calendars render a real month grid with event
+            CRUD, filtered to the active calendar's key. */}
         <div className="lg:col-span-3 bg-white border border-gray-200 rounded-xl overflow-hidden">
-          {active.embedSrc ? (
-            <iframe
-              title={`${active.label} embed`}
-              src={active.embedSrc}
-              className="w-full h-[720px] border-0"
-            />
+          {active.type === 'sync' ? (
+            <SyncPanel cal={active} />
           ) : (
-            <EmbedPlaceholder cal={active} />
+            <CalendarMonthView
+              calendar={active.key}
+              calendarLabel={active.label}
+              accent={active.accent}
+            />
           )}
         </div>
       </div>
 
-      {/* Info footer */}
+      {/* Info footer — sync integration is still open work */}
       <div className="mt-6 bg-indigo-50/60 border border-indigo-100 border-l-4 border-l-indigo-500 rounded-xl p-4 flex gap-3">
         <Info className="w-4.5 h-4.5 text-indigo-500 shrink-0 mt-0.5" />
         <div className="text-xs text-gray-600">
           <p className="font-semibold text-indigo-700 uppercase tracking-wider text-[10px] mb-1">
-            Integration coming
+            Google Calendar Sync waits on OAuth
           </p>
           <p>
-            When Google Calendar is connected, each tab above will drop the corresponding calendar's{' '}
-            <code className="bg-white px-1 rounded text-[11px]">embedSrc</code>{' '}
-            into the panel on the right. Add the calendar's public embed URL to{' '}
-            <code className="bg-white px-1 rounded text-[11px]">CALENDARS</code> in CalendarPage.jsx to light it up.
+            The Connect button lights up once <code className="bg-white px-1 rounded text-[11px]">VITE_GOOGLE_CLIENT_ID</code>{' '}
+            is set and the token exchange endpoint is live. Until then School,
+            Staff, and Events are fully functional in-app calendars backed by
+            the <code className="bg-white px-1 rounded text-[11px]">calendar_events</code> Supabase table.
           </p>
         </div>
       </div>
@@ -140,26 +167,78 @@ export default function CalendarPage() {
   )
 }
 
-function EmbedPlaceholder({ cal }) {
-  const a = ACCENTS[cal.accent] || ACCENTS.indigo
+// Sync tab — Google Calendar connection surface. Independent from the other
+// three tabs: this one connects an external Google account and renders that
+// account's calendar (read-only from the app). Doesn't feed anything into
+// School/Staff/Events. Once OAuth is wired, replace the disabled button
+// with the connect handler and swap the placeholder body for the linked
+// calendar's embed.
+function SyncPanel({ cal }) {
+  const a = ACCENTS[cal.accent] || ACCENTS.violet
   const Icon = cal.icon
   return (
     <div className="h-[720px] flex flex-col items-center justify-center text-center p-8">
       <div className={`w-16 h-16 rounded-2xl ${a.chip} flex items-center justify-center mb-4`}>
         <Icon className={`w-8 h-8 ${a.icon}`} />
       </div>
-      <h3 className="text-lg font-bold text-gray-900 mb-1">{cal.label}</h3>
-      <p className="text-sm text-gray-500 max-w-md">
-        {cal.subtitle}. Google Calendar embed will render here once the calendar's public URL is added.
+      <p className="text-[10px] uppercase tracking-wider font-bold text-violet-600 mb-1">
+        Not connected
       </p>
+      <h3 className="text-lg font-bold text-gray-900 mb-1">{cal.label}</h3>
+      <p className="text-sm text-gray-500 max-w-md mb-6">
+        Connect a Google account and its calendar renders here. Independent of
+        the School / Staff / Events tabs — those are separate in-app calendars
+        with their own events.
+      </p>
+
+      {/* Disabled connect button — flip to an onClick handler that kicks off
+          the OAuth redirect once VITE_GOOGLE_CLIENT_ID is wired. */}
+      <button
+        disabled
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold shadow-sm opacity-50 cursor-not-allowed"
+      >
+        <Link2 className="w-4 h-4" />
+        Connect Google Calendar
+      </button>
+      <p className="text-[11px] text-gray-400 mt-2 italic">
+        OAuth flow coming — button lights up once auth is wired.
+      </p>
+
+      {/* What connecting does — sets expectations without over-promising */}
+      <div className="mt-8 w-full max-w-md text-left">
+        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2">
+          What connecting does
+        </p>
+        <ul className="space-y-1.5">
+          {[
+            { name: 'Read the linked account’s calendar', desc: 'Embed renders here inside this tab' },
+            { name: 'One account at a time', desc: 'Re-connect to switch to a different Google account' },
+            { name: 'No effect on other tabs', desc: 'School / Staff / Events stay in-app, edited by staff' },
+          ].map((item) => (
+            <li
+              key={item.name}
+              className="flex items-start gap-2.5 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2"
+            >
+              <div className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Check className="w-2.5 h-2.5 text-gray-300" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-800">{item.name}</p>
+                <p className="text-[11px] text-gray-500">{item.desc}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <a
         href="https://calendar.google.com/"
         target="_blank"
         rel="noreferrer"
-        className="mt-4 inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+        className="mt-6 inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-violet-600 font-medium"
       >
-        Open Google Calendar
-        <ExternalLink className="w-3.5 h-3.5" />
+        Open Google Calendar in a new tab
+        <ExternalLink className="w-3 h-3" />
       </a>
     </div>
   )

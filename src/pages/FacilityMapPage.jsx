@@ -178,7 +178,7 @@ export default function FacilityMapPage() {
       let mutated = false
       for (const r of rooms) {
         if (!next[r.roomNumber]) {
-          next[r.roomNumber] = { aides: [], kids: [], incidents: [] }
+          next[r.roomNumber] = { aides: [], kids: [], incidents: [], writeUps: [] }
           mutated = true
         }
       }
@@ -334,6 +334,17 @@ export default function FacilityMapPage() {
       extraKids += entriesByRoom[key].kids.length
       roomIncidents += entriesByRoom[key].incidents.length
     }
+    // Designated teacher rollups — one per room. A room with no explicit
+    // status in the map defaults to 'present' (that's the default state
+    // the drawer starts in). Anything other than 'present' counts as absent
+    // for staffing purposes regardless of the specific reason.
+    let designatedTeachersPresent = 0
+    let designatedTeachersAbsent = 0
+    for (const r of rooms) {
+      const status = teacherStatusByRoom[r.roomNumber]?.status ?? 'present'
+      if (status === 'present') designatedTeachersPresent++
+      else designatedTeachersAbsent++
+    }
     // Enrollment counts pull only from `active` kids — incoming/departing/
     // alumni aren't on the floor today. Cohort tile counts live in their
     // own memo below.
@@ -345,6 +356,8 @@ export default function FacilityMapPage() {
     const enrolledPresent = enrolledTotal - enrolledAbsent
     return {
       aides,
+      designatedTeachersPresent,
+      designatedTeachersAbsent,
       kidsPresent: enrolledPresent + extraKids,
       enrolledTotal,
       enrolledAbsent,
@@ -352,7 +365,7 @@ export default function FacilityMapPage() {
       roomIncidents,
       familyIncidents: familyIncidents.length,
     }
-  }, [entriesByRoom, familyIncidents, childrenByStatus, attendance])
+  }, [entriesByRoom, familyIncidents, childrenByStatus, attendance, rooms, teacherStatusByRoom])
 
   // Cohort counts for the tile row. Memoized so the tiles don't re-render
   // on every unrelated state change.
@@ -375,6 +388,7 @@ export default function FacilityMapPage() {
           aides: [],
           kids: [],
           incidents: [],
+          writeUps: [],
         }
         const enrolledHere = childrenByRoom.get(r.roomNumber) || []
         const absentChildren = enrolledHere.filter(
@@ -407,6 +421,7 @@ export default function FacilityMapPage() {
           aides: entry.aides || [],
           extraKids: entry.kids, // manually added walk-ins
           incidents: entry.incidents,
+          writeUps: entry.writeUps || [],
         }
       }),
       familyIncidents,
@@ -433,7 +448,7 @@ export default function FacilityMapPage() {
       console.log('[FacilityMap] facility report payload (webhook not set):', payload)
       await new Promise((r) => setTimeout(r, 300))
       setSubmittedInfo({ submittedAt, submittedBy: submitterName, period })
-      clearFormAfterSubmit(period)
+      clearFormAfterSubmit()
       closeConfirmModal()
       setSubmitState('idle')
       setToast({
@@ -456,7 +471,7 @@ export default function FacilityMapPage() {
         throw new Error(`Webhook returned ${res.status}: ${text.slice(0, 200)}`)
       }
       setSubmittedInfo({ submittedAt, submittedBy: submitterName, period })
-      clearFormAfterSubmit(period)
+      clearFormAfterSubmit()
       closeConfirmModal()
       setSubmitState('idle')
     } catch (err) {
@@ -481,17 +496,21 @@ export default function FacilityMapPage() {
     setShowConfirmModal(true)
   }
 
-  // Wipes the transient per-day inputs so tomorrow's dropoff starts fresh.
-  // Only fires on the Closing submit — Morning and Afternoon submits keep
-  // everything so the state accumulates through the day. Attendance stays
-  // regardless (rolls over at midnight via its own storage key).
-  function clearFormAfterSubmit(period) {
-    if (period !== 'closing') return
+  // Wipes ALL page state after every submit — attendance, room entries,
+  // family incidents, designated teacher statuses. Each report is its own
+  // snapshot with fresh metrics; carryover would mean absent marks from
+  // the morning double-count in the afternoon report. Period is ignored.
+  //
+  // (Earlier iteration: only wiped on Closing, preserved attendance for
+  // "correction re-submits". That created stale marks bleeding into the
+  // next period and was reverted.)
+  function clearFormAfterSubmit() {
     const empty = {}
-    for (const r of rooms) empty[r.roomNumber] = { aides: [], kids: [], incidents: [] }
+    for (const r of rooms) empty[r.roomNumber] = { aides: [], kids: [], incidents: [], writeUps: [] }
     setEntriesByRoom(empty)
     setFamilyIncidents([])
     setTeacherStatusByRoom({})
+    setAttendance({})
   }
 
   function closeConfirmModal() {
@@ -985,9 +1004,10 @@ function SubmittedPanel({ info, onReset, onSubmitNext }) {
             <span className="font-semibold">{info.submittedBy}</span>
           </p>
           <p className="text-[11px] text-emerald-700 mt-2 max-w-lg leading-relaxed">
-            {info.period === 'closing'
-              ? 'Closing wiped the room entries and family incidents. Attendance stays until midnight in case you need a correction.'
-              : `Need to correct ${periodLabel.toLowerCase()}? Hit Submit again. Otherwise, hit Submit next report when the next period rolls around.`}
+            The page is fresh — attendance, room entries, and family
+            incidents were cleared so the next report is its own snapshot.
+            Need to correct this one? Hit Submit next report and re-enter
+            the corrections; both rows land in the Sheet with timestamps.
           </p>
         </div>
         <div className="flex flex-col gap-1.5 flex-shrink-0">
@@ -1046,7 +1066,6 @@ function SubmitConfirmModal({
     submitState !== 'sending'
   const isSending = submitState === 'sending'
   const periodLabel = PERIOD_LABELS[submitPeriod] || 'Facility'
-  const isClosing = submitPeriod === 'closing'
 
   return (
     <div
@@ -1171,10 +1190,9 @@ function SubmitConfirmModal({
             <span className="font-semibold">
               {periodLabel.toLowerCase()} report
             </span>{' '}
-            for {dateLabel}.
-            {isClosing
-              ? ' Submitting will clear the room entries and family incidents so the page is fresh for tomorrow.'
-              : ' Room entries and incidents stay on the page for the next period.'}
+            for {dateLabel}. Submitting sends the current metrics to the
+            Sheet and clears the page — attendance, room entries, and
+            incidents — so the next report starts fresh.
           </span>
         </label>
 

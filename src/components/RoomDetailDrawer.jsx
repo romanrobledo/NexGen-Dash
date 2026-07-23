@@ -12,6 +12,7 @@ import {
   BookMarked,
   CheckCircle2,
   CircleSlash,
+  FileWarning,
 } from 'lucide-react'
 import { COLOR_THEMES } from '../lib/rooms'
 import { formatAge } from '../hooks/useChildren'
@@ -43,10 +44,27 @@ const INCIDENT_SEVERITIES = [
   { key: 'critical', label: 'Critical', chipClass: 'bg-red-50 text-red-700 border-red-200',             dotClass: 'bg-red-500'    },
 ]
 
+// Progressive discipline levels — Verbal → Written → Final. Kept as their
+// own list (not reused from INCIDENT_SEVERITIES) because HR write-ups have
+// different semantics than classroom incidents; conflating them at the
+// data layer would make the Sheet's Teacher Write Ups tab confusing.
+const WRITEUP_TYPES = [
+  { key: 'verbal',  label: 'Verbal',  chipClass: 'bg-yellow-50 text-yellow-800 border-yellow-200', dotClass: 'bg-yellow-500' },
+  { key: 'written', label: 'Written', chipClass: 'bg-orange-50 text-orange-700 border-orange-200', dotClass: 'bg-orange-500' },
+  { key: 'final',   label: 'Final',   chipClass: 'bg-red-50 text-red-700 border-red-200',          dotClass: 'bg-red-500'    },
+]
+
+const WRITEUP_CATEGORIES = [
+  'attendance',
+  'performance',
+  'conduct',
+  'other',
+]
+
 /**
  * @param {{
  *   room: import('../hooks/useClassrooms').Room | null,
- *   entry: { aides: any[], kids: any[], incidents: any[] } | null,
+ *   entry: { aides: any[], kids: any[], incidents: any[], writeUps: any[] } | null,
  *   enrolledChildren?: import('../hooks/useChildren').Child[],
  *   attendance?: Record<string, 'absent'>,
  *   onToggleAttendance?: (childId: string) => void,
@@ -54,7 +72,7 @@ const INCIDENT_SEVERITIES = [
  *   teacherStatusOptions?: Array<{ key: string, label: string, tone: string }>,
  *   onTeacherStatusChange?: (next: { status: string, reason: string }) => void,
  *   onClose: () => void,
- *   onUpdate: (next: { aides: any[], kids: any[], incidents: any[] }) => void,
+ *   onUpdate: (next: { aides: any[], kids: any[], incidents: any[], writeUps: any[] }) => void,
  * }} props
  */
 export default function RoomDetailDrawer({
@@ -76,6 +94,17 @@ export default function RoomDetailDrawer({
   const [incidentSev, setIncidentSev] = useState('minor')
   const [incidentDesc, setIncidentDesc] = useState('')
 
+  // Teacher write-up form. Defaulted to the room's designated teacher because
+  // 9/10 write-ups are for the person always in that room; aides can be typed
+  // in as an override. Reason lives in `description`; witness is optional but
+  // recommended for anything above Verbal.
+  const [wuTeacher, setWuTeacher] = useState('')
+  const [wuType, setWuType] = useState(WRITEUP_TYPES[0].key)
+  const [wuCategory, setWuCategory] = useState(WRITEUP_CATEGORIES[0])
+  const [wuDesc, setWuDesc] = useState('')
+  const [wuAction, setWuAction] = useState('')
+  const [wuWitness, setWuWitness] = useState('')
+
   useEffect(() => {
     if (room) {
       setAideName('')
@@ -83,6 +112,14 @@ export default function RoomDetailDrawer({
       setKidName('')
       setIncidentSev('minor')
       setIncidentDesc('')
+      // Prefill write-up teacher with the room's designated teacher — cheapest
+      // guess. User overrides if it's about an aide instead.
+      setWuTeacher(room.teacherName || '')
+      setWuType(WRITEUP_TYPES[0].key)
+      setWuCategory(WRITEUP_CATEGORIES[0])
+      setWuDesc('')
+      setWuAction('')
+      setWuWitness('')
     }
   }, [room])
 
@@ -157,6 +194,40 @@ export default function RoomDetailDrawer({
     onUpdate({
       ...entry,
       incidents: entry.incidents.filter((i) => i.id !== id),
+    })
+  }
+
+  function addWriteUp() {
+    const trimmedDesc = wuDesc.trim()
+    const trimmedTeacher = wuTeacher.trim()
+    if (!trimmedDesc || !trimmedTeacher) return
+    onUpdate({
+      ...entry,
+      writeUps: [
+        ...(entry.writeUps || []),
+        {
+          id: makeId(),
+          teacherName: trimmedTeacher,
+          writeUpType: wuType,
+          category: wuCategory,
+          description: trimmedDesc,
+          actionTaken: wuAction.trim(),
+          witness: wuWitness.trim(),
+          at: new Date().toISOString(),
+        },
+      ],
+    })
+    setWuDesc('')
+    setWuAction('')
+    setWuWitness('')
+    // Keep teacher + type + category populated so a second write-up on the
+    // same teacher/day isn't a re-entry chore.
+  }
+
+  function removeWriteUp(id) {
+    onUpdate({
+      ...entry,
+      writeUps: (entry.writeUps || []).filter((w) => w.id !== id),
     })
   }
 
@@ -518,6 +589,131 @@ export default function RoomDetailDrawer({
               >
                 <AlertTriangle className="w-4 h-4" />
                 Log Incident
+              </button>
+            </div>
+          </Section>
+
+          {/* Teacher Write-Ups — HR paper trail. Distinct from Room Incidents:
+              this is about staff behavior/performance, not classroom safety.
+              Same drawer for now because it's convenient to log while you're
+              already looking at that room; the Sheet's Teacher Write Ups tab
+              keeps them separated from Incidents on the office side. */}
+          <Section
+            title="Teacher Write-Up"
+            icon={FileWarning}
+            count={(entry.writeUps || []).length}
+            subtitle="HR paper trail — verbal, written, or final. Discreet field; goes to the Teacher Write Ups sheet."
+          >
+            {(entry.writeUps || []).length === 0 ? (
+              <EmptyLine text="No write-ups for this room today." />
+            ) : (
+              <ul className="space-y-2 mb-3">
+                {(entry.writeUps || []).map((w) => {
+                  const t = WRITEUP_TYPES.find((x) => x.key === w.writeUpType) || WRITEUP_TYPES[0]
+                  return (
+                    <li
+                      key={w.id}
+                      className="bg-white border border-gray-200 rounded-lg p-3 text-sm"
+                    >
+                      <div className="flex items-start gap-2 mb-1 flex-wrap">
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap ${t.chipClass}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${t.dotClass}`} />
+                          {t.label}
+                        </span>
+                        <span className="text-[11px] font-semibold text-gray-700">
+                          {w.teacherName}
+                        </span>
+                        <span className="text-[10px] text-gray-400 capitalize">
+                          {w.category}
+                        </span>
+                        <span className="text-[11px] text-gray-400 ml-auto flex-shrink-0">
+                          {formatTime(w.at)}
+                        </span>
+                        <button
+                          onClick={() => removeWriteUp(w.id)}
+                          className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 flex-shrink-0"
+                          title="Remove"
+                          aria-label="Remove write-up"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {w.description}
+                      </p>
+                      {w.actionTaken && (
+                        <p className="text-[11px] text-gray-500 mt-1.5">
+                          <span className="font-semibold">Action taken:</span> {w.actionTaken}
+                        </p>
+                      )}
+                      {w.witness && (
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          <span className="font-semibold">Witness:</span> {w.witness}
+                        </p>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={wuTeacher}
+                onChange={(e) => setWuTeacher(e.target.value)}
+                placeholder="Teacher name"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={wuType}
+                  onChange={(e) => setWuType(e.target.value)}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                >
+                  {WRITEUP_TYPES.map((t) => (
+                    <option key={t.key} value={t.key}>{t.label}</option>
+                  ))}
+                </select>
+                <select
+                  value={wuCategory}
+                  onChange={(e) => setWuCategory(e.target.value)}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none capitalize"
+                >
+                  {WRITEUP_CATEGORIES.map((c) => (
+                    <option key={c} value={c} className="capitalize">{c}</option>
+                  ))}
+                </select>
+              </div>
+              <textarea
+                value={wuDesc}
+                onChange={(e) => setWuDesc(e.target.value)}
+                placeholder="What happened? Be specific and factual."
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none resize-none"
+              />
+              <input
+                type="text"
+                value={wuAction}
+                onChange={(e) => setWuAction(e.target.value)}
+                placeholder="Action taken (optional)"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+              />
+              <input
+                type="text"
+                value={wuWitness}
+                onChange={(e) => setWuWitness(e.target.value)}
+                placeholder="Witness (optional)"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+              />
+              <button
+                onClick={addWriteUp}
+                disabled={!wuDesc.trim() || !wuTeacher.trim()}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                <FileWarning className="w-4 h-4" />
+                Log Write-Up
               </button>
             </div>
           </Section>

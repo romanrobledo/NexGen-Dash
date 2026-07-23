@@ -29,6 +29,9 @@ import {
   BotMessageSquare,
   BookOpen,
   Network,
+  Megaphone,
+  DollarSign,
+  ClipboardCheck,
 } from 'lucide-react'
 
 // Each top-level item has a permissionKey that maps to role_permissions.
@@ -74,13 +77,13 @@ const navItems = [
     permissionKey: 'library',
     path: '/trainings',
   },
-  // Calendars → Calendar — singular menu, no submenus. The child items
-  // (School / Staff / Events) live INSIDE the /calendar page as left-column
-  // tabs alongside the Google Calendar integration surface (embed lands
-  // when auth is wired up).
+  // Calendars — singular menu, no submenus. Sub-calendars (Google Calendar
+  // Sync / School / Staff / Events) live INSIDE the /calendar page as
+  // left-column tabs. Route stayed /calendar across rename → rename → rename
+  // to avoid churning any bookmarks; only the visible label evolves.
   {
     icon: CalendarDays,
-    label: 'Calendar',
+    label: 'Calendars',
     path: '/calendar',
   },
   // Org Chart — single-leaf menu. Landing is the role selector (Who Am I)
@@ -142,16 +145,23 @@ const navItems = [
       { label: 'Procedures', path: '/candidates/procedures' },
     ],
   },
+  // Families — moved up out of the ops/commercial block so it lives next to
+  // its people-pipeline peers (Leads for prospective families, Candidates
+  // for staff, Families for enrolled). Placement above Facility keeps the
+  // "who" cluster together before the "where" cluster starts.
+  {
+    icon: Users,
+    label: 'Families',
+    permissionKey: 'families',
+    children: [
+      { label: 'Guardians' },
+      { label: 'Students' },
+      { label: 'Paperwork' },
+    ],
+  },
   // Facility — daily interactive floor plan for what's happening in every
-  // room right now. Different from the Community menu below: this is the
-  // live daily view (teachers, kids, per-room incidents, family incidents,
-  // eventual Google Sheets submission), while Community is the capacity /
-  // ratios reference grid.
-  //
-  // URL is /facility-map because Community already owns /facility (kept
-  // stable across earlier Capacity → Facility → Community renames). If
-  // you'd rather flip URLs, we can rename Community to /community and give
-  // this menu /facility.
+  // room right now. Live daily view: teachers, kids, per-room incidents,
+  // family incidents, Google Sheets submission.
   {
     icon: Map,
     label: 'Facility',
@@ -164,57 +174,100 @@ const navItems = [
   // teacher ratios) moved behind a "TRS Ratio" button on the Facility page
   // header. Route /facility still resolves to CapacityPage.jsx so any
   // in-app links from that button don't 404.
-  {
-    icon: Users,
-    label: 'Families',
-    permissionKey: 'families',
-    children: [
-      { label: 'Guardians' },
-      { label: 'Students' },
-      { label: 'Paperwork' },
-    ],
-  },
-  // Billing, Marketing, and Finance used to be top-level menus with their
-  // own permission keys (billing / marketing / finance). They now live as
-  // sub-menus under Admin, so access is implicitly gated by the
-  // `admin_panel` permission on the parent instead of three separate keys.
-  // Nested children (Offers → Giveaways etc. for Marketing, Books for
-  // Finance) are preserved so every previously-reachable route still has
-  // a nav path. The old billing/marketing/finance keys were dropped from
-  // NAV_PERMISSIONS — no code referenced them.
+  //
+  // Families moved up next to Leads / Candidates (see block above). What
+  // remains here is the operations + commercial cluster. Admin is now a
+  // slimmer container; Targets & Tasks / Marketing / Finance / Compliance
+  // each got lifted out to their own top-level menus so they're one click
+  // deep instead of two. Every lifted menu inherits the `admin_panel`
+  // permission key so access rules don't change.
   {
     icon: ShieldCheck,
     label: 'Admin',
     permissionKey: 'admin_panel',
     children: [
       { label: 'S.A.N.D.', path: '/' },
-      { label: 'Compliance', path: '/admin/performance-compliance' },
       // Meetings — holds "The Rhythm" (teams / cadence / meeting agenda /
-      // outcomes) that used to live on the Pulse page. Moved here because
-      // it's an operational rhythm doc, not a today-focus dashboard.
+      // outcomes) that used to live on the Pulse page.
       { label: 'Meetings', path: '/admin/meetings' },
-      // Team Pulse and its /admin/team-pulse route were deleted alongside
-      // the broader time-clock/payroll cleanup. The section previously on
-      // the S.A.N.D. dashboard is gone too.
-      { label: 'Data Integrity', path: '/admin/data-integrity' },
-      {
-        label: 'Targets & Tasks',
-        children: [
-          { label: 'Dashboard', path: '/targets' },
-          { label: 'Targets', path: '/targets/progress' },
-          { label: 'Tasks', path: '/targets/tasks' },
-        ],
-      },
       {
         label: 'Staff Management',
         children: [
           { label: 'Accounts', path: '/admin' },
           { label: 'Submissions', path: '/staff/responses' },
           { label: 'Permissions', path: '/admin/permissions' },
-          // Clocked Hours + Time Clock & Payroll entries removed alongside
-          // the broader time-clock cleanup. Pages + DB tables are also gone.
         ],
       },
+      // Billing moved out to Finance — it's a money-flow concern, not a
+      // staff-management one, so it belongs alongside Books under Finance.
+      {
+        label: 'Platform Settings',
+        children: [
+          { label: 'Theme & Appearance', path: '/admin/settings/theme' },
+          { label: 'Integrations', path: '/admin/settings/integrations' },
+          { label: 'Webhooks', path: '/admin/settings/webhooks' },
+        ],
+      },
+    ],
+  },
+  // Targets & Tasks — lifted out of Admin so quarterly goals + the task
+  // board are one click away.
+  {
+    icon: Target,
+    label: 'Targets & Tasks',
+    permissionKey: 'admin_panel',
+    children: [
+      { label: 'Dashboard', path: '/targets' },
+      { label: 'Targets', path: '/targets/progress' },
+      { label: 'Tasks', path: '/targets/tasks' },
+    ],
+  },
+  // Marketing — lifted out of Admin. Full offer tree preserved so no
+  // previously-reachable page becomes a dead link.
+  {
+    icon: Megaphone,
+    label: 'Marketing',
+    permissionKey: 'admin_panel',
+    children: [
+      { label: 'Dashboard', path: '/marketing' },
+      { label: 'Content Calendar', path: '/calendars/content' },
+      {
+        label: 'Offers',
+        path: '/marketing/offers',
+        children: [
+          {
+            label: 'Giveaways',
+            path: '/marketing/offers/giveaways',
+            children: [
+              { label: 'Bags', path: '/marketing/offers/giveaways/bags' },
+              { label: 'Kits', path: '/marketing/offers/giveaways/kits' },
+              { label: 'Baskets', path: '/marketing/offers/giveaways/baskets' },
+            ],
+          },
+          { label: 'Decoy', path: '/marketing/offers/decoy' },
+          { label: 'Buy X, Get Y', path: '/marketing/offers/buy-x-get-y' },
+          { label: 'Pay Less Now or Pay More Later', path: '/marketing/offers/pay-less-now' },
+          {
+            label: 'Free Goodwill Offer',
+            path: '/marketing/offers/free-goodwill',
+            children: [
+              { label: '3 Month Scholarship', path: '/marketing/offers/free-goodwill/3-month-scholarship' },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  // Finance — lifted out of Admin, now also absorbs Billing (previously a
+  // sibling under Admin). Billing is money-flowing-out, Books is
+  // money-flowing-in/tracking — they're the same domain, so co-locating
+  // matches how Directors think about them.
+  {
+    icon: DollarSign,
+    label: 'Finance',
+    permissionKey: 'admin_panel',
+    children: [
+      { label: 'Dashboard', path: '/finance' },
       {
         label: 'Billing',
         children: [
@@ -225,59 +278,26 @@ const navItems = [
         ],
       },
       {
-        label: 'Marketing',
+        label: 'Books',
         children: [
-          { label: 'Dashboard', path: '/marketing' },
-          { label: 'Content Calendar', path: '/calendars/content' },
-          {
-            label: 'Offers',
-            path: '/marketing/offers',
-            children: [
-              {
-                label: 'Giveaways',
-                path: '/marketing/offers/giveaways',
-                children: [
-                  { label: 'Bags', path: '/marketing/offers/giveaways/bags' },
-                  { label: 'Kits', path: '/marketing/offers/giveaways/kits' },
-                  { label: 'Baskets', path: '/marketing/offers/giveaways/baskets' },
-                ],
-              },
-              { label: 'Decoy', path: '/marketing/offers/decoy' },
-              { label: 'Buy X, Get Y', path: '/marketing/offers/buy-x-get-y' },
-              { label: 'Pay Less Now or Pay More Later', path: '/marketing/offers/pay-less-now' },
-              {
-                label: 'Free Goodwill Offer',
-                path: '/marketing/offers/free-goodwill',
-                children: [
-                  { label: '3 Month Scholarship', path: '/marketing/offers/free-goodwill/3-month-scholarship' },
-                ],
-              },
-            ],
-          },
+          { label: 'Accounts' },
+          { label: 'Transactions' },
+          { label: 'Reports' },
         ],
       },
-      {
-        label: 'Finance',
-        children: [
-          { label: 'Dashboard', path: '/finance' },
-          {
-            label: 'Books',
-            children: [
-              { label: 'Accounts' },
-              { label: 'Transactions' },
-              { label: 'Reports' },
-            ],
-          },
-        ],
-      },
-      {
-        label: 'Platform Settings',
-        children: [
-          { label: 'Theme & Appearance', path: '/admin/settings/theme' },
-          { label: 'Integrations', path: '/admin/settings/integrations' },
-          { label: 'Webhooks', path: '/admin/settings/webhooks' },
-        ],
-      },
+    ],
+  },
+  // Compliance — lifted out of Admin AND absorbs Data Integrity as a
+  // child. Both were previously sibling leaves under Admin. Grouping them
+  // matches how they're actually used: performance/compliance audits and
+  // data-integrity checks are the same "is our house in order" job.
+  {
+    icon: ClipboardCheck,
+    label: 'Compliance',
+    permissionKey: 'admin_panel',
+    children: [
+      { label: 'Overview', path: '/admin/performance-compliance' },
+      { label: 'Data Integrity', path: '/admin/data-integrity' },
     ],
   },
 ]
@@ -385,8 +405,19 @@ function NavItem({ item, collapsed }) {
        location.pathname.startsWith('/trainings/role-clarity') ||
        location.pathname.startsWith('/dashboard/'))) ||
     (item.label === 'Targets & Tasks' && location.pathname.startsWith('/targets')) ||
+    // Admin owns most /admin/* routes EXCEPT the two that got lifted into
+    // the Compliance top-level menu. Without those exclusions, Admin would
+    // light up simultaneously with Compliance on /admin/data-integrity or
+    // /admin/performance-compliance and both would look active.
     (item.label === 'Admin' &&
-      (location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff/'))) ||
+      ((location.pathname.startsWith('/admin') &&
+        !location.pathname.startsWith('/admin/data-integrity') &&
+        !location.pathname.startsWith('/admin/performance-compliance')) ||
+       location.pathname.startsWith('/staff/'))) ||
+    (item.label === 'Compliance' &&
+      (location.pathname.startsWith('/admin/performance-compliance') ||
+       location.pathname.startsWith('/admin/data-integrity'))) ||
+    (item.label === 'Finance' && location.pathname.startsWith('/finance')) ||
     (item.label === 'Pulse' && location.pathname === '/quick-focus') ||
     (item.label === 'Handbooks' && location.pathname === '/handbooks') ||
     (item.label === 'Applications' && location.pathname === '/applications') ||

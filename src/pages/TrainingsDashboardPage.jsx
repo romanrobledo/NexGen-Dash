@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Loader2,
@@ -7,6 +7,9 @@ import {
   ChevronRight,
   Briefcase,
   ClipboardList,
+  ListTodo,
+  CheckCheck,
+  LayoutGrid,
 } from 'lucide-react'
 import { useTrainings } from '../hooks/useTrainings'
 import { useViewMode } from '../contexts/ViewModeContext'
@@ -117,11 +120,21 @@ const CATEGORIES = [
   // deep links don't 404 for now; can be pruned in a future cleanup.
 ]
 
+// Filter modes for the top-of-page tab strip. Untracked categories (total=0,
+// "Tracking coming soon") count as To Do — they represent work that hasn't
+// been done yet, even if we can't show a progress %. All shows everything.
+const FILTER_TABS = [
+  { key: 'todo',      label: 'To Do',     icon: ListTodo,   accent: 'text-indigo-600 border-indigo-500' },
+  { key: 'completed', label: 'Completed', icon: CheckCheck, accent: 'text-emerald-600 border-emerald-500' },
+  { key: 'all',       label: 'All',       icon: LayoutGrid, accent: 'text-gray-700 border-gray-400' },
+]
+
 export default function TrainingsDashboardPage() {
   const navigate = useNavigate()
   const { mobileMode } = useViewMode()
   const { hasPermission } = useAuth()
   const { subjects: allSubjects, loading, error } = useTrainings(null)
+  const [activeTab, setActiveTab] = useState('todo')
 
   // Resolve each category's stats once per fetch, then filter out tiles this
   // role isn't permitted to see. The permission check happens AFTER stats so
@@ -144,6 +157,26 @@ export default function TrainingsDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [allSubjects, hasPermission]
   )
+
+  // Bucket tiles into "to do" vs "completed" once so tab counts and the
+  // filtered grid share the same math. Untracked categories (total=0)
+  // count as to-do — placeholder progress shouldn't be labeled complete.
+  const { todoTiles, completedTiles } = useMemo(() => {
+    const todo = []
+    const completed = []
+    for (const t of tiles) {
+      if (t.total > 0 && t.done >= t.total) completed.push(t)
+      else todo.push(t)
+    }
+    return { todoTiles: todo, completedTiles: completed }
+  }, [tiles])
+
+  const visibleTiles =
+    activeTab === 'todo'
+      ? todoTiles
+      : activeTab === 'completed'
+      ? completedTiles
+      : tiles
 
   // Overall progress = sum of all known DONE units / sum of all known TOTAL
   // units across categories that have data. Categories with total=0 are
@@ -236,7 +269,65 @@ export default function TrainingsDashboardPage() {
         </div>
       )}
 
-      {/* Category tile grid */}
+      {/* Filter tabs — To Do / Completed / All. Each shows its count so the
+          user knows at a glance how many categories are pending. */}
+      {tiles.length > 0 && (
+        <div className="flex items-center gap-1 mb-4 border-b border-gray-200">
+          {FILTER_TABS.map((tab) => {
+            const TabIcon = tab.icon
+            const count =
+              tab.key === 'todo'
+                ? todoTiles.length
+                : tab.key === 'completed'
+                ? completedTiles.length
+                : tiles.length
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+                  isActive
+                    ? tab.accent
+                    : 'text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <TabIcon className="w-4 h-4" />
+                {tab.label}
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full tabular-nums ${
+                    isActive
+                      ? 'bg-gray-100 text-gray-700'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Empty state for the current tab — separate from the "no permissions"
+          empty state above. Fires when the tab happens to have zero matches
+          (e.g., Completed tab with no fully-done categories yet). */}
+      {tiles.length > 0 && visibleTiles.length === 0 && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
+          <p className="text-sm font-semibold text-gray-700">
+            Nothing in {FILTER_TABS.find((t) => t.key === activeTab)?.label} yet
+          </p>
+          <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+            {activeTab === 'completed'
+              ? 'Categories move here once every step is done.'
+              : activeTab === 'todo'
+              ? 'Every training category is complete — nice work.'
+              : ''}
+          </p>
+        </div>
+      )}
+
+      {/* Category tile grid — filtered by active tab. */}
       <div
         className={`grid gap-3 ${
           mobileMode
@@ -244,7 +335,7 @@ export default function TrainingsDashboardPage() {
             : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
         }`}
       >
-        {tiles.map((tile) => {
+        {visibleTiles.map((tile) => {
           const Icon = tile.icon
           const hasData = tile.total > 0
           return (
