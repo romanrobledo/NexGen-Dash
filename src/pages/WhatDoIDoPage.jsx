@@ -180,6 +180,24 @@ export const ROLES = [
     tagline: 'You are the bridge between vision and classroom.',
     overview:
       "The Director translates the Operator's vision into daily reality. You are the highest on-site authority. You are responsible for staff performance, compliance, parent satisfaction, and operational excellence. When something goes wrong on the floor, it starts and ends with you.",
+    // Rachel-specific focus areas from the Proposed Leadership & Support
+    // Structure PDF. These are what SHE does; generic Director duties stay
+    // in `responsibilities` below.
+    focusAreas: [
+      {
+        pillar: "Rachel's Focus Areas",
+        subtitle: "Per the Proposed Leadership & Support Structure",
+        color: '#7C3AED',
+        items: [
+          { label: 'Compliance', detail: 'Overall compliance officer for the center' },
+          { label: 'Opening', detail: 'Opens the facility each morning' },
+          { label: 'Transportation', detail: 'Drives the bus in PM' },
+          { label: 'Enrollment', detail: 'Manages student enrollment paperwork and meets with potential students' },
+          { label: 'Tours', detail: 'Conducts tours and enrollment meetings during the AM' },
+          { label: 'Leadership', detail: 'Provides direct oversight and leadership for Abby and Margo' },
+        ],
+      },
+    ],
     responsibilities: [
       'Supervise all teachers, assistants, and support staff daily',
       'Conduct regular classroom observations and provide immediate feedback',
@@ -192,6 +210,81 @@ export const ROLES = [
       "Enforce NexGen's culture, standards, and non-negotiables every day",
     ],
     note: 'You are the culture carrier. What you tolerate becomes the standard. What you celebrate becomes the culture.',
+  },
+  {
+    id: 'assistant-director',
+    label: 'Assistant Director',
+    emoji: '🏫',
+    color: '#2563EB',
+    tagline: 'Acting Director when Rachel is out. Files, trainings, compliance.',
+    overview:
+      "The Assistant Director is the operational backbone of the front office. You step into the Director's shoes any time Rachel is off-site, and you own the systems that keep the center compliant: student files, immunization records, and staff training documentation. You also directly supervise Anjelica and delegate her support projects.",
+    responsibilities: [
+      'Report directly to Rachel',
+      'Serve as acting Director when Rachel is out of the facility',
+      'Drive the bus in PM',
+      'Maintain accuracy of student files and immunization records',
+      'Maintain organization of staff trainings',
+      'Support compliance efforts',
+      'Directly supervise Anjelica and delegate support projects as needed',
+    ],
+    note: 'When Rachel is out, the building looks to you. Every decision you make should be one Rachel would make the same way.',
+  },
+  {
+    id: 'admin-classroom-support',
+    label: 'Administrative & Classroom Support',
+    emoji: '🎨',
+    color: '#0891B2',
+    tagline: "You are Abby's utility player — anywhere she needs you.",
+    overview:
+      "Administrative & Classroom Support is a hybrid role: you support Abby with administrative and marketing work in the morning and back the classroom teachers throughout the day. Social media content, art projects, teacher aide coverage, special projects — whatever the day calls for.",
+    responsibilities: [
+      'Report directly to Abby',
+      "Serve as Abby's primary support person",
+      'Assist with gathering photos and content for social media and marketing',
+      'Help coordinate classroom art projects and special activities',
+      'Provide teacher aide support in classrooms as needed',
+      'Assist with special projects and operational tasks assigned by Abby',
+      'Help maintain classroom engagement and support teachers throughout the day',
+    ],
+    note: 'Your value is your flexibility — you make Abby faster, and every classroom you step into gets better.',
+  },
+  {
+    id: 'head-rover',
+    label: 'Head Rover / Afterschool Teacher',
+    emoji: '🎒',
+    color: '#D97706',
+    tagline: 'Afterschool lead + PM front-office + primary closer.',
+    overview:
+      "The Head Rover runs the afternoon. You are the primary Afterschool Teacher AND the closer, on-site until 5:30 PM. While Abby and Rachel are on bus routes, you run the front office, take tours, and are the primary point of contact for any parent, walk-in, or team question.",
+    responsibilities: [
+      'Report directly to Abby',
+      'Serve as the primary Afterschool Teacher',
+      'Continue as the primary closer, remaining on-site until 5:30 PM',
+      'Oversee front office operations during afternoon hours while Abby/Rachel are on route',
+      'Conduct tours and enrollment meetings in the PM as needed',
+      'Provide staffing coverage',
+      'Act as the primary point of contact during afternoon hours',
+      'Oversee afterschool activities and student supervision',
+    ],
+    note: "The afternoon is yours. When the front office needs a call made, when a tour walks in at 3:30, when a parent has a question at 5 — you are the answer.",
+  },
+  {
+    id: 'teacher-support-lead',
+    label: 'Teacher Support Lead',
+    emoji: '🤝',
+    color: '#059669',
+    tagline: "You make Margo's afternoon run smoother.",
+    overview:
+      "The Teacher Support Lead works under Margo's supervision to keep the afterschool program on track. You are the second pair of hands during the tricky school-pickup-to-afterschool transition, and you back up teacher coverage wherever a classroom needs help.",
+    responsibilities: [
+      "Work under Margo's supervision",
+      'Receive and supervise afterschool students alongside Margo',
+      'Provide classroom support where needed',
+      'Assist Margo with teacher coverage, transitions, and operational support throughout the afternoon',
+      'Help ensure smooth transitions from school pick-up to afterschool programming',
+    ],
+    note: 'The busiest window of the day is 3–4 PM. You are the reason it feels calm instead of chaotic.',
   },
   {
     id: 'teacher',

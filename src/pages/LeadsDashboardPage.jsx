@@ -6,16 +6,29 @@ import {
   Users,
   Calendar,
   Target,
-  Flame,
   Snowflake,
   Clock,
   ArrowRight,
   Phone,
   Mail,
   Globe,
+  MessageSquare,
+  UserCheck,
 } from 'lucide-react'
 import { useViewMode } from '../contexts/ViewModeContext'
 import { useLeadsData } from '../hooks/useLeadsData'
+
+// Stage metadata — matches the 5 GHL pipelines and their webhook paths.
+// Ordered top-to-bottom as the pipeline flows: cold leads enter, funnel
+// down to converted. Each stage has its own icon + accent color that
+// carries through both the Pipeline widget and the Recent Leads chips.
+const PIPELINE_STAGES = [
+  { key: 'cold',      label: 'Cold',      sub: 'Entered info · outreach in progress',    icon: Snowflake,     accent: 'blue' },
+  { key: 'working',   label: 'Working',   sub: 'Responded · trying to book',             icon: MessageSquare, accent: 'amber' },
+  { key: 'booked',    label: 'Booked',    sub: 'Tour scheduled',                          icon: Calendar,      accent: 'rose' },
+  { key: 'showed',    label: 'Showed Up', sub: 'Attended the tour',                       icon: UserCheck,     accent: 'purple' },
+  { key: 'converted', label: 'Converted', sub: 'Enrolled',                                icon: Target,        accent: 'emerald' },
+]
 
 /**
  * Leads Dashboard — shares data source (`useLeadsData`) with the Marketing
@@ -87,32 +100,41 @@ export default function LeadsDashboardPage() {
   // Most recent 5 leads for the activity list.
   const recentLeads = leads.slice(0, 5)
 
-  // Rough hot/warm/cold split — uses `status` if present, otherwise recency.
+  // Stage bucketing — driven entirely by the `leads.status` column, which
+  // n8n sets from whichever GHL webhook fired (cold/warm/booked/showed/
+  // converted). Rows with unknown / legacy statuses default to `cold` so
+  // they still show up somewhere.
   const now = new Date()
-  const hotCut = new Date(now)
-  hotCut.setDate(now.getDate() - 3)
-  const warmCut = new Date(now)
-  warmCut.setDate(now.getDate() - 14)
-
   const classify = (l) => {
     const status = (l.status || '').toLowerCase()
-    if (['hot', 'new', 'scheduled'].includes(status)) return 'hot'
-    if (['warm', 'contacted', 'following_up'].includes(status)) return 'warm'
-    if (['cold', 'lost', 'closed'].includes(status)) return 'cold'
-    const created = l.created_at ? new Date(l.created_at) : null
-    if (!created) return 'warm'
-    if (created >= hotCut) return 'hot'
-    if (created >= warmCut) return 'warm'
+    if (['cold', 'working', 'booked', 'showed', 'converted'].includes(status)) {
+      return status
+    }
+    // Back-compat for legacy status values that predate the 5-stage pipeline
+    if (status === 'new' || status === '') return 'cold'
+    if (status === 'warm' || status === 'contacted' || status === 'following_up') return 'working'
+    if (status === 'tour_booked' || status === 'scheduled') return 'booked'
+    if (status === 'enrolled') return 'converted'
     return 'cold'
   }
 
   const pipeline = leads.reduce(
     (acc, l) => {
-      acc[classify(l)]++
+      acc[classify(l)] = (acc[classify(l)] || 0) + 1
       return acc
     },
-    { hot: 0, warm: 0, cold: 0 }
+    { cold: 0, working: 0, booked: 0, showed: 0, converted: 0 }
   )
+
+  // Stage-to-stage conversion rates for the funnel widget.
+  // Each rate answers "of everyone who reached stage X, what fraction made
+  // it to stage X+1?" Handles zero cases by returning null → "—" in the UI.
+  const conversion = {
+    coldToWorking:     pipeline.cold ? Math.round((pipeline.working   / pipeline.cold)    * 100) : null,
+    workingToBooked:   pipeline.working ? Math.round((pipeline.booked    / pipeline.working) * 100) : null,
+    bookedToShowed:    pipeline.booked ? Math.round((pipeline.showed    / pipeline.booked)  * 100) : null,
+    showedToConverted: pipeline.showed ? Math.round((pipeline.converted / pipeline.showed)  * 100) : null,
+  }
 
   // Source breakdown (top 4).
   const sourceCounts = leads.reduce((acc, l) => {
@@ -196,11 +218,16 @@ export default function LeadsDashboardPage() {
                     lead.email ||
                     'Unnamed lead'
                   const bucket = classify(lead)
+                  // Chip color per 5-stage pipeline — matches the Pipeline
+                  // widget accents so scanning the list feels visually
+                  // consistent with the funnel bars.
                   const badge = {
-                    hot:  'bg-rose-50 text-rose-600',
-                    warm: 'bg-amber-50 text-amber-600',
-                    cold: 'bg-gray-100 text-gray-500',
-                  }[bucket]
+                    cold:      'bg-blue-50 text-blue-600',
+                    working:   'bg-amber-50 text-amber-600',
+                    booked:    'bg-rose-50 text-rose-600',
+                    showed:    'bg-purple-50 text-purple-600',
+                    converted: 'bg-emerald-50 text-emerald-600',
+                  }[bucket] || 'bg-gray-100 text-gray-500'
                   return (
                     <div key={lead.id || name} className="flex items-center justify-between py-3">
                       <div className="flex items-center gap-3 min-w-0">
@@ -292,20 +319,54 @@ export default function LeadsDashboardPage() {
 
         {/* Right column — pipeline & sources */}
         <div className="space-y-4">
-          {/* Pipeline */}
+          {/* Pipeline — funnel view, top-to-bottom matches lead progression.
+              Each stage maps to one GHL pipeline + one webhook. */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Pipeline</h3>
-            <div className="space-y-3">
-              <PipelineRow label="Hot"  value={pipeline.hot}  icon={Flame}     accent="rose" />
-              <PipelineRow label="Warm" value={pipeline.warm} icon={Clock}     accent="amber" />
-              <PipelineRow label="Cold" value={pipeline.cold} icon={Snowflake} accent="blue" />
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-semibold text-gray-900">Pipeline</h3>
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">
+                5-stage funnel
+              </span>
             </div>
+            <p className="text-[11px] text-gray-500 mb-4">
+              Stage set by whichever GHL webhook fired last for each lead.
+            </p>
+            <div className="space-y-3">
+              {PIPELINE_STAGES.map((stage) => (
+                <PipelineRow
+                  key={stage.key}
+                  label={stage.label}
+                  sub={stage.sub}
+                  value={pipeline[stage.key] || 0}
+                  icon={stage.icon}
+                  accent={stage.accent}
+                />
+              ))}
+            </div>
+            {/* Overall conversion rate — cold → converted, the classic
+                top-of-funnel to enrolled ratio. */}
             <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-              <span className="text-xs text-gray-400">Conversion rate</span>
+              <span className="text-xs text-gray-400">Cold → Converted</span>
               <span className="text-sm font-bold text-gray-900">
                 {metrics.conversionPct != null ? `${metrics.conversionPct}%` : '—'}
               </span>
             </div>
+          </div>
+
+          {/* Stage-to-stage conversion — shows where leads leak out of the
+              funnel. Once lead_events data lands we'll add avg-days-per-hop
+              here too. */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Stage Conversion</h3>
+            <div className="space-y-2.5">
+              <StageStep label="Cold → Working"          value={conversion.coldToWorking} />
+              <StageStep label="Working → Booked"        value={conversion.workingToBooked} />
+              <StageStep label="Booked → Showed Up"      value={conversion.bookedToShowed} />
+              <StageStep label="Showed Up → Converted"   value={conversion.showedToConverted} />
+            </div>
+            <p className="text-[10px] text-gray-400 italic mt-3">
+              Time-in-stage metrics appear after the lead_events timeline fills up.
+            </p>
           </div>
 
           {/* Sources */}
@@ -337,17 +398,30 @@ export default function LeadsDashboardPage() {
         </div>
       </div>
 
-      {/* Info footer */}
+      {/* Info footer — explains the 5-stage GHL → n8n → Supabase pipeline
+          that drives every number on this page. */}
       <div className="mt-6 bg-indigo-50/60 border border-indigo-100 border-l-4 border-l-indigo-500 rounded-xl p-4 flex gap-3">
         <UserPlus className="w-4.5 h-4.5 text-indigo-500 shrink-0 mt-0.5" />
-        <div className="text-xs text-gray-600">
-          <p className="font-semibold text-indigo-700 uppercase tracking-wider text-[10px] mb-1">
-            Heads up
+        <div className="text-xs text-gray-600 space-y-1.5">
+          <p className="font-semibold text-indigo-700 uppercase tracking-wider text-[10px]">
+            How this dashboard fills up
           </p>
           <p>
-            Leads and Marketing read the same <code className="bg-white px-1 rounded text-[11px]">leads</code>,{' '}
+            Every stage in this dashboard maps to a <strong>separate GHL pipeline</strong> and its own webhook:
+            {' '}<code className="bg-white px-1 rounded text-[11px]">cold</code> ·{' '}
+            <code className="bg-white px-1 rounded text-[11px]">working</code> ·{' '}
+            <code className="bg-white px-1 rounded text-[11px]">booked</code> ·{' '}
+            <code className="bg-white px-1 rounded text-[11px]">showed</code> ·{' '}
+            <code className="bg-white px-1 rounded text-[11px]">converted</code>.
+            n8n receives each webhook and upserts the lead's current stage into the{' '}
+            <code className="bg-white px-1 rounded text-[11px]">leads</code> table, plus appends a row to{' '}
+            <code className="bg-white px-1 rounded text-[11px]">lead_events</code> for the timeline.
+          </p>
+          <p>
+            Leads and Marketing read the same{' '}
+            <code className="bg-white px-1 rounded text-[11px]">leads</code>,{' '}
             <code className="bg-white px-1 rounded text-[11px]">tours</code>, and{' '}
-            <code className="bg-white px-1 rounded text-[11px]">enrollments</code> tables — so funnel numbers stay in sync across both dashboards.
+            <code className="bg-white px-1 rounded text-[11px]">enrollments</code> tables — funnel numbers stay in sync across both dashboards.
           </p>
         </div>
       </div>
@@ -355,28 +429,64 @@ export default function LeadsDashboardPage() {
   )
 }
 
-function PipelineRow({ label, value, icon: Icon, accent = 'rose' }) {
+function PipelineRow({ label, sub, value, icon: Icon, accent = 'rose' }) {
   const accents = {
-    rose:  { bg: 'bg-rose-50',  text: 'text-rose-600',  bar: 'bg-rose-500'  },
-    amber: { bg: 'bg-amber-50', text: 'text-amber-600', bar: 'bg-amber-500' },
-    blue:  { bg: 'bg-blue-50',  text: 'text-blue-600',  bar: 'bg-blue-500'  },
+    rose:    { bg: 'bg-rose-50',    text: 'text-rose-600',    bar: 'bg-rose-500'    },
+    amber:   { bg: 'bg-amber-50',   text: 'text-amber-600',   bar: 'bg-amber-500'   },
+    blue:    { bg: 'bg-blue-50',    text: 'text-blue-600',    bar: 'bg-blue-500'    },
+    purple:  { bg: 'bg-purple-50',  text: 'text-purple-600',  bar: 'bg-purple-500'  },
+    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', bar: 'bg-emerald-500' },
   }
   const a = accents[accent] || accents.rose
   const pct = Math.min(100, Math.max(8, value * 5))
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-2">
-          <div className={`w-6 h-6 rounded ${a.bg} flex items-center justify-center`}>
+      <div className="flex items-center justify-between mb-1.5 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={`w-6 h-6 rounded ${a.bg} flex items-center justify-center shrink-0`}>
             <Icon className={`w-3.5 h-3.5 ${a.text}`} />
           </div>
-          <span className="text-xs font-medium text-gray-600">{label}</span>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-700 leading-tight">{label}</p>
+            {sub && <p className="text-[10px] text-gray-400 leading-tight truncate">{sub}</p>}
+          </div>
         </div>
-        <span className="text-sm font-bold text-gray-900">{value}</span>
+        <span className="text-sm font-bold text-gray-900 shrink-0 tabular-nums">{value}</span>
       </div>
       <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full ${a.bar} transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
+// One row in the Stage Conversion widget. Shows the %-through rate between
+// two adjacent pipeline stages, or an em-dash if the upstream stage has no
+// leads yet. Bar width scales with the rate; hits 100% cleanly.
+function StageStep({ label, value }) {
+  const pct = value != null ? Math.min(100, Math.max(2, value)) : 0
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1 text-[11px]">
+        <span className="text-gray-500">{label}</span>
+        <span className="font-semibold text-gray-900 tabular-nums">
+          {value != null ? `${value}%` : '—'}
+        </span>
+      </div>
+      <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full transition-all ${
+            value == null
+              ? 'bg-gray-200'
+              : value >= 60
+              ? 'bg-emerald-500'
+              : value >= 30
+              ? 'bg-amber-500'
+              : 'bg-rose-500'
+          }`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   )

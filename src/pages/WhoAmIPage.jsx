@@ -37,9 +37,10 @@ const TREE_ROLES = [
   'executive-assistant',
   'sales-manager',
   'director',
-  'facility-manager',
-  'teacher',
-  'teacher-assistant',
+  'assistant-director',
+  'admin-classroom-support',
+  'head-rover',
+  'teacher-support-lead',
   'scheduling',
   'documentation',
   'internal-communication',
@@ -47,12 +48,17 @@ const TREE_ROLES = [
   'follow-up',
   'enrollment',
   'community-outreach',
-  'classroom-operations',
-  'student-experience',
 ]
 
-// Roles NOT in the visual tree — keep them reachable at the bottom.
+// Roles NOT in the primary leadership tree — kept reachable at the bottom.
+// Includes generic Teacher / Assistant tiles (per-classroom people rather
+// than leadership positions) and the legacy tiles that predated the
+// Proposed Leadership & Support Structure PDF.
 const OTHER_ROLES = [
+  'teacher',
+  'teacher-assistant',
+  'classroom-operations',
+  'student-experience',
   'front-desk',
   'hiring-manager',
   'tour-manager',
@@ -62,9 +68,47 @@ const OTHER_ROLES = [
   'bus-driver',
 ]
 
+// Tab-scoped role groupings — decide which tiles show under each tab. The
+// primary tree layout (Admin) matches the leadership chain; the Operations
+// tab shows the execution-focused roles (teachers, kitchen, transportation).
+// Anjelica lives on Admin because her title is Administrative & Classroom
+// Support — she reports to Abby, not to Margo.
+const OPERATIONS_ROLES = {
+  afterschool: ['head-rover', 'teacher-support-lead'],
+  classroom: [
+    'teacher',
+    'teacher-assistant',
+    'classroom-operations',
+    'student-experience',
+  ],
+  support: [
+    'front-desk',
+    'lesson-plans',
+    'kitchen-manager',
+    'asst-kitchen',
+    'bus-driver',
+  ],
+}
+
+const ADMIN_OTHER_ROLES = ['hiring-manager', 'tour-manager']
+
+const TABS = [
+  {
+    id: 'admin',
+    label: 'Admin',
+    description: 'Leadership, coordination, and office roles.',
+  },
+  {
+    id: 'operations',
+    label: 'Operations',
+    description: 'Execution roles on the floor and in support functions.',
+  },
+]
+
 export default function WhoAmIPage() {
   const { mobileMode } = useViewMode()
   const [openRoleId, setOpenRoleId] = useState(null)
+  const [activeTab, setActiveTab] = useState('admin')
 
   return (
     <div className={mobileMode ? '' : 'max-w-7xl mx-auto'}>
@@ -98,6 +142,35 @@ export default function WhoAmIPage() {
         </p>
       </div>
 
+      {/* Tab bar — Admin vs Operations. Kept flat (no card wrapper) so it
+          reads as a section switcher rather than a separate control card. */}
+      <div className="flex gap-1 mb-4 border-b border-gray-200">
+        {TABS.map((t) => {
+          const isActive = activeTab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+                isActive
+                  ? 'border-indigo-600 text-indigo-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+              aria-pressed={isActive}
+            >
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Tab subtitle — one-line context so users know what they're looking at. */}
+      <p className="text-xs text-gray-500 mb-4 italic">
+        {TABS.find((t) => t.id === activeTab)?.description}
+      </p>
+
+      {activeTab === 'admin' && (
+      <>
       {/* Tree — horizontal scroll on narrow screens preserves the spatial
           layout instead of stacking into an unreadable vertical column. */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5 overflow-x-auto">
@@ -116,52 +189,52 @@ export default function WhoAmIPage() {
 
           {/* Level 3 — 3 top-level branches */}
           <div className="grid grid-cols-3 gap-6 w-full">
-            {/* Branch A — Operator → Director/Facility Manager */}
+            {/* Branch A — Operator → Director → Assistant Director →
+                (Anjelica, Margo → Belia). Matches the Proposed Leadership
+                & Support Structure PDF: Rachel supervises Abby, who
+                directly supervises Anjelica and Margo; Belia works under
+                Margo in the afterschool program. */}
             <Branch>
               <RoleTile roleId="operator" onClick={setOpenRoleId} />
               <Connector />
-              <div className="grid grid-cols-2 gap-3 w-full">
+              <SubBranch>
+                <RoleTile
+                  roleId="director"
+                  size="sm"
+                  onClick={setOpenRoleId}
+                />
+                <Connector short />
                 <SubBranch>
                   <RoleTile
-                    roleId="director"
+                    roleId="assistant-director"
                     size="sm"
                     onClick={setOpenRoleId}
                   />
                   <Connector short />
                   <div className="grid grid-cols-2 gap-2 w-full">
-                    <RoleTile
-                      roleId="teacher"
-                      size="xs"
-                      onClick={setOpenRoleId}
-                    />
-                    <RoleTile
-                      roleId="teacher-assistant"
-                      size="xs"
-                      onClick={setOpenRoleId}
-                    />
+                    <div className="flex flex-col items-center gap-1">
+                      <RoleTile
+                        roleId="admin-classroom-support"
+                        size="xs"
+                        onClick={setOpenRoleId}
+                      />
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <RoleTile
+                        roleId="head-rover"
+                        size="xs"
+                        onClick={setOpenRoleId}
+                      />
+                      <Connector short />
+                      <RoleTile
+                        roleId="teacher-support-lead"
+                        size="xs"
+                        onClick={setOpenRoleId}
+                      />
+                    </div>
                   </div>
                 </SubBranch>
-                <SubBranch>
-                  <RoleTile
-                    roleId="facility-manager"
-                    size="sm"
-                    onClick={setOpenRoleId}
-                  />
-                  <Connector short />
-                  <div className="grid grid-cols-2 gap-2 w-full">
-                    <RoleTile
-                      roleId="classroom-operations"
-                      size="xs"
-                      onClick={setOpenRoleId}
-                    />
-                    <RoleTile
-                      roleId="student-experience"
-                      size="xs"
-                      onClick={setOpenRoleId}
-                    />
-                  </div>
-                </SubBranch>
-              </div>
+              </SubBranch>
             </Branch>
 
             {/* Branch B — Executive Assistant → focus areas */}
@@ -202,18 +275,15 @@ export default function WhoAmIPage() {
         </div>
       </div>
 
-      {/* Other roles — legacy tiles not on the tree */}
+      {/* Admin extras — leadership-adjacent roles that don't sit on the
+          primary tree (Hiring Manager runs recruiting; Tour Manager is a
+          leadership-adjacent enrollment role). */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5">
         <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-3">
-          Other Roles
-        </p>
-        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-          Roles that exist in the business but aren't on the primary org
-          tree — kitchen, transportation, and functional managers whose
-          role clarity content still lives in the Compass pages.
+          Other Admin Roles
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {OTHER_ROLES.map((id) => (
+          {ADMIN_OTHER_ROLES.map((id) => (
             <RoleTile
               key={id}
               roleId={id}
@@ -223,6 +293,86 @@ export default function WhoAmIPage() {
           ))}
         </div>
       </div>
+      </>
+      )}
+
+      {activeTab === 'operations' && (
+      <>
+      {/* Operations context banner — reminds where Ops rolls up. */}
+      <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-5 flex items-start gap-3">
+        <Info className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-indigo-800 leading-relaxed">
+          Operations reports up to <strong>Abby</strong> (Assistant Director) →{' '}
+          <strong>Rachel</strong> (Director). Roles below are grouped by
+          where they spend their day — afterschool, classrooms, or support
+          functions.
+        </p>
+      </div>
+
+      {/* Afterschool team */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5">
+        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-3">
+          Afterschool Team
+        </p>
+        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+          Runs the PM program from 2:30 PM through close.
+        </p>
+        <div className="flex flex-col items-center max-w-md mx-auto">
+          <RoleTile
+            roleId="head-rover"
+            size="md"
+            onClick={setOpenRoleId}
+          />
+          <Connector short />
+          <RoleTile
+            roleId="teacher-support-lead"
+            size="md"
+            onClick={setOpenRoleId}
+          />
+        </div>
+      </div>
+
+      {/* Classrooms */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5">
+        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-3">
+          Classrooms
+        </p>
+        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+          Teacher and classroom-focused roles.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {OPERATIONS_ROLES.classroom.map((id) => (
+            <RoleTile
+              key={id}
+              roleId={id}
+              size="sm"
+              onClick={setOpenRoleId}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Support functions */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5">
+        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-3">
+          Support Functions
+        </p>
+        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+          Front desk, kitchen, transportation, and lesson planning.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {OPERATIONS_ROLES.support.map((id) => (
+            <RoleTile
+              key={id}
+              roleId={id}
+              size="sm"
+              onClick={setOpenRoleId}
+            />
+          ))}
+        </div>
+      </div>
+      </>
+      )}
 
       {/* Drawer */}
       <OrgRoleDrawer roleId={openRoleId} onClose={() => setOpenRoleId(null)} />
@@ -323,7 +473,13 @@ function RoleTile({ roleId, size = 'md', onClick }) {
         // Stacked layout for xs tiles — emoji on top, full-width label
         // wraps to 2 lines. Fits "Documentation", "Internal Communication",
         // "Community Outreach", etc. without truncating.
-        <div className="flex flex-col items-start gap-1">
+        //
+        // For person tiles (Anjelica, Margo, Belia) contact.title differs
+        // from contact.name — we render the title as a subtitle below the
+        // name so the org role is visible without clicking. Category tiles
+        // (Scheduling, Documentation, etc.) whose name and title match
+        // just show the name.
+        <div className="flex flex-col items-start gap-1 w-full">
           <div
             className={`${emojiSizes[size]} rounded-md flex items-center justify-center flex-shrink-0 ${tone.iconBg}`}
           >
@@ -334,6 +490,13 @@ function RoleTile({ roleId, size = 'md', onClick }) {
           >
             {contact.name}
           </p>
+          {contact.title && contact.title !== contact.name && (
+            <p
+              className={`${captionSizes[size]} text-gray-500 leading-tight line-clamp-2 w-full`}
+            >
+              {contact.title}
+            </p>
+          )}
         </div>
       ) : (
         <div className="flex items-start gap-2">
@@ -353,7 +516,10 @@ function RoleTile({ roleId, size = 'md', onClick }) {
                 </span>
               )}
             </p>
-            {(size === 'lg' || size === 'md') && contact.title && (
+            {/* Titles on md/sm too — Rachel and Abby especially need to
+                show "Director" / "Assistant Director" for the tree to
+                read cleanly at a glance. */}
+            {contact.title && contact.title !== contact.name && (
               <p className={`${captionSizes[size]} text-gray-500 truncate`}>
                 {contact.title}
               </p>

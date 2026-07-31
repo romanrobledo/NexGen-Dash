@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Megaphone,
   TrendingUp,
@@ -10,9 +10,13 @@ import {
   Sparkles,
   ArrowRight,
   Eye,
+  CalendarClock,
+  Camera,
+  MapPin,
 } from 'lucide-react'
 import { useViewMode } from '../contexts/ViewModeContext'
 import { useLeadsData } from '../hooks/useLeadsData'
+import { useCalendarEvents } from '../hooks/useCalendarEvents'
 
 function MetricCard({ label, value, delta, icon: Icon, accent = 'pink', suffix }) {
   const accents = {
@@ -160,6 +164,14 @@ export default function MarketingDashboardPage() {
         </div>
       </div>
 
+      {/* Planning strip — Events this week, Campaigns this week, and
+          This Week's Shot List. Each block links to its full workspace. */}
+      <div className={`mt-6 grid gap-4 ${mobileMode ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
+        <EventsThisWeek />
+        <CampaignsThisWeek />
+        <ThisWeeksShotList />
+      </div>
+
       {/* Info footer */}
       <div className="mt-6 bg-pink-50/60 border border-pink-100 border-l-4 border-l-pink-500 rounded-xl p-4 flex gap-3">
         <Megaphone className="w-4.5 h-4.5 text-pink-500 shrink-0 mt-0.5" />
@@ -201,5 +213,157 @@ function FunnelStep({ label, value, accent = 'pink' }) {
         <div className={`h-full ${bars[accent] || bars.pink} transition-all`} style={{ width: `${pct}%` }} />
       </div>
     </div>
+  )
+}
+
+// ─── Planning strip: shared layout primitive ────────────────────────────────
+
+function PlanCard({ icon: Icon, iconTone, title, subtitle, linkTo, linkLabel, children }) {
+  const tones = {
+    indigo: 'bg-indigo-100 text-indigo-600',
+    purple: 'bg-purple-100 text-purple-600',
+    amber:  'bg-amber-100 text-amber-600',
+  }
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${tones[iconTone] || tones.indigo}`}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+            {subtitle && <p className="text-[11px] text-gray-500 mt-0.5">{subtitle}</p>}
+          </div>
+        </div>
+        {linkTo && (
+          <Link
+            to={linkTo}
+            className="text-[11px] font-medium text-gray-500 hover:text-gray-800 flex items-center gap-0.5 shrink-0"
+          >
+            {linkLabel || 'Open'}
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        )}
+      </div>
+      <div className="flex-1">{children}</div>
+    </div>
+  )
+}
+
+function PlanEmpty({ hint }) {
+  return (
+    <div className="border-2 border-dashed border-gray-200 rounded-lg p-5 text-center">
+      <p className="text-xs text-gray-500 leading-relaxed">{hint}</p>
+    </div>
+  )
+}
+
+// ─── Events This Week (live from calendar_events) ─────────────────────────
+// "This week" = today through the coming Saturday (US Sun→Sat week).
+
+function EventsThisWeek() {
+  const { events, loading } = useCalendarEvents('events')
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(today)
+  // Days remaining until Saturday (6). If already Saturday, endOfWeek = today.
+  endOfWeek.setDate(endOfWeek.getDate() + (6 - today.getDay()))
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const upcoming = (events || [])
+    .filter((e) => {
+      const start = new Date(e.startsAt)
+      return start >= today && start <= endOfWeek
+    })
+    .slice(0, 5)
+
+  return (
+    <PlanCard
+      icon={CalendarClock}
+      iconTone="indigo"
+      title="Events This Week"
+      subtitle="Fixed anchors on the Events calendar"
+      linkTo="/calendar?tab=events"
+      linkLabel="Events tab"
+    >
+      {loading ? (
+        <PlanEmpty hint="Loading events…" />
+      ) : upcoming.length === 0 ? (
+        <PlanEmpty hint="No events this week. Add one on the Events tab of the Calendars menu." />
+      ) : (
+        <ul className="space-y-2">
+          {upcoming.map((evt) => {
+            const start = new Date(evt.startsAt)
+            const dateLabel = start.toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+            })
+            return (
+              <li key={evt.id} className="flex items-start gap-2 px-2.5 py-2 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                <div className="w-8 h-8 rounded bg-white border border-indigo-100 flex flex-col items-center justify-center flex-shrink-0">
+                  <span className="text-[9px] font-bold text-indigo-600 uppercase leading-none">
+                    {start.toLocaleDateString(undefined, { month: 'short' })}
+                  </span>
+                  <span className="text-xs font-bold text-gray-900 leading-none">
+                    {start.getDate()}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-900 truncate">{evt.title}</p>
+                  <p className="text-[10px] text-gray-500 flex items-center gap-1">
+                    <span>{dateLabel}</span>
+                    {evt.location && (
+                      <>
+                        <span className="text-gray-300">·</span>
+                        <span className="inline-flex items-center gap-0.5 truncate">
+                          <MapPin className="w-2.5 h-2.5" />
+                          {evt.location}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </PlanCard>
+  )
+}
+
+// ─── Campaigns This Week (placeholder until useCampaigns hook) ────────────
+
+function CampaignsThisWeek() {
+  return (
+    <PlanCard
+      icon={Megaphone}
+      iconTone="purple"
+      title="Campaigns This Week"
+      subtitle="Campaigns starting or running this week"
+      linkTo="/calendars/content"
+      linkLabel="Campaigns"
+    >
+      <PlanEmpty hint="No campaigns scheduled this week. Once created, active + upcoming campaigns for the week appear here." />
+    </PlanCard>
+  )
+}
+
+// ─── This Week's Shot List (placeholder until useShotItems hook) ───────────
+
+function ThisWeeksShotList() {
+  return (
+    <PlanCard
+      icon={Camera}
+      iconTone="amber"
+      title="This Week's Shot List"
+      subtitle="What content creators shoot this week"
+      linkTo="/calendars/content"
+      linkLabel="Shot List"
+    >
+      <PlanEmpty hint="No shots scheduled this week. Shot items tied to active campaigns will populate this list." />
+    </PlanCard>
   )
 }

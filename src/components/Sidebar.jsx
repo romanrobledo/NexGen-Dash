@@ -181,15 +181,30 @@ const navItems = [
   // each got lifted out to their own top-level menus so they're one click
   // deep instead of two. Every lifted menu inherits the `admin_panel`
   // permission key so access rules don't change.
+  // S.A.N.D. — lifted out of Admin. The Sleep At Night Dashboard is the
+  // most-visited surface in the app; one click deep beats two. Same
+  // admin_panel permission gate so access rules don't change.
+  {
+    icon: LayoutDashboard,
+    label: 'S.A.N.D.',
+    permissionKey: 'admin_panel',
+    path: '/',
+  },
+  // Meetings — lifted out of Admin. Holds "The Rhythm" (teams / cadence /
+  // meeting agenda / outcomes) that used to live on the Pulse page.
+  // Route stays /admin/meetings so bookmarks + Admin's isNestedActive
+  // check still resolve correctly.
+  {
+    icon: Users,
+    label: 'Meetings',
+    permissionKey: 'admin_panel',
+    path: '/admin/meetings',
+  },
   {
     icon: ShieldCheck,
     label: 'Admin',
     permissionKey: 'admin_panel',
     children: [
-      { label: 'S.A.N.D.', path: '/' },
-      // Meetings — holds "The Rhythm" (teams / cadence / meeting agenda /
-      // outcomes) that used to live on the Pulse page.
-      { label: 'Meetings', path: '/admin/meetings' },
       {
         label: 'Staff Management',
         children: [
@@ -210,11 +225,12 @@ const navItems = [
       },
     ],
   },
-  // Targets & Tasks — lifted out of Admin so quarterly goals + the task
-  // board are one click away.
+  // Projects — renamed from "Targets & Tasks". Menu label only; underlying
+  // routes (/targets, /targets/progress, /targets/tasks) unchanged so deep
+  // links, permission key (admin_panel), and page filenames all still work.
   {
     icon: Target,
-    label: 'Targets & Tasks',
+    label: 'Projects',
     permissionKey: 'admin_panel',
     children: [
       { label: 'Dashboard', path: '/targets' },
@@ -230,7 +246,15 @@ const navItems = [
     permissionKey: 'admin_panel',
     children: [
       { label: 'Dashboard', path: '/marketing' },
-      { label: 'Content Calendar', path: '/calendars/content' },
+      // Renamed from "Content Calendar" — this menu is the Campaigns
+      // workspace (Campaigns + Shot List). The Events preview lives on
+      // its own submenu below; the actual event CRUD lives on the main
+      // Calendars menu → Events tab (/calendar?tab=events).
+      { label: 'Campaigns', path: '/calendars/content' },
+      // Events — preview of the fixed-dates calendar, scoped to a
+      // marketing context. Reads the same calendar_events table as
+      // /calendar?tab=events, so it stays in sync bidirectionally.
+      { label: 'Events', path: '/marketing/events' },
       {
         label: 'Offers',
         path: '/marketing/offers',
@@ -404,13 +428,14 @@ function NavItem({ item, collapsed }) {
       (location.pathname.startsWith('/org-chart') ||
        location.pathname.startsWith('/trainings/role-clarity') ||
        location.pathname.startsWith('/dashboard/'))) ||
-    (item.label === 'Targets & Tasks' && location.pathname.startsWith('/targets')) ||
-    // Admin owns most /admin/* routes EXCEPT the two that got lifted into
-    // the Compliance top-level menu. Without those exclusions, Admin would
-    // light up simultaneously with Compliance on /admin/data-integrity or
-    // /admin/performance-compliance and both would look active.
+    (item.label === 'Projects' && location.pathname.startsWith('/targets')) ||
+    // Admin owns most /admin/* routes EXCEPT the ones that got lifted into
+    // top-level menus (Meetings, Compliance). Without those exclusions,
+    // Admin would light up simultaneously with Meetings on /admin/meetings
+    // or with Compliance on /admin/data-integrity — both would look active.
     (item.label === 'Admin' &&
       ((location.pathname.startsWith('/admin') &&
+        !location.pathname.startsWith('/admin/meetings') &&
         !location.pathname.startsWith('/admin/data-integrity') &&
         !location.pathname.startsWith('/admin/performance-compliance')) ||
        location.pathname.startsWith('/staff/'))) ||

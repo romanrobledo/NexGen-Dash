@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   CalendarDays,
   School,
@@ -83,8 +84,32 @@ const ACCENTS = {
 
 export default function CalendarPage() {
   const { mobileMode } = useViewMode()
-  const [activeKey, setActiveKey] = useState(CALENDARS[0].key)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Initial tab: honor ?tab=events (or any valid key) from the URL so
+  // deep links like /calendar?tab=events land on the right calendar.
+  // The Campaigns page's Upcoming Events block uses this to jump users
+  // straight to the shared Events calendar surface.
+  const initialTabParam = searchParams.get('tab')
+  const initialKey = CALENDARS.some((c) => c.key === initialTabParam)
+    ? initialTabParam
+    : CALENDARS[0].key
+  const [activeKey, setActiveKeyState] = useState(initialKey)
   const active = CALENDARS.find((c) => c.key === activeKey) || CALENDARS[0]
+
+  // Sync the URL when the tab changes so a copy-pasted link matches
+  // what's on screen — and vice versa when the URL query changes.
+  const setActiveKey = (key) => {
+    setActiveKeyState(key)
+    setSearchParams(key === CALENDARS[0].key ? {} : { tab: key }, { replace: true })
+  }
+
+  useEffect(() => {
+    const t = searchParams.get('tab')
+    if (t && CALENDARS.some((c) => c.key === t) && t !== activeKey) {
+      setActiveKeyState(t)
+    }
+  }, [searchParams, activeKey])
 
   return (
     <div>
