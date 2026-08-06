@@ -39,15 +39,18 @@ export default function ProtectedRoute({ children, requiredPermission }) {
     }
   }, [session, staff])
 
-  // Soft 10-second fallback on initial load ONLY. If we still have no
-  // session/staff after 10 seconds AND have never loaded, show a reload
-  // button so the user has an escape hatch. Does NOT auto-reload.
+  // Soft 20-second fallback on initial load ONLY. Observed reality is
+  // that tab-wake from long idle can take 10–15s to recover naturally
+  // (Supabase auto-refresh + profile fetch under a warming connection).
+  // Firing at 10s was crying wolf 3s before the app was ready; 20s
+  // gives the recovery a real chance while still capping how long a
+  // truly-stuck app stays hostile. Does NOT auto-reload.
   useEffect(() => {
     if (hasEverLoadedRef.current) return
     if (!loading && session && staff) return
     const t = setTimeout(() => {
       if (!hasEverLoadedRef.current) setShowStuckFallback(true)
-    }, 10000)
+    }, 20000)
     return () => clearTimeout(t)
   }, [loading, session, staff])
 
@@ -56,10 +59,12 @@ export default function ProtectedRoute({ children, requiredPermission }) {
       <div className="text-center max-w-sm px-4">
         {showStuckFallback ? (
           <>
-            <div className="text-3xl mb-3">⏱️</div>
-            <p className="text-sm text-gray-600 mb-1 font-medium">Still loading…</p>
+            <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm text-gray-600 mb-1 font-medium">
+              Reconnecting your session…
+            </p>
             <p className="text-xs text-gray-400 mb-4">
-              Something took longer than expected. Try reloading.
+              This can take a moment after long idle. If it persists, reload.
             </p>
             <button
               onClick={() => window.location.reload()}

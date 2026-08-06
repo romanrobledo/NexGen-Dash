@@ -292,19 +292,21 @@ export function AuthProvider({ children }) {
           }
         }
       } catch (err) {
-        // Timeout or network failure — don't blow away state, but log so
-        // we can see it happen. The next visibility flip will retry.
-        console.warn(
-          '[auth] refreshSession threw:',
-          err?.message || err
-        )
+        // Timeout or network failure — do NOT sign out. Observed reality
+        // is that tab-wake sometimes takes 10–15s to recover naturally,
+        // and signing out at 6s would kick the user off a session they
+        // were about to have back. Just log; next visibility flip
+        // retries and getSession/loadProfile will eventually resolve.
+        console.warn('[auth] refreshSession threw:', err?.message || err)
       }
     }
 
     document.addEventListener('visibilitychange', refreshOnVisible)
-    // Also trigger once on mount so a hard reload during suspended-token
-    // state gets a fresh token immediately.
-    refreshOnVisible()
+    // NOTE: We intentionally do NOT call refreshOnVisible() on mount.
+    // The normal auth flow (getSession → loadProfile) already handles
+    // the fresh-mount case; adding a parallel refreshSession here was
+    // making cold starts race for network and slowing everything down.
+    // Visibility handler only fires on actual tab-return events.
 
     return () => {
       document.removeEventListener('visibilitychange', refreshOnVisible)
