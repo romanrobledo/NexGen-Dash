@@ -27,6 +27,7 @@ import {
   X,
   Menu,
   BotMessageSquare,
+  Bot,
   BookOpen,
   Network,
   Megaphone,
@@ -225,6 +226,32 @@ const navItems = [
       },
     ],
   },
+  // Officers — Paperclip agent feeds. Each of the 10 Paperclip agents has
+  // its own scoped page here and its own /webhook/nexgen-officer-<key>
+  // path. n8n POSTs briefings straight into public.officer_briefings
+  // (multi-tenant via the `entity` column, default 'nexgen') and the
+  // OfficerPage reads its scope live.
+  //
+  // Order below matches Paperclip's canonical hierarchy: CEO first,
+  // Junior COO second (their direct executor), then the eight officers
+  // alphabetically. Officer keys MUST match Paperclip agent ids exactly.
+  {
+    icon: Bot,
+    label: 'Officers',
+    permissionKey: 'admin_panel',
+    children: [
+      { label: 'CEO',                  path: '/officers/ceo' },
+      { label: 'Junior COO',           path: '/officers/junior-coo' },
+      { label: 'Detail Officer',       path: '/officers/detail' },
+      { label: 'Fulfillment Officer',  path: '/officers/fulfillment' },
+      { label: 'Improvement Officer',  path: '/officers/improvement' },
+      { label: 'Legal Officer',        path: '/officers/legal' },
+      { label: 'Response Officer',     path: '/officers/response' },
+      { label: 'Revenue Officer',      path: '/officers/revenue' },
+      { label: 'Teams Officer',        path: '/officers/teams' },
+      { label: 'Tech Officer',         path: '/officers/tech' },
+    ],
+  },
   // Projects — renamed from "Targets & Tasks". Menu label only; underlying
   // routes (/targets, /targets/progress, /targets/tasks) unchanged so deep
   // links, permission key (admin_panel), and page filenames all still work.
@@ -246,15 +273,28 @@ const navItems = [
     permissionKey: 'admin_panel',
     children: [
       { label: 'Dashboard', path: '/marketing' },
+      // Shot Lists — dedicated hub for content creators. Unifies the
+      // campaign shot list AND the event shot list into one queue so
+      // creators check one page in the morning instead of two. Each
+      // shot can be checked off as it's captured.
+      { label: 'Shot Lists', path: '/marketing/shot-lists' },
+      // Upload — landing pad for creators to drop photos and videos
+      // after a shoot. Routes to Google Drive (and any other targets)
+      // via an n8n webhook so we don't have to build storage ourselves.
+      { label: 'Upload', path: '/marketing/upload' },
       // Renamed from "Content Calendar" — this menu is the Campaigns
-      // workspace (Campaigns + Shot List). The Events preview lives on
-      // its own submenu below; the actual event CRUD lives on the main
-      // Calendars menu → Events tab (/calendar?tab=events).
+      // workspace. Shot lists moved to their own submenu above.
       { label: 'Campaigns', path: '/calendars/content' },
       // Events — preview of the fixed-dates calendar, scoped to a
       // marketing context. Reads the same calendar_events table as
       // /calendar?tab=events, so it stays in sync bidirectionally.
       { label: 'Events', path: '/marketing/events' },
+      // Marketing Calendar — combined month grid showing campaigns AND
+      // events on one canvas. Filters: All / Campaigns / Events. Click
+      // any tile to open a right-side drawer with focus fields + shot
+      // list preview. Events sync with both the Marketing → Events
+      // submenu AND the top-level Calendars → Events tab.
+      { label: 'Calendar', path: '/marketing/calendar' },
       {
         label: 'Offers',
         path: '/marketing/offers',

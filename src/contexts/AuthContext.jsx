@@ -229,6 +229,111 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // ── Tab-wake session refresh ──────────────────────────────────────────────
+  // Bug this fixes: after hours of idle, the access token has expired but
+  // getSession() cheerfully returns the stale cached session from
+  // localStorage without validating it. Every subsequent DB query then
+  // 401s, loadProfile fails all its retries, and ProtectedRoute gets stuck
+  // showing "Loading profile…" until the user manually clicks Reload.
+  //
+  // Supabase's built-in autoRefreshToken timer doesn't fire reliably when
+  // the tab is backgrounded. So on every return-to-visible we explicitly
+  // refresh. If the refresh itself fails (refresh token has expired), sign
+  // out cleanly — the user goes to /login instead of a stuck spinner.
+  //
+  // Wrapped in a 6-second timeout because refreshSession() can hang on the
+  // same underlying network conditions that cause the bug in the first
+  // place; better to surface a real signout than freeze the UI.
+  useEffect(() => {
+    if (!supabase) return
+
+    async function refreshOnVisible() {
+      if (document.visibilityState !== 'visible') return
+
+      const withTimeout = (p, ms = 6000) =>
+        Promise.race([
+          p,
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('refresh-timeout')), ms)
+          ),
+        ])
+
+      try {
+        const { data, error } = await withTimeout(
+          supabase.auth.refreshSession()
+        )
+
+        if (error) {
+          // Expired refresh token — the only clean recovery is to sign out.
+          // Stale tokens sitting in localStorage cause every query to fail
+          // and the app to hang. Sign out now, redirect to login.
+          if (
+            /refresh|expired|invalid|jwt/i.test(error.message || '')
+          ) {
+            console.warn(
+              '[auth] refresh token unusable — signing out to unstick UI:',
+              error.message
+            )
+            await supabase.auth.signOut()
+          } else {
+            console.warn('[auth] refreshSession error:', error.message)
+          }
+          return
+        }
+
+        if (data?.session) {
+          setSession(data.session)
+          // If the previous mount's loadProfile gave up (401'd against a
+          // stale access token, all retries failed, staff stayed null),
+          // this is our chance to retry with the fresh tokens we just got.
+          // `force: true` bypasses the same-user short-circuit.
+          if (data.session.user?.id) {
+            loadProfile(data.session.user.id, { force: true })
+          }
+        }
+      } catch (err) {
+        // Timeout or network failure — don't blow away state, but log so
+        // we can see it happen. The next visibility flip will retry.
+        console.warn(
+          '[auth] refreshSession threw:',
+          err?.message || err
+        )
+      }
+    }
+
+    document.addEventListener('visibilitychange', refreshOnVisible)
+    // Also trigger once on mount so a hard reload during suspended-token
+    // state gets a fresh token immediately.
+    refreshOnVisible()
+
+    return () => {
+      document.removeEventListener('visibilitychange', refreshOnVisible)
+    }
+  }, [])
+
+  // ── Session-but-no-staff watchdog ─────────────────────────────────────────
+  // Last-resort escape from the "spinner forever + Reload button" state. If
+  // we finished the initial auth boot and have a session but staff is still
+  // null after 8 seconds, the tokens are almost certainly stale (loadProfile
+  // 401'd its way through all retries). Sign out cleanly so ProtectedRoute
+  // sends the user to /login instead of leaving them staring at a Reload
+  // button. Only fires ONCE per hydrated null-staff transition.
+  useEffect(() => {
+    if (!supabase) return
+    if (loading) return
+    if (!session) return
+    if (staff) return
+
+    const t = setTimeout(() => {
+      console.warn(
+        '[auth] session present but staff still null after 8s — signing out to unstick UI'
+      )
+      supabase.auth.signOut().catch(() => {})
+    }, 8000)
+
+    return () => clearTimeout(t)
+  }, [loading, session, staff])
+
   async function signIn(email, password) {
     if (!supabase) throw new Error('Supabase not configured')
     const { data, error } = await supabase.auth.signInWithPassword({

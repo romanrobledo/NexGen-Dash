@@ -17,6 +17,8 @@ import {
 import { useViewMode } from '../contexts/ViewModeContext'
 import { useLeadsData } from '../hooks/useLeadsData'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
+import { useCampaigns } from '../hooks/useCampaigns'
+import { useShotItems } from '../hooks/useShotItems'
 
 function MetricCard({ label, value, delta, icon: Icon, accent = 'pink', suffix }) {
   const accents = {
@@ -334,9 +336,30 @@ function EventsThisWeek() {
   )
 }
 
-// ─── Campaigns This Week (placeholder until useCampaigns hook) ────────────
+// ─── Campaigns This Week (live from campaigns table) ─────────────────────
+// A campaign counts as "this week" if its date range (start..end) overlaps
+// with today..Saturday. Complete campaigns are excluded — this preview is
+// forward-looking, not a status report.
 
 function CampaignsThisWeek() {
+  const { campaigns, loading } = useCampaigns()
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(today)
+  endOfWeek.setDate(endOfWeek.getDate() + (6 - today.getDay()))
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const thisWeek = (campaigns || [])
+    .filter((c) => c.status !== 'complete')
+    .filter((c) => {
+      const start = new Date(c.startDate)
+      const end = c.endDate ? new Date(c.endDate) : start
+      // Overlap check: range intersects [today, endOfWeek]
+      return start <= endOfWeek && end >= today
+    })
+    .slice(0, 5)
+
   return (
     <PlanCard
       icon={Megaphone}
@@ -346,14 +369,68 @@ function CampaignsThisWeek() {
       linkTo="/calendars/content"
       linkLabel="Campaigns"
     >
-      <PlanEmpty hint="No campaigns scheduled this week. Once created, active + upcoming campaigns for the week appear here." />
+      {loading ? (
+        <PlanEmpty hint="Loading campaigns…" />
+      ) : thisWeek.length === 0 ? (
+        <PlanEmpty hint="No campaigns scheduled this week. Create one on the Campaigns page." />
+      ) : (
+        <ul className="space-y-2">
+          {thisWeek.map((c) => (
+            <li
+              key={c.id}
+              className="px-2.5 py-2 rounded-lg bg-purple-50/50 border border-purple-100"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-900 truncate">
+                    {c.name}
+                  </p>
+                  <p className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                    <span className="capitalize">{c.timeframe}</span>
+                    <span className="text-gray-300">·</span>
+                    <span>{formatRange(c.startDate, c.endDate)}</span>
+                  </p>
+                </div>
+                {c.status && (
+                  <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                    c.status === 'active'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {c.status}
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </PlanCard>
   )
 }
 
-// ─── This Week's Shot List (placeholder until useShotItems hook) ───────────
+// ─── This Week's Shot List (live from shot_items table) ──────────────────
+// Shows shots whose shoot_date falls in today..Saturday, plus any past
+// shot still marked 'todo' (they're overdue and matter more).
 
 function ThisWeeksShotList() {
+  const { shots, loading } = useShotItems()
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(today)
+  endOfWeek.setDate(endOfWeek.getDate() + (6 - today.getDay()))
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const thisWeek = (shots || [])
+    .filter((s) => s.status === 'todo' || s.status === 'shot')
+    .filter((s) => {
+      if (!s.shootDate) return false
+      const shoot = new Date(s.shootDate)
+      return shoot <= endOfWeek
+    })
+    .slice(0, 5)
+
   return (
     <PlanCard
       icon={Camera}
@@ -363,7 +440,67 @@ function ThisWeeksShotList() {
       linkTo="/calendars/content"
       linkLabel="Shot List"
     >
-      <PlanEmpty hint="No shots scheduled this week. Shot items tied to active campaigns will populate this list." />
+      {loading ? (
+        <PlanEmpty hint="Loading shots…" />
+      ) : thisWeek.length === 0 ? (
+        <PlanEmpty hint="No shots scheduled this week. Shot items tied to active campaigns will populate this list." />
+      ) : (
+        <ul className="space-y-2">
+          {thisWeek.map((s) => {
+            const shoot = new Date(s.shootDate)
+            const overdue = shoot < today && s.status === 'todo'
+            return (
+              <li
+                key={s.id}
+                className={`px-2.5 py-2 rounded-lg border ${
+                  overdue
+                    ? 'bg-red-50/60 border-red-200'
+                    : 'bg-amber-50/50 border-amber-100'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-gray-900 truncate">
+                      {s.description}
+                    </p>
+                    <p className="text-[10px] text-gray-500 flex items-center gap-1.5 flex-wrap">
+                      <span>
+                        {shoot.toLocaleDateString(undefined, {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                      {s.campaignName && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span className="truncate">{s.campaignName}</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  {overdue && (
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-100 text-red-700">
+                      Overdue
+                    </span>
+                  )}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </PlanCard>
   )
+}
+
+// Small helper — "Aug 4 – Aug 10" style range, single-day collapses to one date.
+function formatRange(start, end) {
+  if (!start) return ''
+  const s = new Date(start)
+  const sLabel = s.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  if (!end || end === start) return sLabel
+  const e = new Date(end)
+  const eLabel = e.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return `${sLabel} – ${eLabel}`
 }

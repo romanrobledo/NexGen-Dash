@@ -1,10 +1,5 @@
 import { useState } from 'react'
-import {
-  Megaphone,
-  Camera,
-  Plus,
-  Calendar as CalendarIcon,
-} from 'lucide-react'
+import { Megaphone, Plus } from 'lucide-react'
 
 /**
  * Campaigns page (route: /calendars/content, file kept for git continuity).
@@ -19,14 +14,16 @@ import {
  *   2. Campaigns section — tabbed by timeframe (Day / Week / Month /
  *      Quarter / Annual). Multiple campaigns can overlap within a single
  *      timeframe.
- *   3. Upcoming Shot List — chronological feed of shots content creators
- *      need to capture, sourced from active campaigns.
+ *
+ * Upcoming Shot List was removed from this page — it moved to the
+ * dedicated Marketing → Shot Lists menu so content creators check one
+ * place for both campaign shots and event shots.
  *
  * Future data model (Supabase, some already created):
  *   campaigns   — id, name, description, timeframe, start_date, end_date,
  *                 status, program_id  ← created
  *   shot_items  — id, campaign_id, description, shoot_date, deadline_date,
- *                 status, assigned_to  ← created
+ *                 status, assigned_to  ← created (surfaced on Shot Lists)
  */
 
 const TIMEFRAMES = [
@@ -57,9 +54,6 @@ export default function ContentCalendarPage() {
         activeTimeframe={activeTimeframe}
         onTimeframeChange={setActiveTimeframe}
       />
-
-      {/* Upcoming Shot List */}
-      <UpcomingShotList />
     </div>
   )
 }
@@ -135,40 +129,4 @@ function CampaignsSection({ activeTimeframe, onTimeframeChange }) {
   )
 }
 
-// ─── Upcoming Shot List ──────────────────────────────────────────────────────
-
-function UpcomingShotList() {
-  return (
-    <section className="mt-6 bg-white border border-gray-200 rounded-2xl p-5">
-      {/* Section header */}
-      <div className="flex items-start gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-          <Camera className="w-5 h-5 text-amber-600" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-lg font-bold text-gray-900">Upcoming Shot List</h3>
-          <p className="text-sm text-gray-500">
-            What the content creators need to shoot next — sorted by deadline,
-            grouped by campaign.
-          </p>
-        </div>
-      </div>
-
-      {/* Empty state */}
-      <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
-        <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center mx-auto mb-3">
-          <CalendarIcon className="w-6 h-6 text-amber-400" />
-        </div>
-        <p className="text-sm font-semibold text-gray-700 mb-1">
-          No shots scheduled
-        </p>
-        <p className="text-xs text-gray-500 max-w-md mx-auto">
-          Once a campaign is created with shot list items, upcoming shoots
-          appear here with the shot description, shoot date, deadline, and
-          who's assigned. Content creators land on this page each morning to
-          know exactly what to capture that day.
-        </p>
-      </div>
-    </section>
-  )
-}
+// Upcoming Shot List was extracted to Marketing → Shot Lists menu.

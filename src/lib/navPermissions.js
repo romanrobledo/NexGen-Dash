@@ -11,33 +11,41 @@
 
 // Column order here matches sidebar order top-to-bottom so admins can scan
 // down a role's row and read access in the same sequence as the menu.
+//
+// KEYS THAT PREDATE THE CURRENT PLATFORM — kept because renaming them
+// would invalidate existing `role_permissions` rows in Supabase:
+//   `quick_focus`  → Pulse           (was Quick Focus → Roadmap → Pulse)
+//   `library`      → Training        (was Training Library)
+//   `admin_panel`  → Admin cluster   (also gates S.A.N.D., Meetings, Projects,
+//                                     Marketing, Finance, Compliance today)
+//
+// KEYS WITHOUT COLUMNS (menus are universal — no permission gate):
+//   AI Chat, Calendars, Candidates, Facility, S.A.N.D., Meetings
+// Attach a `permissionKey` on the Sidebar item AND add an entry here to
+// gate any of them.
+//
+// LEGACY ROW CLEANUP: these permission_key values no longer correspond
+// to any UI; the rows can be dropped from Supabase whenever convenient:
+//   `time_clock` (payroll subsystem retired)
+//   `facility` (menu deleted, permission left orphaned)
+//   `billing` / `marketing` / `finance` (folded into admin_panel earlier;
+//   marketing and finance now top-level again but still gated by
+//   admin_panel — see comment above)
 export const NAV_PERMISSIONS = [
-  // Key stays `quick_focus` — the user-facing label has evolved through
-  // Quick Focus → Roadmap → Pulse. Renaming the key would invalidate
-  // every existing role_permissions row, so it stays stable.
-  { key: 'quick_focus', label: 'Pulse'       },
-  // `time_clock` removed when the time-clock/payroll subsystem was retired.
-  // Existing role_permissions rows with permission_key='time_clock' are
-  // harmless — they just no longer correspond to any UI.
-  { key: 'library',     label: 'Training'    }, // legacy key name kept so existing role_permissions rows survive
-  { key: 'leads',       label: 'Leads'       },
-  // `calendars` doesn't have a permission gate yet — Calendars is universal.
-  // Add `{ key: 'calendars', label: 'Calendars' }` here AND attach the same
-  // key to the Sidebar item when you want to gate it.
-  { key: 'resources',   label: 'Resources'   },
-  // `facility` removed when the Facility menu + pages were deleted (its
-  // per-room responsibilities moved under /capacity). Existing
-  // role_permissions rows with permission_key='facility' are harmless —
-  // they just no longer correspond to any UI.
-  { key: 'families',    label: 'Families'    },
-  // `capacity` will be added once the page is built and gated. Universal
-  // for now (no permissionKey on the Sidebar item).
-  //
-  // `billing`, `marketing`, and `finance` were removed when those menus
-  // moved from top-level to sub-items under Admin. Access is now gated by
-  // the parent `admin_panel` permission — three separate keys weren't
-  // needed anymore. No code references them; existing role_permissions
-  // rows with those keys are harmless and can be cleaned up in Supabase
-  // whenever convenient.
-  { key: 'admin_panel', label: 'Admin'       },
+  { key: 'quick_focus',           label: 'Pulse'      },
+  { key: 'library',               label: 'Training'   },
+  // Org Chart — gates the org tree + drawer + Compass content.
+  // Key already used by Sidebar's Org Chart entry.
+  { key: 'training_role_clarity', label: 'Org Chart'  },
+  // Resources — covers both the top-level SOP Library entry and the
+  // Resources submenu (Handbooks / Applications / TRS). Same key on both.
+  { key: 'resources',             label: 'Resources'  },
+  { key: 'leads',                 label: 'Leads'      },
+  { key: 'families',              label: 'Families'   },
+  // Admin — currently gates the entire admin cluster: Admin submenu,
+  // plus the top-level S.A.N.D. / Meetings / Projects / Marketing /
+  // Finance / Compliance menus. Splitting these into per-menu keys
+  // (`marketing`, `finance`, etc.) is a follow-up when we want finer
+  // control; today one toggle grants all admin surfaces.
+  { key: 'admin_panel',           label: 'Admin'      },
 ]

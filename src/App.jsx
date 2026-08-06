@@ -13,6 +13,10 @@ import StaffProfileDatabasePage from './pages/StaffProfileDatabasePage'
 import StaffProfilePage from './pages/StaffProfilePage'
 import ContentCalendarPage from './pages/ContentCalendarPage'
 import MarketingEventsPage from './pages/MarketingEventsPage'
+import MarketingCalendarPage from './pages/MarketingCalendarPage'
+import ShotListsPage from './pages/ShotListsPage'
+import UploadPage from './pages/UploadPage'
+import OfficerPage from './pages/OfficerPage'
 import TrainingsDashboardPage from './pages/TrainingsDashboardPage'
 import TrainingsOnboardingPage from './pages/TrainingsOnboardingPage'
 import TrainingsRoleClarityPage from './pages/TrainingsRoleClarityPage'
@@ -203,6 +207,10 @@ function App() {
                 <Route path="/staff/:id" element={<StaffProfilePage />} />
                 <Route path="/calendars/content" element={<ContentCalendarPage />} />
                 <Route path="/marketing/events" element={<MarketingEventsPage />} />
+                <Route path="/marketing/calendar" element={<MarketingCalendarPage />} />
+                <Route path="/marketing/shot-lists" element={<ShotListsPage />} />
+                <Route path="/marketing/upload" element={<UploadPage />} />
+                <Route path="/officers/:officerKey" element={<OfficerPage />} />
                 <Route path="/trainings" element={<TrainingsDashboardPage />} />
                 <Route path="/trainings/onboarding" element={<TrainingsOnboardingPage />} />
                 {/* Role Clarity landing — must be registered before the generic

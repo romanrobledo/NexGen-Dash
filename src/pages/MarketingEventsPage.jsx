@@ -116,9 +116,13 @@ export default function MarketingEventsPage() {
         )}
       </section>
 
+      {/* Upcoming Shot List moved to Marketing → Shot Lists menu — a
+          single hub for both campaign and event shots so creators check
+          one place. */}
+
       {/* Past section — small, for context */}
       {past.length > 0 && (
-        <section className="bg-white border border-gray-200 rounded-2xl p-5">
+        <section className="bg-white border border-gray-200 rounded-2xl p-5 mt-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
               <CalendarClock className="w-4 h-4 text-gray-500" />
@@ -138,6 +142,8 @@ export default function MarketingEventsPage() {
     </div>
   )
 }
+
+// Upcoming Event Shot List was extracted to Marketing → Shot Lists menu.
 
 // ─── Single row ──────────────────────────────────────────────────────────────
 
