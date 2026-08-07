@@ -38,6 +38,35 @@ import {
 // Each top-level item has a permissionKey that maps to role_permissions.
 // Items WITHOUT a permissionKey are visible to everyone (universal access).
 const navItems = [
+  // Facility — daily interactive floor plan for what's happening in every
+  // room right now. Lifted to the top on 2026-08-07: it's the highest-
+  // traffic surface for anyone running daily operations, and a top-of-
+  // sidebar landing beats scrolling past a personal-context layer to
+  // reach it. Live daily view: teachers, kids, per-room incidents,
+  // family incidents, Google Sheets submission.
+  {
+    icon: Map,
+    label: 'Facility',
+    path: '/facility-map',
+  },
+  // ── Visual break #1: separates the daily-operations anchor (Facility)
+  //     from the learning + focus cluster (AI Chat, Pulse, Training →
+  //     Resources).
+  { separator: true },
+  // AI Chat + Pulse — moved into the learning/focus cluster on 2026-08-07
+  // (were above the top separator). They belong with Training and
+  // Resources thematically: AI Chat is knowledge-seeking, Pulse is
+  // roadmap/focus. Routes + permission keys unchanged, so nothing else
+  // needs updating.
+  //
+  // Tasks menu — historical note: a "Tasks" menu was removed from the
+  // sidebar in an earlier session. Legacy artifacts left intact:
+  //   - Route: /tasks still resolves (registered in src/App.jsx).
+  //   - Page: src/pages/PulsePage.jsx (project tile board).
+  //   - Component: src/components/ProjectStatusBoard.jsx.
+  //   - Data: src/lib/projects.js.
+  // Nothing links to /tasks anymore. If we want to delete the code
+  // entirely, drop the four files above and remove the /tasks Route.
   {
     icon: BotMessageSquare,
     label: 'AI Chat',
@@ -48,26 +77,15 @@ const navItems = [
   // → Pulse. Same route + same permission key (`quick_focus`) so existing
   // role_permissions rows and any deep links to /quick-focus keep working;
   // only the user-facing label evolved. NOTE: the current "Tasks" menu
-  // below was ALSO called "Pulse" earlier in this project's history — the
-  // name has just shuffled between the two pages. The QuickFocusPage.jsx
-  // filename stayed for git continuity.
+  // referenced above was ALSO called "Pulse" earlier in this project's
+  // history — the name has just shuffled between the two pages. The
+  // QuickFocusPage.jsx filename stayed for git continuity.
   {
     icon: Zap,
     label: 'Pulse',
     permissionKey: 'quick_focus',
     path: '/quick-focus',
   },
-  // Tasks menu removed from the sidebar. Left intact for now:
-  //   - Route: /tasks still resolves (registered in src/App.jsx).
-  //   - Page: src/pages/PulsePage.jsx (renders the project tile board).
-  //   - Component: src/components/ProjectStatusBoard.jsx.
-  //   - Data: src/lib/projects.js.
-  // Nothing links to /tasks anymore — it's an undocumented deep-link path.
-  // If we want to delete the code entirely, drop the four files above and
-  // remove the /tasks Route from src/App.jsx in one pass.
-  // ── Visual break #1: separates the personal-context layer (AI Chat,
-  //     Pulse) from the team-learning cluster (Trainings → Resources).
-  { separator: true },
   // Trainings is intentionally a LEAF (no submenu). Clicking it lands on the
   // tile-based /trainings dashboard where every training category — Onboarding,
   // Role Clarity, TRS, How To's, Team Fulfillment / Administration / Improvement
@@ -116,10 +134,10 @@ const navItems = [
       { label: 'TRS', path: '/trs/documents' },
     ],
   },
-  // ── Visual break #2: separates the team-learning cluster (Trainings,
-  //     Calendars, Resources) from the people-pipeline cluster (Leads +
-  //     Candidates — everyone touching the front of the enrollment / hiring
-  //     funnel).
+  // ── Visual break #2: separates the learning + focus cluster (AI Chat,
+  //     Pulse, Training, Calendars, Org Chart, SOP Library, Resources)
+  //     from the people-pipeline cluster (Leads + Candidates — everyone
+  //     touching the front of the enrollment / hiring funnel).
   { separator: true },
   {
     icon: UserPlus,
@@ -160,16 +178,11 @@ const navItems = [
       { label: 'Paperwork' },
     ],
   },
-  // Facility — daily interactive floor plan for what's happening in every
-  // room right now. Live daily view: teachers, kids, per-room incidents,
-  // family incidents, Google Sheets submission.
-  {
-    icon: Map,
-    label: 'Facility',
-    path: '/facility-map',
-  },
   // ── Visual break #3: separates the people-pipeline cluster from the
   //     operations + commercial cluster.
+  //     (Facility used to sit above this break — it was lifted to the
+  //     very top of the sidebar on 2026-08-07 so the daily-ops anchor is
+  //     one click away instead of scrolled past.)
   { separator: true },
   // Community menu removed — its content (per-room capacity + child-to-
   // teacher ratios) moved behind a "TRS Ratio" button on the Facility page
@@ -679,7 +692,7 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
               item.separator ? (
                 <NavDivider key={`sep-${i}`} collapsed={false} />
               ) : (
-                <NavItem key={item.label} item={item} collapsed={false} />
+                <NavItem key={`nav-${i}-${item.label}`} item={item} collapsed={false} />
               )
             )}
           </nav>
@@ -724,7 +737,7 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
           item.separator ? (
             <NavDivider key={`sep-${i}`} collapsed={collapsed} />
           ) : (
-            <NavItem key={item.label} item={item} collapsed={collapsed} />
+            <NavItem key={`nav-${i}-${item.label}`} item={item} collapsed={collapsed} />
           )
         )}
       </nav>
