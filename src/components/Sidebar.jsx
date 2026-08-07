@@ -7,6 +7,7 @@ import {
 
   GraduationCap,
   Users,
+  Baby,
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
@@ -38,20 +39,33 @@ import {
 // Each top-level item has a permissionKey that maps to role_permissions.
 // Items WITHOUT a permissionKey are visible to everyone (universal access).
 const navItems = [
-  // Facility — daily interactive floor plan for what's happening in every
-  // room right now. Lifted to the top on 2026-08-07: it's the highest-
-  // traffic surface for anyone running daily operations, and a top-of-
-  // sidebar landing beats scrolling past a personal-context layer to
-  // reach it. Live daily view: teachers, kids, per-room incidents,
-  // family incidents, Google Sheets submission.
+  // Top block — Facility / Students / Staff. The three daily-operations
+  // anchors sit together at the top so they're one click from anywhere.
+  //
+  // Students + Staff are shortcuts to pages that ALSO exist inside deeper
+  // menus (Families → Students, Org Chart route context). Duplication is
+  // intentional: two entry points to one page is fine; two different
+  // pages both called Students is not.
   {
     icon: Map,
     label: 'Facility',
     path: '/facility-map',
   },
-  // ── Visual break #1: separates the daily-operations anchor (Facility)
-  //     from the learning + focus cluster (AI Chat, Pulse, Training →
-  //     Resources).
+  {
+    icon: Baby,
+    label: 'Students',
+    permissionKey: 'families',
+    path: '/roster',
+  },
+  {
+    icon: Users,
+    label: 'Staff',
+    permissionKey: 'admin_panel',
+    path: '/staff/profile-database',
+  },
+  // ── Visual break #1: separates the daily-operations anchor
+  //     (Facility/Students/Staff) from the learning + focus cluster
+  //     (AI Chat, Pulse, Training → Resources).
   { separator: true },
   // AI Chat + Pulse — moved into the learning/focus cluster on 2026-08-07
   // (were above the top separator). They belong with Training and
@@ -357,9 +371,9 @@ const navItems = [
       {
         label: 'Books',
         children: [
-          { label: 'Accounts' },
-          { label: 'Transactions' },
-          { label: 'Reports' },
+          { label: 'Accounts',     path: '/finance/books/accounts' },
+          { label: 'Transactions', path: '/finance/books/transactions' },
+          { label: 'Reports',      path: '/finance/books/reports' },
         ],
       },
     ],

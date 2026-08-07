@@ -56,6 +56,9 @@ import CapacityPage from './pages/CapacityPage'
 import CapacityRoomPage from './pages/CapacityRoomPage'
 import FacilityMapPage from './pages/FacilityMapPage'
 import RosterPage from './pages/RosterPage'
+import BooksAccountsPage from './pages/BooksAccountsPage'
+import BooksTransactionsPage from './pages/BooksTransactionsPage'
+import BooksReportsPage from './pages/BooksReportsPage'
 import MarketingOffersPage from './pages/MarketingOffersPage'
 import FinanceDashboardPage from './pages/FinanceDashboardPage'
 import PerformanceCompliancePage from './pages/PerformanceCompliancePage'
@@ -175,6 +178,14 @@ function App() {
                     read-only view of children driven by the retired Sheet
                     sync. Lives under Families > Students in the sidebar. */}
                 <Route path="/roster" element={<RosterPage />} />
+                {/* Books — bank-statement upload, transaction categorization,
+                    monthly rollups. All three pages gated by RLS via the
+                    current_staff_is_books_admin() predicate; non-admin
+                    sessions see empty lists (which is the correct behavior
+                    for sensitive financial data). */}
+                <Route path="/finance/books/accounts" element={<BooksAccountsPage />} />
+                <Route path="/finance/books/transactions" element={<BooksTransactionsPage />} />
+                <Route path="/finance/books/reports" element={<BooksReportsPage />} />
                 <Route path="/finance" element={<FinanceDashboardPage />} />
                 <Route path="/leads" element={<LeadsDashboardPage />} />
                 <Route path="/leads/tours" element={<LeadsToursPage />} />
