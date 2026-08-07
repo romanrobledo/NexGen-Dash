@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { COLOR_THEMES } from '../lib/rooms'
 import { formatAge } from '../hooks/useChildren'
+import { computeRoomHealth, ageInMonths } from '../lib/ratios'
 
 /**
  * Right-side slide-in panel opened by clicking a room tile on the facility
@@ -244,6 +245,16 @@ export default function RoomDetailDrawer({
     ratioNumber != null &&
     ratioNumber > room.targetRatio
 
+  // HHSC health — separate from the walk-ins ratio above. This looks at
+  // the ENROLLED roster (real kids on the ground) and applies HHSC's
+  // youngest-child rule to see if current staffing meets the legal minimum.
+  // Falls back to 1 teacher if the drawer's live staff count is zero (which
+  // is not a real state — the ratio strip already flags no-staff separately).
+  const hhsc = computeRoomHealth(room, enrolledChildren, {
+    teachersAssumed: staffCount || 1,
+  })
+  const youngestKid = findYoungestKid(enrolledChildren)
+
   return (
     <>
       {/* Backdrop — clicking closes. */}
@@ -316,6 +327,12 @@ export default function RoomDetailDrawer({
             </span>
           )}
         </div>
+
+        {/* HHSC ratio card — legal-minimum staffing check based on the
+            enrolled roster + youngest-child rule. Different from the walk-in
+            strip above (that's live "who's in the room right now"; this is
+            "who's on the roster and what does HHSC require"). */}
+        <HhscRatioCard health={hhsc} youngestKid={youngestKid} staffCount={staffCount || 1} />
 
         {/* Body — scrollable */}
         <div className="flex-1 overflow-y-auto">
@@ -848,6 +865,113 @@ function EmptyLine({ text }) {
   return (
     <p className="text-xs text-gray-400 italic mb-3">{text}</p>
   )
+}
+
+// HHSC youngest-child ratio card. Rendered right below the walk-ins strip.
+// Reads a computed RoomHealth + youngest-kid meta and lays out the four
+// data points that matter: youngest age, applicable band, HHSC max, and
+// staffing gap. Color follows RoomHealth.accent.
+function HhscRatioCard({ health, youngestKid, staffCount }) {
+  const accentBg = {
+    emerald: 'bg-emerald-50 border-emerald-200',
+    amber:   'bg-amber-50 border-amber-200',
+    red:     'bg-red-50 border-red-200',
+    gray:    'bg-gray-50 border-gray-200',
+  }[health?.accent] || 'bg-gray-50 border-gray-200'
+  const accentDot = {
+    emerald: 'bg-emerald-500',
+    amber:   'bg-amber-500',
+    red:     'bg-red-500',
+    gray:    'bg-gray-400',
+  }[health?.accent] || 'bg-gray-400'
+  const accentText = {
+    emerald: 'text-emerald-800',
+    amber:   'text-amber-800',
+    red:     'text-red-800',
+    gray:    'text-gray-700',
+  }[health?.accent] || 'text-gray-700'
+
+  return (
+    <div className={`px-5 py-3 border-b border-gray-200 ${accentBg}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className={`w-2 h-2 rounded-full ${accentDot}`} />
+        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-600">
+          HHSC Ratio Check
+        </p>
+        <span className={`ml-auto text-[11px] font-bold uppercase ${accentText}`}>
+          {health?.label || 'Unknown'}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+        <RatioField
+          label="Youngest kid"
+          value={
+            youngestKid
+              ? `${youngestKid.fullName} · ${formatMonthsShort(youngestKid.months)}`
+              : '—'
+          }
+        />
+        <RatioField
+          label="Age band"
+          value={health?.band?.label || '—'}
+        />
+        <RatioField
+          label="HHSC max / teacher"
+          value={
+            health?.maxPerTeacher != null ? `1 : ${health.maxPerTeacher}` : '—'
+          }
+        />
+        <RatioField
+          label="Teachers needed"
+          value={
+            health?.teachersRequired != null
+              ? `${health.teachersRequired} (assumed ${staffCount})`
+              : '—'
+          }
+        />
+      </div>
+      {health?.rationale && (
+        <p className={`mt-2 text-[11px] italic leading-snug ${accentText}`}>
+          {health.rationale}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function RatioField({ label, value }) {
+  return (
+    <div>
+      <p className="text-[9px] uppercase tracking-wider font-bold text-gray-400 leading-none">
+        {label}
+      </p>
+      <p className="text-xs font-semibold text-gray-800 tabular-nums leading-tight mt-0.5 truncate">
+        {value}
+      </p>
+    </div>
+  )
+}
+
+// Find the youngest enrolled kid (with a valid DOB) for the ratio card's
+// name+age display. Returns { fullName, months } or null.
+function findYoungestKid(enrolledChildren) {
+  let winner = null
+  for (const c of enrolledChildren || []) {
+    const m = ageInMonths(c.dateOfBirth)
+    if (m == null) continue
+    if (!winner || m < winner.months) {
+      winner = { fullName: c.fullName, months: m }
+    }
+  }
+  return winner
+}
+
+function formatMonthsShort(m) {
+  if (m == null) return '—'
+  if (m < 24) return `${m}mo`
+  const y = Math.floor(m / 12)
+  const rem = m % 12
+  return rem === 0 ? `${y}yr` : `${y}yr ${rem}mo`
 }
 
 function formatTime(iso) {

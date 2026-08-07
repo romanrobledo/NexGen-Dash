@@ -55,6 +55,7 @@ import PulsePage from './pages/PulsePage'
 import CapacityPage from './pages/CapacityPage'
 import CapacityRoomPage from './pages/CapacityRoomPage'
 import FacilityMapPage from './pages/FacilityMapPage'
+import RosterPage from './pages/RosterPage'
 import MarketingOffersPage from './pages/MarketingOffersPage'
 import FinanceDashboardPage from './pages/FinanceDashboardPage'
 import PerformanceCompliancePage from './pages/PerformanceCompliancePage'
@@ -170,6 +171,10 @@ function App() {
                     the interactive floor plan with per-room drawers for
                     adding kids / teachers / incidents. */}
                 <Route path="/facility-map" element={<FacilityMapPage />} />
+                {/* Roster — canonical enrollment CRUD surface. Replaces the
+                    read-only view of children driven by the retired Sheet
+                    sync. Lives under Families > Students in the sidebar. */}
+                <Route path="/roster" element={<RosterPage />} />
                 <Route path="/finance" element={<FinanceDashboardPage />} />
                 <Route path="/leads" element={<LeadsDashboardPage />} />
                 <Route path="/leads/tours" element={<LeadsToursPage />} />

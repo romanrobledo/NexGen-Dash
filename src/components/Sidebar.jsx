@@ -156,7 +156,7 @@ const navItems = [
     permissionKey: 'families',
     children: [
       { label: 'Guardians' },
-      { label: 'Students' },
+      { label: 'Students', path: '/roster' },
       { label: 'Paperwork' },
     ],
   },

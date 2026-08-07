@@ -115,7 +115,16 @@ const GRID_TEMPLATE_AREAS = `
 
 const ICONS = { Baby, Smile, BookOpen, GraduationCap, Sun, Dumbbell, Users }
 
-export default function FacilityFloorPlan({ rooms, entriesByRoom, onRoomClick }) {
+// Tile-scoped health pill classes. Kept inline to the floor plan so the
+// tile's tight spacing dictates the styling (smaller than the drawer's).
+const HEALTH_PILL = {
+  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  amber:   'bg-amber-50 text-amber-700 border-amber-200',
+  red:     'bg-red-100 text-red-800 border-red-300',
+  gray:    'bg-gray-50 text-gray-500 border-gray-200',
+}
+
+export default function FacilityFloorPlan({ rooms, entriesByRoom, healthByRoom, onRoomClick }) {
   const { mobileMode } = useViewMode()
   const summary = summarizeEnrollment(rooms)
 
@@ -166,24 +175,25 @@ export default function FacilityFloorPlan({ rooms, entriesByRoom, onRoomClick })
         >
           {PHYSICAL_ROOMS.map((cell) => {
             if (cell.type === 'support') {
-              return <SupportCell key={cell.position} cell={cell} />
+              return <SupportCell key={cell.area} cell={cell} />
             }
             const room = roomByPhysical.get(cell.position)
             if (!room) {
               return (
                 <PlaceholderCell
-                  key={cell.position}
+                  key={cell.area}
                   cell={cell}
                 />
               )
             }
             return (
               <RoomRegion
-                key={cell.position}
+                key={cell.area}
                 area={cell.area}
                 physicalPosition={cell.position}
                 room={room}
                 entry={entriesByRoom[room.roomNumber]}
+                health={healthByRoom?.get(room.roomNumber) || null}
                 onClick={() => onRoomClick(room.roomNumber)}
               />
             )
@@ -213,7 +223,7 @@ export default function FacilityFloorPlan({ rooms, entriesByRoom, onRoomClick })
 // ─── Cell variants ──────────────────────────────────────────────────────────
 
 // Interactive classroom tile — the main content of the map.
-function RoomRegion({ area, physicalPosition, room, entry, onClick }) {
+function RoomRegion({ area, physicalPosition, room, entry, health, onClick }) {
   const Icon = ICONS[room.iconName] || Users
   const theme = COLOR_THEMES[room.accent] || COLOR_THEMES.indigo
 
@@ -227,6 +237,13 @@ function RoomRegion({ area, physicalPosition, room, entry, onClick }) {
   const pct = knownCap && cap > 0 ? Math.min(100, Math.round((enrolled / cap) * 100)) : 0
   const isFull = knownCap && enrolled >= cap
 
+  // HHSC ratio health — red for over ratio/capacity, amber for near limit,
+  // green for OK. Falls back to the older "isFull" amber if the health
+  // calc didn't return (e.g. hook still loading).
+  const badgeAccent = health?.accent || (isFull ? 'amber' : null)
+  const badgeLabel = health?.label || (isFull ? 'Full' : null)
+  const isRatioAlarm = health?.status === 'over_capacity' || health?.status === 'over_ratio'
+
   // Whether this classroom's Supabase roomNumber matches its physical
   // position (rooms 1-3) or is placed via PHYSICAL_ROOM_MAP (rooms 4-8).
   // Different label so admins know which is which.
@@ -236,9 +253,9 @@ function RoomRegion({ area, physicalPosition, room, entry, onClick }) {
     <button
       onClick={onClick}
       style={{ gridArea: area }}
-      className={`text-left bg-white border-l-4 ${theme.border} border-y border-r border-gray-200 rounded-lg p-2.5 hover:border-indigo-300 hover:shadow-sm transition-all group min-w-0 flex flex-col ${
+      className={`text-left bg-white border-l-4 ${theme.border} border-y border-r border-gray-200 rounded-lg p-2.5 hover:border-indigo-300 hover:shadow-sm transition-all group min-w-0 flex flex-col relative ${
         incidentCount > 0 ? 'ring-1 ring-orange-200' : ''
-      }`}
+      } ${isRatioAlarm ? 'ring-2 ring-red-300 shadow-[0_0_0_1px_rgba(239,68,68,0.25)]' : ''}`}
     >
       {/* Top row — physical room number + teacher */}
       <div className="flex items-start gap-1.5 mb-1">
@@ -262,18 +279,23 @@ function RoomRegion({ area, physicalPosition, room, entry, onClick }) {
         {room.ageRange}
       </p>
 
-      {/* Enrollment — compact */}
+      {/* Enrollment + health badge */}
       <div className="flex items-baseline gap-1 mb-1 mt-auto">
         <span className={`text-base font-bold tabular-nums leading-none ${
-          isFull ? 'text-amber-600' : 'text-gray-900'
+          isRatioAlarm ? 'text-red-700' : isFull ? 'text-amber-600' : 'text-gray-900'
         }`}>
           {enrolled}
         </span>
         <span className="text-[10px] text-gray-400 tabular-nums leading-none">
           / {knownCap ? cap : '—'}
         </span>
-        {isFull && (
-          <span className="text-[9px] text-amber-700 font-bold ml-auto">FULL</span>
+        {badgeAccent && badgeLabel && (
+          <span
+            className={`text-[9px] font-bold ml-auto px-1.5 py-0.5 rounded border tabular-nums leading-none whitespace-nowrap ${HEALTH_PILL[badgeAccent]}`}
+            title={health?.rationale || ''}
+          >
+            {badgeLabel.toUpperCase()}
+          </span>
         )}
       </div>
 

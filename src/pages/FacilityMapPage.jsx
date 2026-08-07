@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Map,
+  // Aliased so `new Map()` in useMemo resolves to the built-in JS constructor
+  // rather than this icon component. The Lucide name collides with the
+  // global.
+  Map as MapIcon,
   AlertTriangle,
   Send,
   UsersRound,
@@ -19,6 +22,7 @@ import {
 import { useViewMode } from '../contexts/ViewModeContext'
 import { useClassrooms, findRoomByNumber } from '../hooks/useClassrooms'
 import { useChildren } from '../hooks/useChildren'
+import { computeRoomHealth } from '../lib/ratios'
 import FacilityFloorPlan from '../components/FacilityFloorPlan'
 import RoomDetailDrawer from '../components/RoomDetailDrawer'
 import CohortDrawer from '../components/CohortDrawer'
@@ -367,6 +371,21 @@ export default function FacilityMapPage() {
     }
   }, [entriesByRoom, familyIncidents, childrenByStatus, attendance, rooms, teacherStatusByRoom])
 
+  // HHSC ratio health per room. Keyed by roomNumber → RoomHealth. Applies
+  // the youngest-child rule from the prompt — a mixed-age room's ratio is
+  // whatever the youngest kid physically in it demands.
+  // teachersAssumed defaults to 1 because the classrooms table stores a
+  // single lead per room; live aide counts from `entriesByRoom` refine
+  // this later once the Daily screen is wired.
+  const healthByRoom = useMemo(() => {
+    const map = new Map()
+    for (const r of rooms) {
+      const kids = childrenByRoom.get(r.roomNumber) || []
+      map.set(r.roomNumber, computeRoomHealth(r, kids, { teachersAssumed: 1 }))
+    }
+    return map
+  }, [rooms, childrenByRoom])
+
   // Cohort counts for the tile row. Memoized so the tiles don't re-render
   // on every unrelated state change.
   const cohortCounts = useMemo(
@@ -541,7 +560,7 @@ export default function FacilityMapPage() {
       {/* Header */}
       <div className="flex items-start gap-3 mb-5">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
-          <Map className="w-6 h-6 text-white" />
+          <MapIcon className="w-6 h-6 text-white" />
         </div>
         <div className="min-w-0 flex-1">
           <h1 className={`font-bold text-gray-900 ${mobileMode ? 'text-xl' : 'text-2xl'}`}>
@@ -625,6 +644,7 @@ export default function FacilityMapPage() {
         <FacilityFloorPlan
           rooms={rooms}
           entriesByRoom={entriesByRoom}
+          healthByRoom={healthByRoom}
           onRoomClick={(roomNumber) => setOpenRoomNumber(roomNumber)}
         />
       )}
