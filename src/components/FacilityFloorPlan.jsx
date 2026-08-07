@@ -242,7 +242,9 @@ function RoomRegion({ area, physicalPosition, room, entry, health, onClick }) {
   // calc didn't return (e.g. hook still loading).
   const badgeAccent = health?.accent || (isFull ? 'amber' : null)
   const badgeLabel = health?.label || (isFull ? 'Full' : null)
-  const isRatioAlarm = health?.status === 'over_capacity' || health?.status === 'over_ratio'
+  // over_ratio was removed with the shadow-engine rip-out on 2026-08-07;
+  // over_capacity is the only alarm that runs on real DB data today.
+  const isRatioAlarm = health?.status === 'over_capacity'
 
   // Whether this classroom's Supabase roomNumber matches its physical
   // position (rooms 1-3) or is placed via PHYSICAL_ROOM_MAP (rooms 4-8).

@@ -371,17 +371,15 @@ export default function FacilityMapPage() {
     }
   }, [entriesByRoom, familyIncidents, childrenByStatus, attendance, rooms, teacherStatusByRoom])
 
-  // HHSC ratio health per room. Keyed by roomNumber → RoomHealth. Applies
-  // the youngest-child rule from the prompt — a mixed-age room's ratio is
-  // whatever the youngest kid physically in it demands.
-  // teachersAssumed defaults to 1 because the classrooms table stores a
-  // single lead per room; live aide counts from `entriesByRoom` refine
-  // this later once the Daily screen is wired.
+  // Room health per room. Keyed by roomNumber → RoomHealth. Purely
+  // DB-backed — capacity overflow/watch is real, everything else
+  // returns `unknown` (grey pill) until real ratio + staffing data
+  // land. See src/lib/ratios.js for why no shadow thresholds live here.
   const healthByRoom = useMemo(() => {
     const map = new Map()
     for (const r of rooms) {
       const kids = childrenByRoom.get(r.roomNumber) || []
-      map.set(r.roomNumber, computeRoomHealth(r, kids, { teachersAssumed: 1 }))
+      map.set(r.roomNumber, computeRoomHealth(r, kids))
     }
     return map
   }, [rooms, childrenByRoom])

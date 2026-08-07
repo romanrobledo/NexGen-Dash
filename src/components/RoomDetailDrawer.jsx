@@ -233,8 +233,10 @@ export default function RoomDetailDrawer({
   }
 
   // Live ratio calculation — designated teacher (if present) + aides
-  // versus present kids. Vacation/Absent/Sick designated teacher counts
-  // as zero for the ratio, which is the point of tracking status.
+  // versus walk-in kids added via the drawer. All inputs are real
+  // drawer state, NOT hardcoded. The pill below handles the null-
+  // threshold case explicitly (grey "No ratio set") — do not use
+  // overRatio's falsy state as a green-pass signal.
   const kidCount = entry.kids.length
   const aideCount = (entry.aides || []).length
   const designatedCount = teacherStatus.status === 'present' ? 1 : 0
@@ -245,14 +247,34 @@ export default function RoomDetailDrawer({
     ratioNumber != null &&
     ratioNumber > room.targetRatio
 
-  // HHSC health — separate from the walk-ins ratio above. This looks at
-  // the ENROLLED roster (real kids on the ground) and applies HHSC's
-  // youngest-child rule to see if current staffing meets the legal minimum.
-  // Falls back to 1 teacher if the drawer's live staff count is zero (which
-  // is not a real state — the ratio strip already flags no-staff separately).
-  const hhsc = computeRoomHealth(room, enrolledChildren, {
-    teachersAssumed: staffCount || 1,
-  })
+  // Ratio pill state — three explicit outcomes:
+  //   (a) no DB threshold  → grey "No ratio set"  (same rule as tiles)
+  //   (b) no live staffing → grey "No staffing"   (comparison can't run)
+  //   (c) both present     → real green/red comparison
+  // Never render a green pass when the comparison couldn't happen.
+  let ratioPillClass, ratioPillDot, ratioPillText
+  if (room.targetRatio == null) {
+    ratioPillClass = 'bg-gray-100 text-gray-600 border-gray-200'
+    ratioPillDot   = 'bg-gray-400'
+    ratioPillText  = 'No ratio set'
+  } else if (staffCount === 0) {
+    ratioPillClass = 'bg-gray-100 text-gray-600 border-gray-200'
+    ratioPillDot   = 'bg-gray-400'
+    ratioPillText  = 'No staffing'
+  } else if (overRatio) {
+    ratioPillClass = 'bg-red-50 text-red-700 border-red-200'
+    ratioPillDot   = 'bg-red-500'
+    ratioPillText  = `1 : ${ratioNumber.toFixed(1)} over threshold`
+  } else {
+    ratioPillClass = 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    ratioPillDot   = 'bg-emerald-500'
+    ratioPillText  = `1 : ${ratioNumber.toFixed(1)} under threshold`
+  }
+
+  // Room health — capacity checks are real; ratio checks return `unknown`
+  // until the database has a threshold + staffing count. No assumed-teacher
+  // shortcuts. See src/lib/ratios.js header for the full rationale.
+  const roomHealth = computeRoomHealth(room, enrolledChildren)
   const youngestKid = findYoungestKid(enrolledChildren)
 
   return (
@@ -310,29 +332,19 @@ export default function RoomDetailDrawer({
           <span className="text-gray-500">
             <strong className="text-gray-900 tabular-nums">{kidCount}</strong> {kidCount === 1 ? 'walk-in' : 'walk-ins'}
           </span>
-          {ratioNumber != null && (
-            <span
-              className={`ml-auto inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border font-semibold text-[11px] ${
-                overRatio
-                  ? 'bg-red-50 text-red-700 border-red-200'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  overRatio ? 'bg-red-500' : 'bg-emerald-500'
-                }`}
-              />
-              1 : {ratioNumber.toFixed(1)} {overRatio ? 'over ratio' : 'under ratio'}
-            </span>
-          )}
+          <span
+            className={`ml-auto inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border font-semibold text-[11px] ${ratioPillClass}`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${ratioPillDot}`} />
+            {ratioPillText}
+          </span>
         </div>
 
-        {/* HHSC ratio card — legal-minimum staffing check based on the
-            enrolled roster + youngest-child rule. Different from the walk-in
-            strip above (that's live "who's in the room right now"; this is
-            "who's on the roster and what does HHSC require"). */}
-        <HhscRatioCard health={hhsc} youngestKid={youngestKid} staffCount={staffCount || 1} />
+        {/* Room ratio status — reads target_ratio from the database and
+            reports honestly. Grey "No ratio" state is the default until
+            TRS/HHSC standards ship to a DB table. Do not add fabricated
+            fallbacks — the whole point of this card is to admit ignorance. */}
+        <RoomRatioCard health={roomHealth} youngestKid={youngestKid} />
 
         {/* Body — scrollable */}
         <div className="flex-1 overflow-y-auto">
@@ -867,36 +879,36 @@ function EmptyLine({ text }) {
   )
 }
 
-// HHSC youngest-child ratio card. Rendered right below the walk-ins strip.
-// Reads a computed RoomHealth + youngest-kid meta and lays out the four
-// data points that matter: youngest age, applicable band, HHSC max, and
-// staffing gap. Color follows RoomHealth.accent.
-function HhscRatioCard({ health, youngestKid, staffCount }) {
+// Room ratio status card. Reports capacity truths and admits ratio
+// ignorance. Two REAL fields (youngest kid age + configured ratio
+// from DB) plus the health rationale. No fabricated HHSC/TRS numbers
+// live in this component — thresholds come from room.targetRatio only.
+function RoomRatioCard({ health, youngestKid }) {
   const accentBg = {
-    emerald: 'bg-emerald-50 border-emerald-200',
-    amber:   'bg-amber-50 border-amber-200',
-    red:     'bg-red-50 border-red-200',
-    gray:    'bg-gray-50 border-gray-200',
+    amber: 'bg-amber-50 border-amber-200',
+    red:   'bg-red-50 border-red-200',
+    gray:  'bg-gray-50 border-gray-200',
   }[health?.accent] || 'bg-gray-50 border-gray-200'
   const accentDot = {
-    emerald: 'bg-emerald-500',
-    amber:   'bg-amber-500',
-    red:     'bg-red-500',
-    gray:    'bg-gray-400',
+    amber: 'bg-amber-500',
+    red:   'bg-red-500',
+    gray:  'bg-gray-400',
   }[health?.accent] || 'bg-gray-400'
   const accentText = {
-    emerald: 'text-emerald-800',
-    amber:   'text-amber-800',
-    red:     'text-red-800',
-    gray:    'text-gray-700',
+    amber: 'text-amber-800',
+    red:   'text-red-800',
+    gray:  'text-gray-700',
   }[health?.accent] || 'text-gray-700'
+
+  const configuredRatio =
+    health?.targetRatio != null ? `1 : ${health.targetRatio}` : 'Not set'
 
   return (
     <div className={`px-5 py-3 border-b border-gray-200 ${accentBg}`}>
       <div className="flex items-center gap-2 mb-2">
         <span className={`w-2 h-2 rounded-full ${accentDot}`} />
         <p className="text-[10px] uppercase tracking-wider font-bold text-gray-600">
-          HHSC Ratio Check
+          Ratio Status
         </p>
         <span className={`ml-auto text-[11px] font-bold uppercase ${accentText}`}>
           {health?.label || 'Unknown'}
@@ -916,17 +928,15 @@ function HhscRatioCard({ health, youngestKid, staffCount }) {
           value={health?.band?.label || '—'}
         />
         <RatioField
-          label="HHSC max / teacher"
-          value={
-            health?.maxPerTeacher != null ? `1 : ${health.maxPerTeacher}` : '—'
-          }
+          label="Configured ratio"
+          value={configuredRatio}
         />
         <RatioField
-          label="Teachers needed"
+          label="Enrolled / capacity"
           value={
-            health?.teachersRequired != null
-              ? `${health.teachersRequired} (assumed ${staffCount})`
-              : '—'
+            health?.capacity != null
+              ? `${health.enrolled} / ${health.capacity}`
+              : `${health?.enrolled ?? 0} / —`
           }
         />
       </div>
