@@ -213,6 +213,19 @@ export function useBankStatements() {
 // configured" and let the caller surface a warning; the row is
 // already inserted so nothing hangs.
 async function triggerParse(statementId, filePath) {
+  // Diagnostic logging block — prove which branch we take on production.
+  // Log booleans + URL origin only (never the secret value), so we can
+  // spot missing/mistyped env vars without leaking auth. Remove when
+  // the auto-parse pipeline is verified working end-to-end.
+  console.info('[parseWebhook] env check', {
+    url_defined: !!PARSE_WEBHOOK_URL,
+    url_origin: PARSE_WEBHOOK_URL
+      ? (() => { try { return new URL(PARSE_WEBHOOK_URL).origin + new URL(PARSE_WEBHOOK_URL).pathname } catch { return 'unparseable' } })()
+      : null,
+    secret_defined: !!PARSE_WEBHOOK_SECRET,
+    secret_len: PARSE_WEBHOOK_SECRET ? PARSE_WEBHOOK_SECRET.length : 0,
+  })
+
   if (!PARSE_WEBHOOK_URL) {
     console.info(
       '[useBankStatements] VITE_STATEMENT_PARSE_WEBHOOK not set — statement stays pending, no auto-parse.'
@@ -234,6 +247,7 @@ async function triggerParse(statementId, filePath) {
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), PARSE_WEBHOOK_TIMEOUT_MS)
+    console.info('[parseWebhook] POSTing', { statement_id: statementId, file_path: filePath })
     const res = await fetch(PARSE_WEBHOOK_URL, {
       method: 'POST',
       headers: {
@@ -248,12 +262,17 @@ async function triggerParse(statementId, filePath) {
       signal: controller.signal,
     })
     clearTimeout(timer)
+    const bodyText = await res.text().catch(() => '')
+    console.info('[parseWebhook] response', {
+      status: res.status,
+      statusText: res.statusText,
+      body_preview: bodyText.slice(0, 300),
+    })
     if (!res.ok) {
-      const body = await res.text().catch(() => '')
       console.warn(
         '[useBankStatements] Parse webhook returned',
         res.status,
-        body.slice(0, 200)
+        bodyText.slice(0, 200)
       )
       return { ok: false, reason: `HTTP ${res.status}` }
     }
@@ -263,6 +282,7 @@ async function triggerParse(statementId, filePath) {
       err?.name === 'AbortError'
         ? `no response within ${PARSE_WEBHOOK_TIMEOUT_MS / 1000}s`
         : err?.message || 'network error'
+    console.warn('[parseWebhook] caught', { name: err?.name, message: err?.message })
     console.warn('[useBankStatements] Parse webhook failed:', reason)
     return { ok: false, reason }
   }
