@@ -18,51 +18,114 @@ import { useBooksMonthly } from '../hooks/useBooksMonthly'
  * v_books_revenue_by_source, v_books_completeness). This page reads
  * and renders — no JS math on expense/revenue rollups.
  *
- * MANDATORY banner: whenever v_books_completeness.expense_completeness
- * is 'INCOMPLETE' for the selected month, the expense card + net card
- * BOTH render a completeness banner explaining exactly what's missing
- * (staff payroll checks) and why the total shown understates reality.
+ * MANDATORY banner: whenever v_books_completeness for the selected
+ * month is 'INCOMPLETE' — OR when NO row exists for the month at all
+ * (unknown state) — the expense card + net card BOTH render a
+ * completeness banner. Absent is not complete; treating "no row" as
+ * "verified complete" is the same failure mode as the Finance
+ * Dashboard's $0.00-subsidies-for-missing-data bug.
  *
- * MANDATORY: no margin/profit figure is rendered when the month is
- * incomplete. A missing number is fine; a confident wrong one is not.
+ * MANDATORY: no margin/profit figure is rendered when completeness is
+ * anything other than 'complete'. A missing number is fine; a
+ * confident wrong one is not.
  */
+
+// Categories that must NOT flow into the operating-net calculation.
+// owner_draw is personal withdrawal, not operating spend.
+// unclassified is unfiled — including it in net is filing-by-default.
+// TODO: this list belongs on a DB-side table (a bool column on a
+// categories table, or a view like v_books_operating_monthly), not
+// hardcoded in JS. Same shadow-engine failure mode we ripped out of
+// src/lib/ratios.js — flagging as tech debt so it doesn't compound.
+const NON_OPERATING_EXPENSE_CATEGORIES = new Set([
+  'owner_draw',
+  'unclassified',
+])
+
+// Normalize month values to "YYYY-MM" so string comparisons work
+// regardless of whether the source column is `date` ("2026-07-01") or
+// `timestamptz` ("2026-07-01T00:00:00+00:00").
+const monthKey = (iso) => String(iso || '').slice(0, 7)
 export default function BooksReportsPage() {
   const { monthly, revenueBySource, completeness, loading, error, refetch } = useBooksMonthly()
 
+  // Months use "YYYY-MM" keys throughout so filter comparisons don't
+  // silently miss when one source returns date and another returns
+  // timestamptz. (This is what let the completeness lookup fail earlier
+  // — v_books_completeness may return a different column type than
+  // v_books_monthly, and strict === made them non-matching.)
   const months = useMemo(() => {
     const set = new Set()
-    for (const r of monthly) set.add(r.month)
-    for (const r of revenueBySource) set.add(r.month)
-    for (const r of completeness) set.add(r.month)
+    for (const r of monthly)          set.add(monthKey(r.month))
+    for (const r of revenueBySource)  set.add(monthKey(r.month))
+    for (const r of completeness)     set.add(monthKey(r.month))
     return Array.from(set).sort((a, b) => (a > b ? -1 : 1))
   }, [monthly, revenueBySource, completeness])
 
   const [monthIdx, setMonthIdx] = useState(0)
-  const currentMonth = months[monthIdx] || null
+  const currentMonth = months[monthIdx] || null   // "YYYY-MM"
   const completenessRow = useMemo(
-    () => completeness.find((c) => c.month === currentMonth) || null,
+    () => completeness.find((c) => monthKey(c.month) === currentMonth) || null,
     [completeness, currentMonth]
   )
-  const isIncomplete = !!completenessRow?.isIncomplete
+
+  // Three-state completeness:
+  //   'incomplete' — row exists AND expense_completeness starts with 'INCOMPLETE'
+  //   'complete'   — row exists AND expense_completeness starts with 'COMPLETE'
+  //   'unknown'    — anything else (no row, NULL, PARTIAL, or a string we
+  //                  don't recognize). Defaulting to unknown when unsure
+  //                  is the same rule as [[null-ratio-means-cannot-evaluate]]:
+  //                  absent evidence of completeness is not evidence of it.
+  //
+  // Only 'complete' is safe to show a net figure against. Both
+  // 'incomplete' and 'unknown' suppress net and render a banner.
+  const completenessState = !completenessRow
+    ? 'unknown'
+    : completenessRow.isIncomplete
+      ? 'incomplete'
+      : completenessRow.isComplete
+        ? 'complete'
+        : 'unknown'
+  const netIsSafeToShow = completenessState === 'complete'
 
   // Month-scoped slices.
   const monthExpenses = useMemo(
-    () => monthly.filter((r) => r.month === currentMonth && r.direction === 'debit'),
+    () => monthly.filter((r) => monthKey(r.month) === currentMonth && r.direction === 'debit'),
     [monthly, currentMonth]
   )
   const monthRevenueTotal = useMemo(
     () => revenueBySource
-      .filter((r) => r.month === currentMonth)
+      .filter((r) => monthKey(r.month) === currentMonth)
       .reduce((sum, r) => sum + Number(r.total || 0), 0),
     [revenueBySource, currentMonth]
   )
+  // Gross debit total — used ONLY for the expense card total display,
+  // NOT for the net calculation. Net uses monthOperatingExpenseTotal.
   const monthExpenseTotal = useMemo(
     () => monthExpenses.reduce((sum, r) => sum + Number(r.total || 0), 0),
     [monthExpenses]
   )
+  // Operating expenses — excludes owner_draw and unclassified. This is
+  // the number that flows into net. Excluded amounts still render on
+  // the expense card so their existence is visible; they just don't
+  // count as "operating spend."
+  const monthOperatingExpenseTotal = useMemo(
+    () => monthExpenses
+      .filter((r) => !NON_OPERATING_EXPENSE_CATEGORIES.has(r.category))
+      .reduce((sum, r) => sum + Number(r.total || 0), 0),
+    [monthExpenses]
+  )
+  const monthExcludedFromOperating = useMemo(() => {
+    const map = new Map()
+    for (const r of monthExpenses) {
+      if (!NON_OPERATING_EXPENSE_CATEGORIES.has(r.category)) continue
+      map.set(r.category, (map.get(r.category) || 0) + Number(r.total || 0))
+    }
+    return Array.from(map.entries()).map(([category, total]) => ({ category, total }))
+  }, [monthExpenses])
   const monthRevenueRows = useMemo(
     () => revenueBySource
-      .filter((r) => r.month === currentMonth)
+      .filter((r) => monthKey(r.month) === currentMonth)
       .sort((a, b) => b.total - a.total),
     [revenueBySource, currentMonth]
   )
@@ -167,10 +230,13 @@ export default function BooksReportsPage() {
               }))}
             />
 
-            {/* Expenses by category — banner on top when incomplete */}
+            {/* Expenses by category — banner on top when incomplete OR unknown */}
             <div>
-              {isIncomplete && (
-                <CompletenessBanner completenessRow={completenessRow} />
+              {completenessState !== 'complete' && (
+                <CompletenessBanner
+                  state={completenessState}
+                  completenessRow={completenessRow}
+                />
               )}
               <Section
                 title="Expenses by category"
@@ -178,8 +244,8 @@ export default function BooksReportsPage() {
                 accent="red"
                 total={monthExpenseTotal}
                 totalCaveat={
-                  isIncomplete
-                    ? 'Excludes uncategorized payroll checks — see banner above.'
+                  completenessState !== 'complete'
+                    ? 'Gross outflow shown — see banner above for what may be missing.'
                     : null
                 }
                 empty="No expense lines for this month."
@@ -191,22 +257,26 @@ export default function BooksReportsPage() {
               />
             </div>
 
-            {/* Net — silent when incomplete, per spec */}
+            {/* Net — silent whenever completeness is not 'complete'. */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2">
                 Net for {formatMonth(currentMonth)}
               </p>
-              {isIncomplete ? (
+              {netIsSafeToShow ? (
+                <NetLine
+                  revenue={monthRevenueTotal}
+                  operatingExpenses={monthOperatingExpenseTotal}
+                  excluded={monthExcludedFromOperating}
+                />
+              ) : (
                 <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
                   <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   <span>
-                    Net margin is intentionally NOT shown while expense totals are
-                    incomplete. Reveals only once every check is categorized —
-                    otherwise the number would look ~30-50% better than reality.
+                    {completenessState === 'unknown'
+                      ? 'Net margin hidden: v_books_completeness has no row for this month, so completeness cannot be verified. Absent is not the same as complete.'
+                      : 'Net margin hidden while expense totals are incomplete. Reveals only once every check is categorized — otherwise the number would look ~30–50% better than reality.'}
                   </span>
                 </div>
-              ) : (
-                <NetLine revenue={monthRevenueTotal} expenses={monthExpenseTotal} />
               )}
             </div>
           </>
@@ -218,7 +288,23 @@ export default function BooksReportsPage() {
 
 // ─── Sections ───────────────────────────────────────────────────────────
 
-function CompletenessBanner({ completenessRow }) {
+function CompletenessBanner({ state, completenessRow }) {
+  if (state === 'unknown') {
+    return (
+      <div className="mb-3 flex items-start gap-3 p-4 rounded-xl border border-amber-300 bg-amber-50">
+        <AlertTriangle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-amber-900 leading-relaxed">
+          <p className="font-semibold mb-1">Completeness unknown for this month.</p>
+          <p>
+            <code>v_books_completeness</code> returned no row for this reporting
+            period, so we cannot verify whether every check has been categorized.
+            Treating as incomplete — net margin hidden. If this persists after
+            the parser runs, check the view definition.
+          </p>
+        </div>
+      </div>
+    )
+  }
   const count = completenessRow?.uncategorizedChecks || 0
   const total = completenessRow?.uncategorizedCheckTotal || 0
   return (
@@ -285,34 +371,52 @@ function Section({ title, icon: Icon, accent, total, totalCaveat, rows, empty })
   )
 }
 
-function NetLine({ revenue, expenses }) {
-  const net = revenue - expenses
+function NetLine({ revenue, operatingExpenses, excluded }) {
+  const net = revenue - operatingExpenses
   const netCls = net >= 0 ? 'text-emerald-700' : 'text-red-700'
+  const excludedTotal = (excluded || []).reduce((sum, r) => sum + Number(r.total || 0), 0)
   return (
-    <div className="flex items-baseline gap-2 flex-wrap">
-      <span className="text-xs text-gray-500 tabular-nums">
-        {formatUSD(revenue)} revenue
-      </span>
-      <span className="text-xs text-gray-400">−</span>
-      <span className="text-xs text-gray-500 tabular-nums">
-        {formatUSD(expenses)} expenses
-      </span>
-      <span className="text-xs text-gray-400">=</span>
-      <span className={`text-xl font-bold tabular-nums ${netCls}`}>
-        {net >= 0 ? '+' : ''}{formatUSD(net)}
-      </span>
+    <div className="space-y-1.5">
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span className="text-xs text-gray-500 tabular-nums">
+          {formatUSD(revenue)} revenue
+        </span>
+        <span className="text-xs text-gray-400">−</span>
+        <span className="text-xs text-gray-500 tabular-nums">
+          {formatUSD(operatingExpenses)} operating expenses
+        </span>
+        <span className="text-xs text-gray-400">=</span>
+        <span className={`text-xl font-bold tabular-nums ${netCls}`}>
+          {net >= 0 ? '+' : ''}{formatUSD(net)}
+        </span>
+      </div>
+      {excluded && excluded.length > 0 && (
+        <p className="text-[10px] text-gray-500 italic leading-relaxed">
+          Excluded from operating (not counted in net):{' '}
+          {excluded
+            .map((r) => `${r.category} ${formatUSD(r.total)}`)
+            .join(' · ')}
+          {excludedTotal > 0 && ` — ${formatUSD(excludedTotal)} total`}
+        </p>
+      )}
     </div>
   )
 }
 
-function formatMonth(iso) {
-  if (!iso) return '—'
-  try {
-    const d = new Date(iso)
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  } catch {
-    return iso
-  }
+// Month formatter — parses "YYYY-MM" or "YYYY-MM-DD..." with local
+// components rather than through new Date(iso). The old version called
+// `new Date("2026-07-01")` which JS parses as UTC midnight, then
+// toLocaleDateString formatted it in local TZ (US Central, UTC-5/-6),
+// where UTC midnight July 1 is 6-7pm June 30 — so "July 2026" rendered
+// as "June 2026." Constructing from (year, month-1, 1) avoids the trip
+// through UTC entirely.
+function formatMonth(monthKey) {
+  if (!monthKey) return '—'
+  const s = String(monthKey).slice(0, 7) // accepts "YYYY-MM" or "YYYY-MM-DD..."
+  const [y, m] = s.split('-').map(Number)
+  if (!y || !m) return String(monthKey)
+  const d = new Date(y, m - 1, 1)
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
 function formatUSD(n) {

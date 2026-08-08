@@ -86,14 +86,22 @@ function mapRevenue(row) {
 }
 
 function mapCompleteness(row) {
+  const raw = String(row.expense_completeness || '').trim()
+  // Prefix-match, case-insensitive. The view returns descriptive strings
+  // like "INCOMPLETE — check-based payroll not categorized" (not bare
+  // 'INCOMPLETE'), so a strict === would silently miss and the UI would
+  // treat an incomplete month as complete. Reserved: only strings that
+  // START with 'COMPLETE' are treated as complete — anything else
+  // (INCOMPLETE variants, PARTIAL, PENDING, NULL, unknown) is safest
+  // interpreted as "cannot evaluate as complete."
   return {
     month: row.month,
     uncategorizedChecks: row.uncategorized_checks,
     uncategorizedCheckTotal: Number(row.uncategorized_check_total || 0),
     unresolvedTxns: row.unresolved_txns,
-    // Raw string from the view — passed through, not interpreted.
-    expenseCompleteness: row.expense_completeness,
-    isIncomplete: (row.expense_completeness || '').toUpperCase() === 'INCOMPLETE',
+    expenseCompleteness: raw,
+    isIncomplete: /^INCOMPLETE\b/i.test(raw),
+    isComplete:   /^COMPLETE\b/i.test(raw),
   }
 }
 
