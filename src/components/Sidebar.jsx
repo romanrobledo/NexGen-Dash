@@ -187,12 +187,13 @@ const navItems = [
       { label: 'Procedures', path: '/candidates/procedures' },
     ],
   },
-  // Marketing — moved into the pipeline cluster right below Candidates.
-  // Full offer tree preserved so no previously-reachable page becomes a
-  // dead link.
+  // Advertising — renamed from Marketing (label only). Routes stay under
+  // /marketing/* so bookmarks, deep links, permission key, and every
+  // sub-page filename are unchanged. Sits in the pipeline cluster right
+  // below Candidates.
   {
     icon: Megaphone,
-    label: 'Marketing',
+    label: 'Advertising',
     permissionKey: 'admin_panel',
     children: [
       { label: 'Dashboard', path: '/marketing' },
@@ -248,21 +249,41 @@ const navItems = [
       { label: 'Tasks', path: '/targets/tasks' },
     ],
   },
-  // Meetings — "The Rhythm" (teams / cadence / agenda / outcomes).
-  // Route stays /admin/meetings so bookmarks still resolve.
+  // Meetings — parent with two children:
+  //   Structure — "The Rhythm" (teams / cadence / agenda / outcomes).
+  //     Route stays /admin/meetings so bookmarks + AdminMeetingsPage
+  //     filename are unchanged.
+  //   Calendar — placeholder, no path yet.
   {
     icon: Users,
     label: 'Meetings',
     permissionKey: 'admin_panel',
-    path: '/admin/meetings',
+    children: [
+      { label: 'Structure', path: '/admin/meetings' },
+      { label: 'Calendar' },
+    ],
   },
-  // Admin — top-level container that now holds S.A.N.D., Staff Management,
-  // Platform Settings, Officers, and Finance. Order intentional:
-  //   1. S.A.N.D. — highest-frequency dashboard, land here first
-  //   2. Staff Management — accounts, submissions, permissions
-  //   3. Platform Settings — theme, integrations, webhooks
-  //   4. Officers — AI agent feeds (Paperclip pipeline)
-  //   5. Finance — money flows (billing + books)
+  // Staff Management — lifted out of Admin to a top-level menu on
+  // 2026-08-07. Sits directly above Admin so the two settings clusters
+  // remain visually adjacent. Same permission key (admin_panel) so
+  // access rules don't change; only position moves.
+  {
+    icon: Users,
+    label: 'Staff Management',
+    permissionKey: 'admin_panel',
+    children: [
+      { label: 'Accounts', path: '/admin' },
+      { label: 'Submissions', path: '/staff/responses' },
+      { label: 'Permissions', path: '/admin/permissions' },
+    ],
+  },
+  // Admin — top-level container that now holds S.A.N.D., Platform
+  // Settings, Officers, and Finance. Staff Management moved out to a
+  // top-level menu above (see block just above). Order inside Admin:
+  //   1. S.A.N.D. — highest-frequency dashboard
+  //   2. Platform Settings — theme, integrations, webhooks
+  //   3. Officers — AI agent feeds (Paperclip pipeline)
+  //   4. Finance — money flows (billing + books)
   {
     icon: ShieldCheck,
     label: 'Admin',
@@ -272,14 +293,6 @@ const navItems = [
       // the app landing page. Top of Admin so it's the first thing you
       // see when you open the menu.
       { label: 'S.A.N.D.', path: '/' },
-      {
-        label: 'Staff Management',
-        children: [
-          { label: 'Accounts', path: '/admin' },
-          { label: 'Submissions', path: '/staff/responses' },
-          { label: 'Permissions', path: '/admin/permissions' },
-        ],
-      },
       {
         label: 'Platform Settings',
         children: [
