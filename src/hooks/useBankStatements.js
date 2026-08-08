@@ -5,6 +5,20 @@ import { useAuth } from './useAuth'
 const BUCKET = 'bank-statements'
 const MAX_BYTES = 15 * 1024 * 1024 // 15 MB
 
+// n8n parse-trigger webhook. Env vars come from Vite (VITE_ prefix
+// exposes them to the browser bundle — acceptable because n8n's Header
+// Auth node validates the secret server-side; a leaked value from the
+// bundle would let a stranger POST parse jobs against Roman's own
+// statements, no wider blast radius. Set both in Vercel; if the URL
+// is unset the app skips the POST silently and the statement stays
+// `pending` — Roman triggers manually.
+const PARSE_WEBHOOK_URL = import.meta.env.VITE_STATEMENT_PARSE_WEBHOOK
+const PARSE_WEBHOOK_SECRET = import.meta.env.VITE_STATEMENT_PARSE_SECRET
+// Cap the parse-trigger wait so a slow/hung webhook can't hold the
+// upload feedback hostage. 8 s is well above n8n's typical webhook
+// ack; anything slower is a red flag worth surfacing as a warning.
+const PARSE_WEBHOOK_TIMEOUT_MS = 8000
+
 /**
  * Read bank_statements (newest first) + upload a PDF to the
  * bank-statements bucket + insert a pending row pointing at it.
@@ -23,9 +37,17 @@ const MAX_BYTES = 15 * 1024 * 1024 // 15 MB
  *   statements: Statement[],
  *   loading: boolean, error: string|null,
  *   refetch: () => Promise<void>,
- *   uploadStatement: (file: File, accountId: string) => Promise<{data, error}>,
+ *   uploadStatement: (file: File, accountId: string) => Promise<{data, error, warning?}>,
  *   uploading: boolean, uploadError: string|null,
  * }}
+ *
+ * uploadStatement return contract:
+ *   error   — hard failure (upload or insert failed). data is null.
+ *   warning — soft failure. Row inserted successfully as `pending`
+ *             but the parse-trigger webhook didn't fire (URL not
+ *             configured, network error, non-2xx, or timeout).
+ *             Roman can trigger parse manually. data is populated.
+ *   neither — success. Row inserted, webhook fired, parser will pick up.
  */
 export function useBankStatements() {
   const { staff } = useAuth()
@@ -147,7 +169,22 @@ export function useBankStatements() {
       }
 
       await fetchStatements()
-      return { data: mapRow(data), error: null }
+
+      // ── Fire the parse-trigger webhook AFTER both storage + insert
+      //    succeed. Not awaited-inside-try because a webhook failure
+      //    must NOT roll back the upload — the row lands as `pending`
+      //    either way and Roman can trigger parse manually. Bounded
+      //    by PARSE_WEBHOOK_TIMEOUT_MS so a hung webhook can't hold
+      //    the upload feedback hostage. NO automatic retry per spec:
+      //    a duplicate POST means a duplicate parse.
+      const parse = await triggerParse(data.id, path)
+      return {
+        data: mapRow(data),
+        error: null,
+        warning: parse.ok
+          ? null
+          : `Uploaded. Parse not started (${parse.reason}) — trigger manually from n8n.`,
+      }
     } catch (err) {
       const msg = err?.message || 'Upload failed'
       setUploadError(msg)
@@ -166,6 +203,68 @@ export function useBankStatements() {
     uploadStatement,
     uploading,
     uploadError,
+  }
+}
+
+// POST { statement_id, file_path, bucket } to the n8n parse webhook.
+// Returns { ok, reason }. Never throws — every failure mode collapses
+// to `{ ok: false, reason: string }` so the caller's happy path stays
+// linear. If the URL isn't configured, treat as "webhook not
+// configured" and let the caller surface a warning; the row is
+// already inserted so nothing hangs.
+async function triggerParse(statementId, filePath) {
+  if (!PARSE_WEBHOOK_URL) {
+    console.info(
+      '[useBankStatements] VITE_STATEMENT_PARSE_WEBHOOK not set — statement stays pending, no auto-parse.'
+    )
+    return { ok: false, reason: 'webhook not configured' }
+  }
+  // The secret guard is explicit rather than a bare `...(secret ? ... : {})`
+  // because missing-secret + n8n Header Auth = a 403 with no clue in the
+  // response body. Better to surface "secret not configured" than to
+  // guess at a 403 later. If Roman intentionally runs without auth in
+  // dev, flip the header off by leaving VITE_STATEMENT_PARSE_SECRET
+  // unset — but n8n will reject the call.
+  if (!PARSE_WEBHOOK_SECRET) {
+    console.info(
+      '[useBankStatements] VITE_STATEMENT_PARSE_SECRET not set — n8n Header Auth will reject the POST.'
+    )
+    return { ok: false, reason: 'secret not configured' }
+  }
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), PARSE_WEBHOOK_TIMEOUT_MS)
+    const res = await fetch(PARSE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-webhook-secret': PARSE_WEBHOOK_SECRET,
+      },
+      body: JSON.stringify({
+        statement_id: statementId,
+        file_path: filePath,
+        bucket: BUCKET,
+      }),
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      console.warn(
+        '[useBankStatements] Parse webhook returned',
+        res.status,
+        body.slice(0, 200)
+      )
+      return { ok: false, reason: `HTTP ${res.status}` }
+    }
+    return { ok: true }
+  } catch (err) {
+    const reason =
+      err?.name === 'AbortError'
+        ? `no response within ${PARSE_WEBHOOK_TIMEOUT_MS / 1000}s`
+        : err?.message || 'network error'
+    console.warn('[useBankStatements] Parse webhook failed:', reason)
+    return { ok: false, reason }
   }
 }
 

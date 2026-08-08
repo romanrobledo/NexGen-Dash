@@ -4,6 +4,7 @@ import {
   FileText,
   Loader2,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Plus,
   Landmark,
@@ -292,16 +293,23 @@ function NewAccountForm({ onCreate, onCancel }) {
 function UploadZone({ disabled, uploading, uploadError, onUpload, accountLabel }) {
   const inputRef = useRef(null)
   const [dragOver, setDragOver] = useState(false)
-  const [flash, setFlash] = useState(/** @type {{ tone:'ok'|'err', msg:string }|null} */ (null))
+  const [flash, setFlash] = useState(/** @type {{ tone:'ok'|'warn'|'err', msg:string }|null} */ (null))
 
   async function handleFile(file) {
     if (!file || disabled) return
     setFlash(null)
     const res = await onUpload(file)
+    // Three-state tone: err (upload/insert failed, no row), warn (row
+    // inserted but parse trigger failed — Roman kicks off parse
+    // manually), ok (row inserted + parser notified). The `warning`
+    // channel is separate from `error` so we don't scare Roman with
+    // red text over a soft failure.
     if (res?.error) {
       setFlash({ tone: 'err', msg: res.error })
+    } else if (res?.warning) {
+      setFlash({ tone: 'warn', msg: res.warning })
     } else {
-      setFlash({ tone: 'ok', msg: `Uploaded "${file.name}" — awaiting processing.` })
+      setFlash({ tone: 'ok', msg: `Uploaded "${file.name}" — parser notified.` })
     }
   }
 
@@ -375,11 +383,15 @@ function UploadZone({ disabled, uploading, uploadError, onUpload, accountLabel }
           className={`mt-3 flex items-start gap-2 p-3 rounded-lg text-xs ${
             flash?.tone === 'ok'
               ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-              : 'bg-red-50 border border-red-200 text-red-700'
+              : flash?.tone === 'warn'
+                ? 'bg-amber-50 border border-amber-200 text-amber-800'
+                : 'bg-red-50 border border-red-200 text-red-700'
           }`}
         >
           {flash?.tone === 'ok' ? (
             <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          ) : flash?.tone === 'warn' ? (
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           ) : (
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           )}
