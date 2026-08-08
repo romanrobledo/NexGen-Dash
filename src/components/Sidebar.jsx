@@ -340,6 +340,7 @@ const navItems = [
               { label: 'Accounts',     path: '/finance/books/accounts' },
               { label: 'Transactions', path: '/finance/books/transactions' },
               { label: 'Reports',      path: '/finance/books/reports' },
+              { label: 'Rules',        path: '/finance/books/rules' },
             ],
           },
         ],

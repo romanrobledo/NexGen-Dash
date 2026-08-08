@@ -59,6 +59,7 @@ import RosterPage from './pages/RosterPage'
 import BooksAccountsPage from './pages/BooksAccountsPage'
 import BooksTransactionsPage from './pages/BooksTransactionsPage'
 import BooksReportsPage from './pages/BooksReportsPage'
+import BooksRulesPage from './pages/BooksRulesPage'
 import MarketingOffersPage from './pages/MarketingOffersPage'
 import FinanceDashboardPage from './pages/FinanceDashboardPage'
 import PerformanceCompliancePage from './pages/PerformanceCompliancePage'
@@ -186,6 +187,12 @@ function App() {
                 <Route path="/finance/books/accounts" element={<BooksAccountsPage />} />
                 <Route path="/finance/books/transactions" element={<BooksTransactionsPage />} />
                 <Route path="/finance/books/reports" element={<BooksReportsPage />} />
+                {/* Books → Rules — vendor_rules admin surface. Test patterns,
+                    manage the 155+ pattern→category mappings, re-apply rules
+                    across a statement. Read/write gated by the same
+                    current_staff_is_books_admin() predicate as the other Books
+                    pages. */}
+                <Route path="/finance/books/rules" element={<BooksRulesPage />} />
                 <Route path="/finance" element={<FinanceDashboardPage />} />
                 <Route path="/leads" element={<LeadsDashboardPage />} />
                 <Route path="/leads/tours" element={<LeadsToursPage />} />
