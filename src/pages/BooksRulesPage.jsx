@@ -450,32 +450,34 @@ function ReapplyPanel({ statements, previewChanges, applyChanges, busy }) {
       {preview && (
         <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
           <p className="font-semibold mb-1">
-            <strong className="tabular-nums">{preview.wouldChange}</strong> of{' '}
-            <strong className="tabular-nums">{preview.eligible}</strong> transaction
-            {preview.eligible === 1 ? '' : 's'} would change category.
+            <strong className="tabular-nums">{preview.totalChanges}</strong> change
+            {preview.totalChanges === 1 ? '' : 's'} across{' '}
+            <strong className="tabular-nums">{preview.eligibleTotal}</strong> eligible
+            transaction{preview.eligibleTotal === 1 ? '' : 's'}.
           </p>
-          {preview.wouldChange === 0 && (
+          {preview.totalChanges === 0 ? (
             <p className="italic mt-1">Rules already match current data.</p>
-          )}
-          {preview.sampleChanges?.length > 0 && (
-            <div className="mt-2 space-y-1 text-[11px]">
-              <p className="font-semibold">Sample changes:</p>
-              {preview.sampleChanges.map((c, i) => (
-                <p key={i} className="font-mono truncate">
-                  <span className="text-amber-700">{c.description.slice(0, 40)}</span>{' '}
-                  · {c.from} → <strong>{c.to}</strong>
-                </p>
-              ))}
-              {preview.wouldChange > preview.sampleChanges.length && (
-                <p className="italic">…and {preview.wouldChange - preview.sampleChanges.length} more.</p>
-              )}
-            </div>
-          )}
-          {preview.rpcErrors > 0 && (
-            <p className="mt-2 text-red-700 font-semibold">
-              ⚠ {preview.rpcErrors} preview RPC{preview.rpcErrors === 1 ? '' : 's'} failed —
-              actual apply count may differ.
-            </p>
+          ) : (
+            <ul className="mt-2 space-y-0.5 text-[11px]">
+              <li className="tabular-nums">
+                <strong>{preview.wouldRecategorize}</strong> would recategorize
+                <span className="text-amber-700 italic ml-1">
+                  (had a rule match, new match differs)
+                </span>
+              </li>
+              <li className="tabular-nums">
+                <strong>{preview.wouldUncategorize}</strong> would uncategorize
+                <span className="text-amber-700 italic ml-1">
+                  (had a rule match, no longer matches any active rule)
+                </span>
+              </li>
+              <li className="tabular-nums">
+                <strong>{preview.wouldNewlyMatch}</strong> would newly match
+                <span className="text-amber-700 italic ml-1">
+                  (currently unmatched, a rule now matches)
+                </span>
+              </li>
+            </ul>
           )}
         </div>
       )}

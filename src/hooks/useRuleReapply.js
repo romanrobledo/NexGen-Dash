@@ -45,15 +45,18 @@ export function useRuleReapply() {
   }, [])
 
   /**
-   * Preview — count transactions whose category WOULD change if
-   * categorize_statement ran right now. Parallel RPC per eligible
-   * transaction, then aggregate client-side.
+   * Preview — single RPC to preview_categorize_statement. Returns four
+   * counts computed by the DB function via LEFT JOIN LATERAL against
+   * match_vendor_rule, sharing the exact same eligibility WHERE clause
+   * as categorize_statement.
    *
-   * Slow-ish (5-10s for a 250-txn statement over ~200 concurrent RPCs).
-   * Roman explicitly wants an exact count before applying, so a client
-   * loop is preferred over an approximation. Candidate future optimization:
-   * a preview_categorize_statement(uuid) Postgres function returning the
-   * count directly — a small helper, not a schema change.
+   * One source of truth for both eligibility and matching. No JS-side
+   * mirror. If the SQL guards change, this call reflects it
+   * automatically — preview and apply cannot diverge.
+   *
+   * (Replaced a JS parallel-RPC loop on 2026-08-07 that duplicated the
+   *  eligibility WHERE clause in the frontend — see the memory note
+   *  preview-categorize-statement for the history.)
    */
   const previewChanges = useCallback(async (statementId) => {
     if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -61,77 +64,39 @@ export function useRuleReapply() {
     setBusy(true)
     setError(null)
     try {
-      // 1. Fetch eligible transactions — mirrors categorize_statement's guards.
-      const { data: txns, error: tErr } = await supabase
-        .from('bank_transactions')
-        .select('id, description, direction, category, subcategory, matched_rule_id')
-        .eq('statement_id', statementId)
-        .neq('description', '')
-        .not('categorized_by', 'eq', 'human')
-
-      if (tErr) throw tErr
-      const eligible = txns || []
-      if (eligible.length === 0) {
-        return { data: { eligible: 0, wouldChange: 0, sampleChanges: [] }, error: null }
-      }
-
-      // 2. Match each in parallel. Supabase handles ~50-100 concurrent
-      //    requests fine; batching keeps memory + backpressure sane.
-      const BATCH = 50
-      const results = new Array(eligible.length)
-      for (let i = 0; i < eligible.length; i += BATCH) {
-        const slice = eligible.slice(i, i + BATCH)
-        const matched = await Promise.all(
-          slice.map((t) =>
-            supabase.rpc('match_vendor_rule', {
-              p_description: t.description,
-              p_direction: t.direction,
-            })
-          )
-        )
-        matched.forEach((res, k) => {
-          const row = Array.isArray(res.data) ? res.data[0] || null : null
-          results[i + k] = { txn: slice[k], match: row, error: res.error?.message || null }
-        })
-      }
-
-      // 3. Diff — a change is a difference in category, subcategory,
-      //    OR matched_rule_id. (Same three fields categorize_statement
-      //    writes.) Also count rule-going-away (match was NULL): the
-      //    function itself doesn't clear stale matches, so those don't
-      //    change on re-apply — we don't count them as "would change."
-      let wouldChange = 0
-      const samples = []
-      for (const r of results) {
-        if (!r || !r.match) continue // no match → function leaves alone
-        const changed =
-          r.match.category    !== r.txn.category    ||
-          r.match.subcategory !== r.txn.subcategory ||
-          r.match.rule_id     !== r.txn.matched_rule_id
-        if (changed) {
-          wouldChange++
-          if (samples.length < 5) {
-            samples.push({
-              description: r.txn.description,
-              from: `${r.txn.category || '—'}${r.txn.subcategory ? '/' + r.txn.subcategory : ''}`,
-              to:   `${r.match.category || '—'}${r.match.subcategory ? '/' + r.match.subcategory : ''}`,
-              matchedOn: r.match.matched_on,
-            })
-          }
+      const { data, error: qErr } = await supabase.rpc(
+        'preview_categorize_statement',
+        { p_statement_id: statementId }
+      )
+      if (qErr) throw qErr
+      const row = Array.isArray(data) ? data[0] || null : data || null
+      if (!row) {
+        return {
+          data: {
+            eligibleTotal: 0,
+            wouldRecategorize: 0,
+            wouldUncategorize: 0,
+            wouldNewlyMatch: 0,
+            totalChanges: 0,
+          },
+          error: null,
         }
       }
-
+      const wouldRecategorize = Number(row.would_recategorize || 0)
+      const wouldUncategorize = Number(row.would_uncategorize || 0)
+      const wouldNewlyMatch   = Number(row.would_newly_match   || 0)
       return {
         data: {
-          eligible: eligible.length,
-          wouldChange,
-          sampleChanges: samples,
-          rpcErrors: results.filter((r) => r?.error).length,
+          eligibleTotal: Number(row.eligible_total || 0),
+          wouldRecategorize,
+          wouldUncategorize,
+          wouldNewlyMatch,
+          totalChanges: wouldRecategorize + wouldUncategorize + wouldNewlyMatch,
         },
         error: null,
       }
     } catch (err) {
-      const msg = err?.message || 'Preview failed'
+      const msg = err?.message || 'preview_categorize_statement failed'
       console.error('[useRuleReapply.previewChanges]', msg)
       setError(msg)
       return { data: null, error: msg }
