@@ -38,14 +38,20 @@ import {
 
 // Each top-level item has a permissionKey that maps to role_permissions.
 // Items WITHOUT a permissionKey are visible to everyone (universal access).
+//
+// Structural restructure on 2026-08-07:
+//   - Top block: Facility / Students / Staff / Families
+//   - Learning cluster: AI Chat → Resources, Compliance nested here
+//   - People pipeline: Leads / Candidates / Marketing
+//   - Operations: Projects / Meetings / Admin (Admin now absorbs S.A.N.D.,
+//     Officers, and Finance as children — one place for everything the
+//     Founder/Operator lives in).
 const navItems = [
-  // Top block — Facility / Students / Staff. The three daily-operations
-  // anchors sit together at the top so they're one click from anywhere.
-  //
+  // ── Top block ────────────────────────────────────────────────────────────
+  // Facility / Students / Staff / Families — daily-operations anchors.
   // Students + Staff are shortcuts to pages that ALSO exist inside deeper
-  // menus (Families → Students, Org Chart route context). Duplication is
-  // intentional: two entry points to one page is fine; two different
-  // pages both called Students is not.
+  // menus (Families → Students). Two entry points to one page is fine;
+  // two different pages both called Students is not.
   {
     icon: Map,
     label: 'Facility',
@@ -63,66 +69,60 @@ const navItems = [
     permissionKey: 'admin_panel',
     path: '/staff/profile-database',
   },
-  // ── Visual break #1: separates the daily-operations anchor
-  //     (Facility/Students/Staff) from the learning + focus cluster
-  //     (AI Chat, Pulse, Training → Resources).
+  // Families — parent menu with Guardians / Students / Paperwork.
+  // Sits at the top with the other "who" anchors, right under Staff.
+  {
+    icon: Users,
+    label: 'Families',
+    permissionKey: 'families',
+    children: [
+      { label: 'Guardians' },
+      { label: 'Students', path: '/roster' },
+      { label: 'Paperwork' },
+    ],
+  },
+  // ── Visual break #1: top block → learning + focus cluster.
   { separator: true },
-  // AI Chat + Pulse — moved into the learning/focus cluster on 2026-08-07
-  // (were above the top separator). They belong with Training and
-  // Resources thematically: AI Chat is knowledge-seeking, Pulse is
-  // roadmap/focus. Routes + permission keys unchanged, so nothing else
-  // needs updating.
+
+  // ── Learning + focus cluster ─────────────────────────────────────────────
+  // AI Chat / Pulse / Training / Calendars / Org Chart / SOP Library /
+  // Compliance / Resources.
   //
-  // Tasks menu — historical note: a "Tasks" menu was removed from the
-  // sidebar in an earlier session. Legacy artifacts left intact:
-  //   - Route: /tasks still resolves (registered in src/App.jsx).
-  //   - Page: src/pages/PulsePage.jsx (project tile board).
-  //   - Component: src/components/ProjectStatusBoard.jsx.
-  //   - Data: src/lib/projects.js.
-  // Nothing links to /tasks anymore. If we want to delete the code
-  // entirely, drop the four files above and remove the /tasks Route.
+  // Tasks menu — historical note: removed from the sidebar in an earlier
+  // session. Legacy artifacts left intact:
+  //   - Route /tasks still resolves (in src/App.jsx)
+  //   - Page src/pages/PulsePage.jsx (project tile board)
+  //   - Component src/components/ProjectStatusBoard.jsx
+  //   - Data src/lib/projects.js
   {
     icon: BotMessageSquare,
     label: 'AI Chat',
     path: '/ai-chat',
-    // no permissionKey — accessible to every authenticated user
   },
-  // Pulse — high-level roadmap page. Rename history: Quick Focus → Roadmap
-  // → Pulse. Same route + same permission key (`quick_focus`) so existing
-  // role_permissions rows and any deep links to /quick-focus keep working;
-  // only the user-facing label evolved. NOTE: the current "Tasks" menu
-  // referenced above was ALSO called "Pulse" earlier in this project's
-  // history — the name has just shuffled between the two pages. The
-  // QuickFocusPage.jsx filename stayed for git continuity.
+  // Pulse — high-level roadmap page. Same route + same permission key
+  // (quick_focus). QuickFocusPage.jsx filename kept for git continuity.
   {
     icon: Zap,
     label: 'Pulse',
     permissionKey: 'quick_focus',
     path: '/quick-focus',
   },
-  // Trainings is intentionally a LEAF (no submenu). Clicking it lands on the
-  // tile-based /trainings dashboard where every training category — Onboarding,
-  // Role Clarity, TRS, How To's, Team Fulfillment / Administration / Improvement
-  // / Revenue — is its own clickable tile with a progress meter.
+  // Training is a LEAF — /trainings dashboard shows every training
+  // category as its own tile.
   {
     icon: GraduationCap,
     label: 'Training',
     permissionKey: 'library',
     path: '/trainings',
   },
-  // Calendars — singular menu, no submenus. Sub-calendars (Google Calendar
-  // Sync / School / Staff / Events) live INSIDE the /calendar page as
-  // left-column tabs. Route stayed /calendar across rename → rename → rename
-  // to avoid churning any bookmarks; only the visible label evolves.
+  // Calendars — sub-calendars (Google Calendar Sync / School / Staff /
+  // Events) are tabs INSIDE /calendar, not submenu entries.
   {
     icon: CalendarDays,
     label: 'Calendars',
     path: '/calendar',
   },
-  // Org Chart — single-leaf menu. Landing is the role selector (Who Am I)
-  // and each role opens a combined page with What Do I Do / How Do I Do It /
-  // When Do I Do It / Why Is It Important / How Do I Know I Am Doing A Good
-  // Job stacked as scroll sections. No sub-menus.
+  // Org Chart — single-leaf menu.
   {
     icon: Network,
     label: 'Org Chart',
@@ -130,13 +130,25 @@ const navItems = [
     path: '/org-chart',
   },
   // SOP Library — promoted from a nested Resources child to a top-level
-  // menu. Inherits the `resources` permission key so existing access rules
-  // don't change; only its position in the sidebar moves.
+  // menu. Inherits the `resources` permission key.
   {
     icon: BookOpen,
     label: 'SOP Library',
     permissionKey: 'resources',
     path: '/sop-library',
+  },
+  // Compliance — moved into the learning cluster right below SOP Library.
+  // Same "is our house in order" job as the reference material lives with,
+  // so it fits with SOP Library thematically. Absorbs Data Integrity as a
+  // child (both previously sibling leaves under Admin).
+  {
+    icon: ClipboardCheck,
+    label: 'Compliance',
+    permissionKey: 'admin_panel',
+    children: [
+      { label: 'Overview', path: '/admin/performance-compliance' },
+      { label: 'Data Integrity', path: '/admin/data-integrity' },
+    ],
   },
   {
     icon: FolderOpen,
@@ -148,11 +160,13 @@ const navItems = [
       { label: 'TRS', path: '/trs/documents' },
     ],
   },
-  // ── Visual break #2: separates the learning + focus cluster (AI Chat,
-  //     Pulse, Training, Calendars, Org Chart, SOP Library, Resources)
-  //     from the people-pipeline cluster (Leads + Candidates — everyone
-  //     touching the front of the enrollment / hiring funnel).
+  // ── Visual break #2: learning cluster → people-pipeline cluster.
   { separator: true },
+
+  // ── People-pipeline cluster ──────────────────────────────────────────────
+  // Leads / Candidates / Marketing — everyone touching the front of the
+  // enrollment, hiring, or acquisition funnel. Families moved out to the
+  // top block (they're already enrolled).
   {
     icon: UserPlus,
     label: 'Leads',
@@ -163,12 +177,7 @@ const navItems = [
       { label: 'Procedures', path: '/leads/procedures' },
     ],
   },
-  // Candidates — the hiring twin of Leads. Same three-page shape
-  // (Dashboard / Interviews / Procedures) so anyone who knows the Leads
-  // section already knows this one. Shares `useCandidatesData` across
-  // the three pages so counts stay aligned. No permission key yet;
-  // add a `candidates` entry to NAV_PERMISSIONS when you want to gate
-  // it (probably Founder + Operator + Director + Hiring Manager).
+  // Candidates — hiring twin of Leads. Same three-page shape.
   {
     icon: UserSearch,
     label: 'Candidates',
@@ -178,149 +187,19 @@ const navItems = [
       { label: 'Procedures', path: '/candidates/procedures' },
     ],
   },
-  // Families — moved up out of the ops/commercial block so it lives next to
-  // its people-pipeline peers (Leads for prospective families, Candidates
-  // for staff, Families for enrolled). Placement above Facility keeps the
-  // "who" cluster together before the "where" cluster starts.
-  {
-    icon: Users,
-    label: 'Families',
-    permissionKey: 'families',
-    children: [
-      { label: 'Guardians' },
-      { label: 'Students', path: '/roster' },
-      { label: 'Paperwork' },
-    ],
-  },
-  // ── Visual break #3: separates the people-pipeline cluster from the
-  //     operations + commercial cluster.
-  //     (Facility used to sit above this break — it was lifted to the
-  //     very top of the sidebar on 2026-08-07 so the daily-ops anchor is
-  //     one click away instead of scrolled past.)
-  { separator: true },
-  // Community menu removed — its content (per-room capacity + child-to-
-  // teacher ratios) moved behind a "TRS Ratio" button on the Facility page
-  // header. Route /facility still resolves to CapacityPage.jsx so any
-  // in-app links from that button don't 404.
-  //
-  // Families moved up next to Leads / Candidates (see block above). What
-  // remains here is the operations + commercial cluster. Admin is now a
-  // slimmer container; Targets & Tasks / Marketing / Finance / Compliance
-  // each got lifted out to their own top-level menus so they're one click
-  // deep instead of two. Every lifted menu inherits the `admin_panel`
-  // permission key so access rules don't change.
-  // S.A.N.D. — lifted out of Admin. The Sleep At Night Dashboard is the
-  // most-visited surface in the app; one click deep beats two. Same
-  // admin_panel permission gate so access rules don't change.
-  {
-    icon: LayoutDashboard,
-    label: 'S.A.N.D.',
-    permissionKey: 'admin_panel',
-    path: '/',
-  },
-  // Meetings — lifted out of Admin. Holds "The Rhythm" (teams / cadence /
-  // meeting agenda / outcomes) that used to live on the Pulse page.
-  // Route stays /admin/meetings so bookmarks + Admin's isNestedActive
-  // check still resolve correctly.
-  {
-    icon: Users,
-    label: 'Meetings',
-    permissionKey: 'admin_panel',
-    path: '/admin/meetings',
-  },
-  {
-    icon: ShieldCheck,
-    label: 'Admin',
-    permissionKey: 'admin_panel',
-    children: [
-      {
-        label: 'Staff Management',
-        children: [
-          { label: 'Accounts', path: '/admin' },
-          { label: 'Submissions', path: '/staff/responses' },
-          { label: 'Permissions', path: '/admin/permissions' },
-        ],
-      },
-      // Billing moved out to Finance — it's a money-flow concern, not a
-      // staff-management one, so it belongs alongside Books under Finance.
-      {
-        label: 'Platform Settings',
-        children: [
-          { label: 'Theme & Appearance', path: '/admin/settings/theme' },
-          { label: 'Integrations', path: '/admin/settings/integrations' },
-          { label: 'Webhooks', path: '/admin/settings/webhooks' },
-        ],
-      },
-    ],
-  },
-  // Officers — Paperclip agent feeds. Each of the 10 Paperclip agents has
-  // its own scoped page here and its own /webhook/nexgen-officer-<key>
-  // path. n8n POSTs briefings straight into public.officer_briefings
-  // (multi-tenant via the `entity` column, default 'nexgen') and the
-  // OfficerPage reads its scope live.
-  //
-  // Order below matches Paperclip's canonical hierarchy: CEO first,
-  // Junior COO second (their direct executor), then the eight officers
-  // alphabetically. Officer keys MUST match Paperclip agent ids exactly.
-  {
-    icon: Bot,
-    label: 'Officers',
-    permissionKey: 'admin_panel',
-    children: [
-      { label: 'CEO',                  path: '/officers/ceo' },
-      { label: 'Junior COO',           path: '/officers/junior-coo' },
-      { label: 'Detail Officer',       path: '/officers/detail' },
-      { label: 'Fulfillment Officer',  path: '/officers/fulfillment' },
-      { label: 'Improvement Officer',  path: '/officers/improvement' },
-      { label: 'Legal Officer',        path: '/officers/legal' },
-      { label: 'Response Officer',     path: '/officers/response' },
-      { label: 'Revenue Officer',      path: '/officers/revenue' },
-      { label: 'Teams Officer',        path: '/officers/teams' },
-      { label: 'Tech Officer',         path: '/officers/tech' },
-    ],
-  },
-  // Projects — renamed from "Targets & Tasks". Menu label only; underlying
-  // routes (/targets, /targets/progress, /targets/tasks) unchanged so deep
-  // links, permission key (admin_panel), and page filenames all still work.
-  {
-    icon: Target,
-    label: 'Projects',
-    permissionKey: 'admin_panel',
-    children: [
-      { label: 'Dashboard', path: '/targets' },
-      { label: 'Targets', path: '/targets/progress' },
-      { label: 'Tasks', path: '/targets/tasks' },
-    ],
-  },
-  // Marketing — lifted out of Admin. Full offer tree preserved so no
-  // previously-reachable page becomes a dead link.
+  // Marketing — moved into the pipeline cluster right below Candidates.
+  // Full offer tree preserved so no previously-reachable page becomes a
+  // dead link.
   {
     icon: Megaphone,
     label: 'Marketing',
     permissionKey: 'admin_panel',
     children: [
       { label: 'Dashboard', path: '/marketing' },
-      // Shot Lists — dedicated hub for content creators. Unifies the
-      // campaign shot list AND the event shot list into one queue so
-      // creators check one page in the morning instead of two. Each
-      // shot can be checked off as it's captured.
       { label: 'Shot Lists', path: '/marketing/shot-lists' },
-      // Upload — landing pad for creators to drop photos and videos
-      // after a shoot. Routes to Google Drive (and any other targets)
-      // via an n8n webhook so we don't have to build storage ourselves.
       { label: 'Upload', path: '/marketing/upload' },
-      // Renamed from "Content Calendar" — this menu is the Campaigns
-      // workspace. Shot lists moved to their own submenu above.
       { label: 'Campaigns', path: '/calendars/content' },
-      // Events — preview of the fixed-dates calendar, scoped to a
-      // marketing context. Reads the same calendar_events table as
-      // /calendar?tab=events, so it stays in sync bidirectionally.
       { label: 'Events', path: '/marketing/events' },
-      // Marketing Calendar — combined month grid showing campaigns AND
-      // events on one canvas. Filters: All / Campaigns / Events. Click
-      // any tile to open a right-side drawer with focus fields + shot
-      // list preview. Events sync with both the Marketing → Events
-      // submenu AND the top-level Calendars → Events tab.
       { label: 'Calendar', path: '/marketing/calendar' },
       {
         label: 'Offers',
@@ -349,46 +228,109 @@ const navItems = [
       },
     ],
   },
-  // Finance — lifted out of Admin, now also absorbs Billing (previously a
-  // sibling under Admin). Billing is money-flowing-out, Books is
-  // money-flowing-in/tracking — they're the same domain, so co-locating
-  // matches how Directors think about them.
+  // ── Visual break #3: pipeline → operations cluster.
+  { separator: true },
+
+  // ── Operations cluster ───────────────────────────────────────────────────
+  // Projects / Meetings / Admin. Admin now absorbs S.A.N.D., Officers, and
+  // Finance as children — one place for everything the Founder/Operator
+  // lives in.
+  //
+  // Projects — routes (/targets, /targets/progress, /targets/tasks)
+  // unchanged so deep links + page filenames still work.
   {
-    icon: DollarSign,
-    label: 'Finance',
+    icon: Target,
+    label: 'Projects',
     permissionKey: 'admin_panel',
     children: [
-      { label: 'Dashboard', path: '/finance' },
-      {
-        label: 'Billing',
-        children: [
-          { label: 'Dashboard', path: '/billing' },
-          { label: 'Invoices' },
-          { label: 'Payments' },
-          { label: 'Plans' },
-        ],
-      },
-      {
-        label: 'Books',
-        children: [
-          { label: 'Accounts',     path: '/finance/books/accounts' },
-          { label: 'Transactions', path: '/finance/books/transactions' },
-          { label: 'Reports',      path: '/finance/books/reports' },
-        ],
-      },
+      { label: 'Dashboard', path: '/targets' },
+      { label: 'Targets', path: '/targets/progress' },
+      { label: 'Tasks', path: '/targets/tasks' },
     ],
   },
-  // Compliance — lifted out of Admin AND absorbs Data Integrity as a
-  // child. Both were previously sibling leaves under Admin. Grouping them
-  // matches how they're actually used: performance/compliance audits and
-  // data-integrity checks are the same "is our house in order" job.
+  // Meetings — "The Rhythm" (teams / cadence / agenda / outcomes).
+  // Route stays /admin/meetings so bookmarks still resolve.
   {
-    icon: ClipboardCheck,
-    label: 'Compliance',
+    icon: Users,
+    label: 'Meetings',
+    permissionKey: 'admin_panel',
+    path: '/admin/meetings',
+  },
+  // Admin — top-level container that now holds S.A.N.D., Staff Management,
+  // Platform Settings, Officers, and Finance. Order intentional:
+  //   1. S.A.N.D. — highest-frequency dashboard, land here first
+  //   2. Staff Management — accounts, submissions, permissions
+  //   3. Platform Settings — theme, integrations, webhooks
+  //   4. Officers — AI agent feeds (Paperclip pipeline)
+  //   5. Finance — money flows (billing + books)
+  {
+    icon: ShieldCheck,
+    label: 'Admin',
     permissionKey: 'admin_panel',
     children: [
-      { label: 'Overview', path: '/admin/performance-compliance' },
-      { label: 'Data Integrity', path: '/admin/data-integrity' },
+      // S.A.N.D. — Sleep At Night Dashboard. Path is '/' because it's
+      // the app landing page. Top of Admin so it's the first thing you
+      // see when you open the menu.
+      { label: 'S.A.N.D.', path: '/' },
+      {
+        label: 'Staff Management',
+        children: [
+          { label: 'Accounts', path: '/admin' },
+          { label: 'Submissions', path: '/staff/responses' },
+          { label: 'Permissions', path: '/admin/permissions' },
+        ],
+      },
+      {
+        label: 'Platform Settings',
+        children: [
+          { label: 'Theme & Appearance', path: '/admin/settings/theme' },
+          { label: 'Integrations', path: '/admin/settings/integrations' },
+          { label: 'Webhooks', path: '/admin/settings/webhooks' },
+        ],
+      },
+      // Officers — 10 Paperclip agent feeds. Order matches Paperclip's
+      // canonical hierarchy: CEO, Junior COO, then eight officers
+      // alphabetically. Officer keys MUST match Paperclip agent ids.
+      {
+        label: 'Officers',
+        children: [
+          { label: 'CEO',                 path: '/officers/ceo' },
+          { label: 'Junior COO',          path: '/officers/junior-coo' },
+          { label: 'Detail Officer',      path: '/officers/detail' },
+          { label: 'Fulfillment Officer', path: '/officers/fulfillment' },
+          { label: 'Improvement Officer', path: '/officers/improvement' },
+          { label: 'Legal Officer',       path: '/officers/legal' },
+          { label: 'Response Officer',    path: '/officers/response' },
+          { label: 'Revenue Officer',     path: '/officers/revenue' },
+          { label: 'Teams Officer',       path: '/officers/teams' },
+          { label: 'Tech Officer',        path: '/officers/tech' },
+        ],
+      },
+      // Finance — Dashboard, Billing (money out), Books (money in +
+      // tracking). Books surface built 2026-08-07.
+      {
+        label: 'Finance',
+        children: [
+          { label: 'Dashboard', path: '/finance' },
+          {
+            label: 'Billing',
+            children: [
+              { label: 'Dashboard', path: '/billing' },
+              { label: 'Invoices' },
+              { label: 'Payments' },
+              { label: 'Plans' },
+            ],
+          },
+          {
+            label: 'Books',
+            children: [
+              { label: 'Accounts',     path: '/finance/books/accounts' },
+              { label: 'Transactions', path: '/finance/books/transactions' },
+              { label: 'Reports',      path: '/finance/books/reports' },
+            ],
+          },
+        ],
+      },
     ],
   },
 ]
