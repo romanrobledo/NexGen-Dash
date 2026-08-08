@@ -11,23 +11,83 @@ import { useAuth } from '../contexts/AuthContext'
  * MobileBottomNav — iOS/Android-style tab bar fixed to the bottom edge.
  * Rendered only when mobileMode is true (see AppShell in App.jsx).
  *
- * Base tabs (every authenticated user):
- *   Trainings · AI Chat
+ * As of 2026-08-08 every tab gates on a `nav_*` permission key that
+ * exists in `src/lib/navItems.js` and is seeded in `role_permissions`.
+ * Under the CLOSED hasPermission default, a tab is hidden when the
+ * user's role doesn't have that key.
  *
- * Admin-tier tabs (Founder, or anyone with admin_panel permission):
- *   Dashboard · Trainings · AI Chat · Admin
- *
- * To add a new permission-gated tab, add an entry to `buildNavItems` below.
- * Each entry supports an optional `matchPrefix` array for highlighting the
- * tab on nested routes (e.g., Admin lights up on anything under /admin or
- * /staff/).
+ * MVP scope note: the four tabs below are admin-shaped — Teachers /
+ * Support currently see only the Training tab under this filter.
+ * That's a design conversation, not a bug in this refactor. When
+ * you're ready, expand MOBILE_TABS with items that make sense for
+ * classroom / support workflows (Facility is universal, Compliance
+ * is granted to those roles, etc.).
  */
+
+// The four tabs. Each references a nav_* permission key from
+// src/lib/navItems.js so the mobile bar and the sidebar stay in
+// lockstep — one source of truth for role visibility.
+const MOBILE_TABS = [
+  {
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    path: '/',
+    // S.A.N.D. lives inside the Admin sub-menu in the sidebar; the
+    // mobile Dashboard tab points at the same route (/). No standalone
+    // nav_sand key yet — see the "Admin — S.A.N.D. scoping" comment in
+    // src/lib/navItems.js if that's ever needed.
+    permissionKey: 'nav_admin',
+    // Exact-match only for the root — we don't want every page to
+    // light up the Dashboard tab.
+    exact: true,
+  },
+  {
+    label: 'Training',
+    icon: GraduationCap,
+    path: '/trainings',
+    permissionKey: 'nav_training',
+    // Trainings lights up on every /trainings/* page AND on Roles
+    // pages (they live under /dashboard/) to match the sidebar's
+    // nested-active rule.
+    matchPrefix: ['/trainings', '/dashboard/'],
+  },
+  {
+    label: 'AI Chat',
+    icon: BotMessageSquare,
+    path: '/ai-chat',
+    permissionKey: 'nav_ai_chat',
+    matchPrefix: ['/ai-chat'],
+  },
+  {
+    label: 'Admin',
+    icon: ShieldCheck,
+    path: '/admin',
+    permissionKey: 'nav_admin',
+    matchPrefix: ['/admin', '/staff/'],
+  },
+]
+
 export default function MobileBottomNav() {
   const { staff, hasPermission } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
-  const items = buildNavItems({ staff, hasPermission })
+  // Filter tabs the same way Sidebar filters top-level items:
+  //   - Universal (no permissionKey) → always shown. None of the current
+  //     tabs are universal, but the check is here so future universal
+  //     tabs (e.g., Facility) can slot in without special-casing.
+  //   - No staff loaded yet → show everything (avoids empty-bar flash
+  //     during initial auth hydration).
+  //   - Otherwise → gate on hasPermission(key).
+  const items = MOBILE_TABS.filter((tab) => {
+    if (!tab.permissionKey) return true
+    if (!staff) return true
+    return hasPermission(tab.permissionKey)
+  })
+
+  // Guard: don't render the bar at all if the user's role has zero
+  // visible tabs. Better a missing bar than an empty one.
+  if (items.length === 0) return null
 
   return (
     <nav
@@ -48,7 +108,6 @@ export default function MobileBottomNav() {
               }`}
               title={item.label}
             >
-              {/* Active pill indicator at top edge of the button */}
               <span
                 className={`absolute top-0 left-1/2 -translate-x-1/2 h-0.5 rounded-b-full transition-all ${
                   active ? 'w-8 bg-blue-600' : 'w-0 bg-transparent'
@@ -67,72 +126,13 @@ export default function MobileBottomNav() {
   )
 }
 
-// ─── Nav item factory ───────────────────────────────────────────────────────
-
-function buildNavItems({ staff, hasPermission }) {
-  // Admin-tier = Founder role (short-circuits everything) OR any user with
-  // admin_panel permission enabled. Matches how Sidebar.jsx gates the Admin
-  // section, so the bottom bar stays consistent with the full sidebar.
-  const isAdminTier =
-    staff?.role?.toLowerCase?.() === 'founder' ||
-    (hasPermission && hasPermission('admin_panel'))
-
-  // Base tabs — shown to every authenticated user.
-  //
-  // "Clock in / out" used to live here; it was removed alongside the sidebar
-  // entry and TopToolbar buttons when the platform got refocused around
-  // training. Leaving the matchPrefix arrays exactly as they were so the
-  // remaining tabs still highlight correctly on nested routes.
-  const BASE = [
-    {
-      label: 'Training',
-      icon: GraduationCap,
-      path: '/trainings',
-      // Trainings lights up on every /trainings/* page AND on the Roles pages
-      // (they live under /dashboard/) to match the sidebar's nested-active rule.
-      matchPrefix: ['/trainings', '/dashboard/'],
-    },
-    {
-      label: 'AI Chat',
-      icon: BotMessageSquare,
-      path: '/ai-chat',
-      matchPrefix: ['/ai-chat'],
-    },
-  ]
-
-  if (isAdminTier) {
-    return [
-      {
-        label: 'Dashboard',
-        icon: LayoutDashboard,
-        path: '/',
-        // Exact-match only for the root — we don't want every page to light up
-        // the Dashboard tab.
-        exact: true,
-      },
-      ...BASE,
-      {
-        label: 'Admin',
-        icon: ShieldCheck,
-        // Used to default to /admin/team-pulse; that page was removed with
-        // the rest of the time-clock subsystem. Point at /admin (Staff
-        // Accounts) instead — the most generally-useful admin landing.
-        path: '/admin',
-        matchPrefix: ['/admin', '/staff/'],
-      },
-    ]
-  }
-
-  return BASE
-}
-
 // ─── Active matcher ─────────────────────────────────────────────────────────
+
 function isActive(pathname, item) {
   if (item.exact) return pathname === item.path
   if (pathname === item.path) return true
   if (item.matchPrefix) {
     return item.matchPrefix.some((p) => pathname === p || pathname.startsWith(p))
   }
-  // Fallback: treat path as a prefix
   return pathname.startsWith(item.path + '/')
 }

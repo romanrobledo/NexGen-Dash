@@ -23,7 +23,27 @@ import { ShieldOff, RotateCcw } from 'lucide-react'
  * With the AuthContext fix (never null-clobber staff on transient events),
  * the watchdog is no longer necessary.
  */
-export default function ProtectedRoute({ children, requiredPermission }) {
+/**
+ * Access guards, in order of preference:
+ *
+ *   requiredRole={[...]} — role-list check against staff.role. Fails
+ *     CLOSED: if the user's role isn't in the list, deny. Recommended
+ *     for sensitive routes because it cannot be silently opened by a
+ *     missing DB row. Kept in sync with BOOKS_ADMIN_ROLES in
+ *     src/lib/roles.js when that list applies.
+ *
+ *   requiredPermission="key" — legacy permission_key check via
+ *     hasPermission. Kept for backwards compatibility. Under the
+ *     CLOSED hasPermission default, this also fails safe. But new
+ *     guards should prefer requiredRole for the reasons above.
+ *
+ * If neither prop is passed, ProtectedRoute only gates authentication
+ * (session + staff present) with no authorization check.
+ *
+ * When BOTH are passed, both must pass — role first, then permission.
+ * (Belt-and-suspenders for anything unusually sensitive.)
+ */
+export default function ProtectedRoute({ children, requiredPermission, requiredRole }) {
   const { session, staff, loading, hasPermission } = useAuth()
 
   // Once true, we consider the app "hydrated" and never show a full-screen
@@ -89,11 +109,17 @@ export default function ProtectedRoute({ children, requiredPermission }) {
   // rendering children. Transient auth wobbles do NOT unmount them. The only
   // exception is if session becomes definitively null (SIGNED_OUT handled
   // in AuthContext), in which case we redirect below.
+  // Authorization check — used in both the hydrated and initial-load
+  // branches below. Fails CLOSED: any denial returns <AccessDenied />.
+  // Role list is checked FIRST (explicit, DB-independent) and can't be
+  // bypassed by a stale permission_key row.
+  const denied =
+    (requiredRole && !isRoleAllowed(staff, requiredRole)) ||
+    (requiredPermission && !hasPermission(requiredPermission))
+
   if (hasEverLoadedRef.current) {
     if (!session) return <Navigate to="/login" replace />
-    if (requiredPermission && !hasPermission(requiredPermission)) {
-      return <AccessDenied />
-    }
+    if (denied) return <AccessDenied />
     return children
   }
 
@@ -101,10 +127,16 @@ export default function ProtectedRoute({ children, requiredPermission }) {
   if (loading) return renderSpinner('Loading...')
   if (!session) return <Navigate to="/login" replace />
   if (!staff) return renderSpinner('Loading profile...')
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    return <AccessDenied />
-  }
+  if (denied) return <AccessDenied />
   return children
+}
+
+// True when the staff row's role is one of the allowed values.
+// Case-sensitive by design — staff.role is free text; a typo like
+// 'founder' vs 'Founder' shouldn't accidentally grant admin access.
+function isRoleAllowed(staff, allowedRoles) {
+  if (!staff?.role) return false
+  return allowedRoles.includes(staff.role)
 }
 
 function AccessDenied() {

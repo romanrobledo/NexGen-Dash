@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { GraduationCap, Loader2, Pencil, Check, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { isBooksAdmin } from '../lib/roles'
 import {
   CERT_TYPES,
   TRAINING_HOUR_TARGET,
@@ -185,11 +186,15 @@ export default function StaffCertificationPanel({ staffName, staffId }) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [reloadKey, setReloadKey] = useState(0)
-  const { staff: currentUser, hasPermission } = useAuth()
+  const { staff: currentUser } = useAuth()
 
-  // Admins (admin_panel permission) OR the profile's owner can edit hours
+  // Admin-tier roles (BOOKS_ADMIN_ROLES) OR the profile's owner can edit
+  // hours. Migrated 2026-08-08 from a `hasPermission('admin_panel')`
+  // check to an explicit role-list check — same reasoning as the route
+  // guards: an explicit role list can't be silently opened or closed by
+  // a database row someone forgot to write.
   const canEdit =
-    hasPermission?.('admin_panel') ||
+    isBooksAdmin(currentUser) ||
     (currentUser?.id && staffId && currentUser.id === staffId)
 
   useEffect(() => {

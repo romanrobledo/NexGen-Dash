@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ViewModeProvider, useViewMode } from './contexts/ViewModeContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import { BOOKS_ADMIN_ROLES } from './lib/roles'
 import Sidebar from './components/Sidebar'
 import TopToolbar from './components/TopToolbar'
 import MobileBottomNav from './components/MobileBottomNav'
@@ -136,12 +137,12 @@ function App() {
           <ProtectedRoute>
             <AppShell>
               <Routes>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/targets" element={<TargetTaskDashboardPage />} />
-                <Route path="/targets/progress" element={<TargetsProgressPage />} />
-                <Route path="/targets/tasks" element={<TasksPage />} />
-                <Route path="/targets/submit" element={<TargetTaskSubmitPage />} />
-                <Route path="/ai-chat" element={<AIChatPage />} />
+                <Route path="/" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><DashboardPage /></ProtectedRoute>} />
+                <Route path="/targets" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><TargetTaskDashboardPage /></ProtectedRoute>} />
+                <Route path="/targets/progress" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><TargetsProgressPage /></ProtectedRoute>} />
+                <Route path="/targets/tasks" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><TasksPage /></ProtectedRoute>} />
+                <Route path="/targets/submit" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><TargetTaskSubmitPage /></ProtectedRoute>} />
+                <Route path="/ai-chat" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><AIChatPage /></ProtectedRoute>} />
                 <Route path="/operating-system" element={<OperatingSystemPage />} />
                 <Route path="/handbooks" element={<HandbooksPage />} />
                 <Route path="/applications" element={<ApplicationsPage />} />
@@ -157,7 +158,7 @@ function App() {
                 <Route path="/sop-library" element={<SopLibraryPage />} />
                 <Route path="/sop-library/chapter/:chapterNum" element={<SopChapterPage />} />
                 <Route path="/sop-library/:sopId" element={<SopDetailPage />} />
-                <Route path="/quick-focus" element={<QuickFocusPage />} />
+                <Route path="/quick-focus" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><QuickFocusPage /></ProtectedRoute>} />
                 {/* Tasks page lives at /tasks — the PulsePage.jsx filename
                     stayed for git-history continuity, only the URL changed. */}
                 <Route path="/tasks" element={<PulsePage />} />
@@ -184,35 +185,35 @@ function App() {
                     current_staff_is_books_admin() predicate; non-admin
                     sessions see empty lists (which is the correct behavior
                     for sensitive financial data). */}
-                <Route path="/finance/books/accounts" element={<BooksAccountsPage />} />
-                <Route path="/finance/books/transactions" element={<BooksTransactionsPage />} />
-                <Route path="/finance/books/reports" element={<BooksReportsPage />} />
+                <Route path="/finance/books/accounts" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><BooksAccountsPage /></ProtectedRoute>} />
+                <Route path="/finance/books/transactions" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><BooksTransactionsPage /></ProtectedRoute>} />
+                <Route path="/finance/books/reports" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><BooksReportsPage /></ProtectedRoute>} />
                 {/* Books → Rules — vendor_rules admin surface. Test patterns,
                     manage the 155+ pattern→category mappings, re-apply rules
                     across a statement. Read/write gated by the same
                     current_staff_is_books_admin() predicate as the other Books
                     pages. */}
-                <Route path="/finance/books/rules" element={<BooksRulesPage />} />
-                <Route path="/finance" element={<FinanceDashboardPage />} />
-                <Route path="/leads" element={<LeadsDashboardPage />} />
-                <Route path="/leads/tours" element={<LeadsToursPage />} />
-                <Route path="/leads/procedures" element={<LeadsProceduresPage />} />
-                <Route path="/candidates" element={<CandidatesDashboardPage />} />
-                <Route path="/candidates/interviews" element={<CandidatesInterviewsPage />} />
-                <Route path="/candidates/procedures" element={<CandidatesProceduresPage />} />
+                <Route path="/finance/books/rules" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><BooksRulesPage /></ProtectedRoute>} />
+                <Route path="/finance" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FinanceDashboardPage /></ProtectedRoute>} />
+                <Route path="/leads" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><LeadsDashboardPage /></ProtectedRoute>} />
+                <Route path="/leads/tours" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><LeadsToursPage /></ProtectedRoute>} />
+                <Route path="/leads/procedures" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><LeadsProceduresPage /></ProtectedRoute>} />
+                <Route path="/candidates" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><CandidatesDashboardPage /></ProtectedRoute>} />
+                <Route path="/candidates/interviews" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><CandidatesInterviewsPage /></ProtectedRoute>} />
+                <Route path="/candidates/procedures" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><CandidatesProceduresPage /></ProtectedRoute>} />
                 <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/admin/meetings" element={<AdminMeetingsPage />} />
+                <Route path="/admin/meetings" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><AdminMeetingsPage /></ProtectedRoute>} />
                 {/* Org Chart landing → reuses the existing role-selector page
                     (WhoAmIPage). Each role click continues to open the
                     per-section pages (What Do I Do, How Do I Do It, etc.)
                     for now — merging those 5 pages into one combined page
                     per role is the next iteration. */}
                 <Route path="/org-chart" element={<WhoAmIPage />} />
-                <Route path="/billing" element={<BillingDashboardPage />} />
-                <Route path="/marketing" element={<MarketingDashboardPage />} />
-                <Route path="/marketing/offers" element={<MarketingOffersPage />} />
-                <Route path="/marketing/offers/:category" element={<MarketingOffersPage />} />
-                <Route path="/marketing/offers/:category/:subcategory" element={<MarketingOffersPage />} />
+                <Route path="/billing" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><BillingDashboardPage /></ProtectedRoute>} />
+                <Route path="/marketing" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><MarketingDashboardPage /></ProtectedRoute>} />
+                <Route path="/marketing/offers" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><MarketingOffersPage /></ProtectedRoute>} />
+                <Route path="/marketing/offers/:category" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><MarketingOffersPage /></ProtectedRoute>} />
+                <Route path="/marketing/offers/:category/:subcategory" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><MarketingOffersPage /></ProtectedRoute>} />
                 <Route path="/dashboard/who-are-we" element={<WhoAreWePage />} />
                 <Route path="/dashboard/who-am-i" element={<WhoAmIPage />} />
                 <Route path="/dashboard/what-do-i-do" element={<WhatDoIDoPage />} />
@@ -225,15 +226,15 @@ function App() {
                 <Route path="/dashboard/where-to-go" element={<WhereDoWeGoPage />} />
                 <Route path="/dashboard/important-metrics" element={<ImportantMetricsPage />} />
                 <Route path="/dashboard/:slug" element={<DashboardGuidePage />} />
-                <Route path="/staff/responses" element={<StaffResponsesPage />} />
-                <Route path="/staff/profile-database" element={<StaffProfileDatabasePage />} />
-                <Route path="/staff/:id" element={<StaffProfilePage />} />
-                <Route path="/calendars/content" element={<ContentCalendarPage />} />
-                <Route path="/marketing/events" element={<MarketingEventsPage />} />
-                <Route path="/marketing/calendar" element={<MarketingCalendarPage />} />
-                <Route path="/marketing/shot-lists" element={<ShotListsPage />} />
-                <Route path="/marketing/upload" element={<UploadPage />} />
-                <Route path="/officers/:officerKey" element={<OfficerPage />} />
+                <Route path="/staff/responses" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><StaffResponsesPage /></ProtectedRoute>} />
+                <Route path="/staff/profile-database" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><StaffProfileDatabasePage /></ProtectedRoute>} />
+                <Route path="/staff/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><StaffProfilePage /></ProtectedRoute>} />
+                <Route path="/calendars/content" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><ContentCalendarPage /></ProtectedRoute>} />
+                <Route path="/marketing/events" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><MarketingEventsPage /></ProtectedRoute>} />
+                <Route path="/marketing/calendar" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><MarketingCalendarPage /></ProtectedRoute>} />
+                <Route path="/marketing/shot-lists" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><ShotListsPage /></ProtectedRoute>} />
+                <Route path="/marketing/upload" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><UploadPage /></ProtectedRoute>} />
+                <Route path="/officers/:officerKey" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><OfficerPage /></ProtectedRoute>} />
                 <Route path="/trainings" element={<TrainingsDashboardPage />} />
                 <Route path="/trainings/onboarding" element={<TrainingsOnboardingPage />} />
                 {/* Role Clarity landing — must be registered before the generic
@@ -253,47 +254,51 @@ function App() {
                 <Route path="/trainings/:category" element={<TrainingCategoryPage />} />
                 <Route path="/trainings/:category/:subcategory" element={<TrainingCategoryPage />} />
                 <Route path="/admin" element={
-                  <ProtectedRoute requiredPermission="admin_panel">
+                  <ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}>
                     <AdminPanelPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/permissions" element={
-                  <ProtectedRoute requiredPermission="admin_panel">
+                  <ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}>
                     <AdminPanelPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/settings" element={
-                  <ProtectedRoute requiredPermission="admin_panel">
+                  <ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}>
                     <AdminPanelPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/settings/theme" element={
-                  <ProtectedRoute requiredPermission="admin_panel">
+                  <ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}>
                     <AdminPanelPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/settings/integrations" element={
-                  <ProtectedRoute requiredPermission="admin_panel">
+                  <ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}>
                     <AdminPanelPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/settings/webhooks" element={
-                  <ProtectedRoute requiredPermission="admin_panel">
+                  <ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}>
                     <AdminPanelPage />
                   </ProtectedRoute>
                 } />
+                {/* Compliance routes — Teachers + Support have nav_compliance so
+                    they can reach these to see their own certs / training hours.
+                    Guard on the specific permission_key rather than
+                    BOOKS_ADMIN_ROLES so those non-admin roles don't 403. */}
                 <Route path="/admin/performance-compliance" element={
-                  <ProtectedRoute requiredPermission="admin_panel">
+                  <ProtectedRoute requiredPermission="nav_compliance">
                     <PerformanceCompliancePage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/data-integrity" element={
-                  <ProtectedRoute requiredPermission="admin_panel">
+                  <ProtectedRoute requiredPermission="nav_compliance">
                     <DataIntegrityPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/data-integrity/metric/:metricName" element={
-                  <ProtectedRoute requiredPermission="admin_panel">
+                  <ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}>
                     <MetricDetailPage />
                   </ProtectedRoute>
                 } />

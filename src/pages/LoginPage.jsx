@@ -114,14 +114,23 @@ export default function LoginPage() {
       await signIn(email, pin)
       navigate('/', { replace: true })
     } catch (err) {
-      // Wrong PIN: clear the boxes, refocus the first, keep it friendly.
+      // Clear PIN boxes on any failure so the user re-enters cleanly.
       setDigits(Array(PIN_LENGTH).fill(''))
       refs.current[0]?.focus()
-      setError(
-        err.message === 'Invalid login credentials'
-          ? 'Incorrect PIN. Try again.'
-          : err.message || 'Something went wrong. Try again.'
-      )
+      // Distinct messages so a separated employee doesn't spend an hour
+      // typing PINs thinking she forgot it. err.code comes from signIn
+      // when the auth succeeded but staff.status wasn't 'Active'.
+      if (err.code === 'ACCOUNT_INACTIVE') {
+        setError(err.message)
+      } else if (err.code === 'NO_STAFF_RECORD') {
+        setError(err.message)
+      } else if (err.code === 'STATUS_CHECK_FAILED') {
+        setError(err.message)
+      } else if (err.message === 'Invalid login credentials') {
+        setError('Incorrect PIN. Try again.')
+      } else {
+        setError(err.message || 'Something went wrong. Try again.')
+      }
     } finally {
       setLoading(false)
     }

@@ -83,6 +83,24 @@ export function AuthProvider({ children }) {
           return
         }
 
+        // Defense-in-depth status check. signIn() already blocks initial
+        // login for inactive accounts; this handles the mid-session case
+        // where a user was Active at login and later gets Separated. The
+        // next background loadProfile detects the state change and kicks
+        // them out. Case-insensitive to tolerate 'active' / 'Active' etc.
+        const normalizedStatus = String(staffRow.status || '').trim().toLowerCase()
+        if (normalizedStatus !== 'active') {
+          console.warn(
+            `[auth] staff status changed to "${staffRow.status}" mid-session — signing out.`
+          )
+          await supabase.auth.signOut()
+          setSession(null)
+          setStaff(null)
+          setPermissions({})
+          loadedUserIdRef.current = null
+          return
+        }
+
         setStaff(staffRow)
         loadedUserIdRef.current = userId
 
@@ -338,11 +356,50 @@ export function AuthProvider({ children }) {
 
   async function signIn(email, password) {
     if (!supabase) throw new Error('Supabase not configured')
+
+    // Step 1: authenticate with Supabase. Wrong PIN throws here with
+    // "Invalid login credentials".
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
     if (error) throw error
+
+    // Step 2: verify staff.status = 'Active' BEFORE releasing control
+    // to LoginPage. A separated employee (status = 'Separated', etc.)
+    // must not be able to log in even though the auth password matches.
+    //
+    // Uses a distinct error code so LoginPage can show "your account is
+    // inactive" instead of "wrong password" — that mismatch would make
+    // a separated employee call the office thinking she forgot her PIN.
+    const { data: staffRow, error: sErr } = await supabase
+      .from('staff')
+      .select('status, full_name')
+      .eq('auth_user_id', data.user.id)
+      .maybeSingle()
+
+    if (sErr) {
+      await supabase.auth.signOut()
+      const e = new Error('Could not verify account status. Try again.')
+      e.code = 'STATUS_CHECK_FAILED'
+      throw e
+    }
+    if (!staffRow) {
+      await supabase.auth.signOut()
+      const e = new Error('No staff record for this account. Contact your administrator.')
+      e.code = 'NO_STAFF_RECORD'
+      throw e
+    }
+    const normalizedStatus = String(staffRow.status || '').trim().toLowerCase()
+    if (normalizedStatus !== 'active') {
+      await supabase.auth.signOut()
+      const e = new Error(
+        `Your account is ${String(staffRow.status || 'inactive').toLowerCase()}. ` +
+        `Contact your administrator to reactivate access.`
+      )
+      e.code = 'ACCOUNT_INACTIVE'
+      throw e
+    }
 
     // Set session IMMEDIATELY so ProtectedRoute sees it when LoginPage navigates.
     // Load profile in background — UI updates reactively when state changes.
@@ -366,24 +423,23 @@ export function AuthProvider({ children }) {
   }
 
   function hasPermission(key) {
-    // Case-insensitive founder check — DB values like 'Founder' / 'FOUNDER'
-    // all count as full-access. Anything else falls through to the
-    // per-permission toggles in role_permissions.
-    const normalizedRole = staff?.role?.toLowerCase?.()
-    if (normalizedRole === 'founder') return true
-
-    // Training category keys (training_onboarding, training_trs, etc.) default
-    // to OPEN — if there's no explicit row in role_permissions for this key
-    // and role, treat the tile as visible. This matches the contract documented
-    // in src/lib/trainingPermissions.js: every existing role keeps current
-    // behavior on first deploy; admins only need to write rows when they want
-    // to DENY a specific category. An explicit `false` row still denies.
-    if (key && key.startsWith('training_')) {
-      return permissions[key] !== false
-    }
-
-    // Every other permission key uses standard "deny by default" semantics —
-    // a missing row means no access.
+    // CLOSED-default semantics for EVERY key. A row with enabled=true
+    // grants access; anything else (row missing, row explicitly false,
+    // key falsy) denies.
+    //
+    // Removed 2026-08-08:
+    //   - The case-insensitive Founder bypass (`if role === 'founder'
+    //     return true`) — that was a shadow-engine pattern; a JS-side
+    //     truth that role_permissions couldn't see. If Founder ever
+    //     needed a permission revoked, the bypass would silently
+    //     ignore the revoke. Founder now gets access via explicit
+    //     role_permissions rows (all seeded true) just like every
+    //     other role.
+    //   - The training_* OPEN default (returned permissions[key]
+    //     !== false). Training tiles now require an explicit true row
+    //     just like nav_* keys. The seed grants Founder / Operator /
+    //     Co-Integrator all four training_* keys; Teacher and Support
+    //     get zero training tiles until Roman decides which they see.
     return permissions[key] === true
   }
 
