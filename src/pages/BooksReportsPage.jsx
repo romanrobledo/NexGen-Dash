@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   BarChart3,
   AlertTriangle,
@@ -8,8 +9,21 @@ import {
   ArrowDownRight,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from 'lucide-react'
 import { useBooksMonthly } from '../hooks/useBooksMonthly'
+
+// Build a link into Books → Transactions with the current month + optional
+// category / subcategory pre-filled. Uses real react-router Links so
+// cmd/ctrl-click opens in a new tab and links are shareable.
+function txnLink({ month, category, subcategory }) {
+  const params = new URLSearchParams()
+  if (month)       params.set('month', month)
+  if (category)    params.set('category', category)
+  if (subcategory) params.set('subcategory', subcategory)
+  const qs = params.toString()
+  return `/finance/books/transactions${qs ? '?' + qs : ''}`
+}
 
 /**
  * Books → Reports.
@@ -129,14 +143,28 @@ export default function BooksReportsPage() {
       .sort((a, b) => b.total - a.total),
     [revenueBySource, currentMonth]
   )
-  const monthExpenseByCategory = useMemo(() => {
-    const map = new Map()
+  // Two-level aggregation: category → subcategory. v_books_monthly
+  // already returns subcategory per row, so no new query.
+  //   { category, total, subs: [{ subcategory, total }...] }
+  const monthExpensesGrouped = useMemo(() => {
+    const catMap = new Map()
     for (const r of monthExpenses) {
-      const key = r.category || 'unclassified'
-      map.set(key, (map.get(key) || 0) + Number(r.total || 0))
+      const catKey = r.category || 'unclassified'
+      if (!catMap.has(catKey)) catMap.set(catKey, { total: 0, subs: new Map() })
+      const cat = catMap.get(catKey)
+      const val = Number(r.total || 0)
+      cat.total += val
+      const subKey = r.subcategory ?? null // null preserved as a real bucket
+      cat.subs.set(subKey, (cat.subs.get(subKey) || 0) + val)
     }
-    return Array.from(map.entries())
-      .map(([category, total]) => ({ category, total }))
+    return Array.from(catMap.entries())
+      .map(([category, { total, subs }]) => ({
+        category,
+        total,
+        subs: Array.from(subs.entries())
+          .map(([subcategory, subTotal]) => ({ subcategory, total: subTotal }))
+          .sort((a, b) => b.total - a.total),
+      }))
       .sort((a, b) => b.total - a.total)
   }, [monthExpenses])
 
@@ -216,7 +244,8 @@ export default function BooksReportsPage() {
               </button>
             </div>
 
-            {/* Revenue by source */}
+            {/* Revenue by source — each source is really a subcategory
+                under category='revenue'. Link filters Transactions to both. */}
             <Section
               title="Revenue by source"
               icon={ArrowUpRight}
@@ -227,6 +256,11 @@ export default function BooksReportsPage() {
                 key: r.source,
                 label: r.source,
                 total: r.total,
+                href: txnLink({
+                  month: currentMonth,
+                  category: 'revenue',
+                  subcategory: r.source,
+                }),
               }))}
             />
 
@@ -249,10 +283,19 @@ export default function BooksReportsPage() {
                     : null
                 }
                 empty="No expense lines for this month."
-                rows={monthExpenseByCategory.map((r) => ({
+                rows={monthExpensesGrouped.map((r) => ({
                   key: r.category,
                   label: r.category,
                   total: r.total,
+                  href: txnLink({ month: currentMonth, category: r.category }),
+                  subrows: r.subs.map((s) => ({
+                    key: `${r.category}::${s.subcategory ?? '_null'}`,
+                    label: s.subcategory ?? '(no subcategory)',
+                    total: s.total,
+                    href: s.subcategory
+                      ? txnLink({ month: currentMonth, category: r.category, subcategory: s.subcategory })
+                      : txnLink({ month: currentMonth, category: r.category }),
+                  })),
                 }))}
               />
             </div>
@@ -325,12 +368,26 @@ function CompletenessBanner({ state, completenessRow }) {
 }
 
 function Section({ title, icon: Icon, accent, total, totalCaveat, rows, empty }) {
+  const [expanded, setExpanded] = useState(() => new Set())
+  const toggle = (key) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
+
   const totalCls =
     accent === 'emerald' ? 'text-emerald-700' : accent === 'red' ? 'text-red-700' : 'text-gray-900'
   const iconCls =
     accent === 'emerald' ? 'bg-emerald-100 text-emerald-700'
     : accent === 'red' ? 'bg-red-100 text-red-700'
     : 'bg-gray-100 text-gray-700'
+  const rowHover =
+    accent === 'emerald' ? 'hover:bg-emerald-50/60'
+    : accent === 'red' ? 'hover:bg-red-50/60'
+    : 'hover:bg-gray-50'
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
@@ -349,21 +406,78 @@ function Section({ title, icon: Icon, accent, total, totalCaveat, rows, empty })
         <p className="px-4 py-6 text-xs text-gray-400 italic text-center">{empty}</p>
       ) : (
         <ul className="divide-y divide-gray-100">
-          {rows.map((r) => {
+          {rows.flatMap((r) => {
             const pct = total > 0 ? (r.total / total) * 100 : 0
-            return (
-              <li key={r.key} className="px-4 py-2.5 flex items-center gap-3">
-                <span className="text-xs font-semibold text-gray-800 flex-1 truncate">
-                  {r.label}
-                </span>
+            const hasSubrows = Array.isArray(r.subrows) && r.subrows.length > 0
+            const isExpanded = expanded.has(r.key)
+            const out = [
+              <li key={r.key} className={`px-4 py-2.5 flex items-center gap-2 group ${rowHover}`}>
+                {hasSubrows ? (
+                  <button
+                    type="button"
+                    onClick={() => toggle(r.key)}
+                    className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-800 rounded hover:bg-gray-100"
+                    aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                    title={isExpanded ? 'Collapse subcategories' : 'Expand subcategories'}
+                  >
+                    {isExpanded
+                      ? <ChevronDown className="w-3.5 h-3.5" />
+                      : <ChevronRight className="w-3.5 h-3.5" />}
+                  </button>
+                ) : (
+                  <span className="w-5" />
+                )}
+                {r.href ? (
+                  <Link
+                    to={r.href}
+                    className="text-xs font-semibold text-gray-800 flex-1 truncate hover:text-indigo-600 hover:underline underline-offset-2"
+                  >
+                    {r.label}
+                  </Link>
+                ) : (
+                  <span className="text-xs font-semibold text-gray-800 flex-1 truncate">
+                    {r.label}
+                  </span>
+                )}
                 <span className="text-[10px] text-gray-400 tabular-nums w-14 text-right">
                   {pct.toFixed(1)}%
                 </span>
                 <span className="text-xs tabular-nums w-24 text-right text-gray-900 font-medium">
                   {formatUSD(r.total)}
                 </span>
-              </li>
-            )
+              </li>,
+            ]
+            if (hasSubrows && isExpanded) {
+              r.subrows.forEach((sub) => {
+                const subPct = total > 0 ? (sub.total / total) * 100 : 0
+                out.push(
+                  <li
+                    key={sub.key}
+                    className="px-4 py-2 pl-11 flex items-center gap-2 bg-gray-50/60 hover:bg-gray-100/70"
+                  >
+                    {sub.href ? (
+                      <Link
+                        to={sub.href}
+                        className="text-[11px] text-gray-700 flex-1 truncate hover:text-indigo-600 hover:underline underline-offset-2"
+                      >
+                        {sub.label}
+                      </Link>
+                    ) : (
+                      <span className="text-[11px] text-gray-500 italic flex-1 truncate">
+                        {sub.label}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-gray-400 tabular-nums w-14 text-right">
+                      {subPct.toFixed(1)}%
+                    </span>
+                    <span className="text-[11px] tabular-nums w-24 text-right text-gray-700">
+                      {formatUSD(sub.total)}
+                    </span>
+                  </li>
+                )
+              })
+            }
+            return out
           })}
         </ul>
       )}

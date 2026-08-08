@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Wallet,
   Search,
@@ -15,15 +16,49 @@ import TransactionResolveDrawer from '../components/TransactionResolveDrawer'
  * Books → Transactions. Table view over bank_transactions joined to the
  * containing statement. Review queue is a filter state, not a separate
  * page — the badge on the header applies the filter with one click.
+ *
+ * URL params drive filter state so incoming links from Books → Reports
+ * (or a shared link like "July payroll transactions") land with the
+ * filter already applied. Params: month, category, subcategory,
+ * direction, status, review (=1 for reviewOnly).
  */
 export default function BooksTransactionsPage() {
-  const [filters, setFilters] = useState({
-    month: '',
-    category: '',
-    direction: '',
-    status: '',
-    reviewOnly: false,
-  })
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Initialize + keep filter state in sync with the URL. Reading from
+  // useSearchParams directly (rather than seeding once) means back/forward
+  // + shared links + programmatic navigation all Just Work.
+  const filters = useMemo(() => ({
+    month:       searchParams.get('month')       || '',
+    category:    searchParams.get('category')    || '',
+    subcategory: searchParams.get('subcategory') || '',
+    direction:   searchParams.get('direction')   || '',
+    status:      searchParams.get('status')      || '',
+    reviewOnly:  searchParams.get('review') === '1',
+  }), [searchParams])
+
+  const setFilters = (nextOrUpdater) => {
+    setSearchParams((prev) => {
+      const current = {
+        month:       prev.get('month')       || '',
+        category:    prev.get('category')    || '',
+        subcategory: prev.get('subcategory') || '',
+        direction:   prev.get('direction')   || '',
+        status:      prev.get('status')      || '',
+        reviewOnly:  prev.get('review') === '1',
+      }
+      const next = typeof nextOrUpdater === 'function' ? nextOrUpdater(current) : nextOrUpdater
+      const params = new URLSearchParams()
+      if (next.month)       params.set('month', next.month)
+      if (next.category)    params.set('category', next.category)
+      if (next.subcategory) params.set('subcategory', next.subcategory)
+      if (next.direction)   params.set('direction', next.direction)
+      if (next.status)      params.set('status', next.status)
+      if (next.reviewOnly)  params.set('review', '1')
+      return params
+    }, { replace: true })
+  }
+
   const [search, setSearch] = useState('')
   const [drawer, setDrawer] = useState({ open: false, transaction: null })
 
@@ -48,6 +83,7 @@ export default function BooksTransactionsPage() {
   const filterCount =
     (filters.month ? 1 : 0) +
     (filters.category ? 1 : 0) +
+    (filters.subcategory ? 1 : 0) +
     (filters.direction ? 1 : 0) +
     (filters.status ? 1 : 0) +
     (filters.reviewOnly ? 1 : 0)
@@ -116,7 +152,7 @@ export default function BooksTransactionsPage() {
             />
             <select
               value={filters.category}
-              onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
+              onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value, subcategory: '' }))}
               className="h-10 px-3 border border-gray-300 rounded-lg text-sm bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none"
             >
               <option value="">All categories</option>
@@ -124,6 +160,22 @@ export default function BooksTransactionsPage() {
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
+            {/* Subcategory chip — no dedicated dropdown yet. Users can arrive
+                with this set via URL (from Books → Reports drill-down) and
+                clear it here. If a full dependent dropdown is wanted, extend
+                using subcategoriesFor(filters.category). */}
+            {filters.subcategory && (
+              <span className="inline-flex items-center gap-1.5 h-10 px-3 border border-amber-300 bg-amber-50 rounded-lg text-xs font-semibold text-amber-800">
+                sub: {filters.subcategory}
+                <button
+                  onClick={() => setFilters((f) => ({ ...f, subcategory: '' }))}
+                  className="text-amber-600 hover:text-amber-900"
+                  title="Clear subcategory filter"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
             <select
               value={filters.direction}
               onChange={(e) => setFilters((f) => ({ ...f, direction: e.target.value }))}
@@ -146,7 +198,7 @@ export default function BooksTransactionsPage() {
             {(filterCount > 0 || search) && (
               <button
                 onClick={() => {
-                  setFilters({ month: '', category: '', direction: '', status: '', reviewOnly: false })
+                  setFilters({ month: '', category: '', subcategory: '', direction: '', status: '', reviewOnly: false })
                   setSearch('')
                 }}
                 className="h-10 px-3 text-xs font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg inline-flex items-center gap-1"

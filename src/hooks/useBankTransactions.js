@@ -7,12 +7,14 @@ import { useAuth } from './useAuth'
  * the review queue view + resolve a transaction with optional
  * vendor_rules autolearn.
  *
- * Filters (all optional): month (YYYY-MM), category, direction, status.
+ * Filters (all optional): month (YYYY-MM), category, subcategory,
+ * direction, status.
  * Default sort: txn_date desc.
  *
  * @param {{
  *   month?: string,
  *   category?: string,
+ *   subcategory?: string,
  *   direction?: 'credit'|'debit'|'',
  *   status?: 'categorized'|'needs_review'|'unmatched'|'',
  *   reviewOnly?: boolean,
@@ -30,11 +32,12 @@ export function useBankTransactions(filters = {}) {
     () => JSON.stringify({
       month: filters.month || '',
       category: filters.category || '',
+      subcategory: filters.subcategory || '',
       direction: filters.direction || '',
       status: filters.status || '',
       reviewOnly: !!filters.reviewOnly,
     }),
-    [filters.month, filters.category, filters.direction, filters.status, filters.reviewOnly]
+    [filters.month, filters.category, filters.subcategory, filters.direction, filters.status, filters.reviewOnly]
   )
 
   const fetch = useCallback(async () => {
@@ -77,9 +80,10 @@ export function useBankTransactions(filters = {}) {
         .order('txn_date', { ascending: false })
         .limit(500)
 
-      if (filters.category)  query = query.eq('category', filters.category)
-      if (filters.direction) query = query.eq('direction', filters.direction)
-      if (filters.status)    query = query.eq('status', filters.status)
+      if (filters.category)    query = query.eq('category', filters.category)
+      if (filters.subcategory) query = query.eq('subcategory', filters.subcategory)
+      if (filters.direction)   query = query.eq('direction', filters.direction)
+      if (filters.status)      query = query.eq('status', filters.status)
 
       const { data, error: qErr } = await query
       if (qErr) throw qErr
