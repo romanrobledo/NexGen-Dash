@@ -217,6 +217,7 @@ async function triggerParse(statementId, filePath) {
   // Log booleans + URL origin only (never the secret value), so we can
   // spot missing/mistyped env vars without leaking auth. Remove when
   // the auto-parse pipeline is verified working end-to-end.
+  // (Vercel deploy probe: 2026-08-08 — nudging Git integration to react.)
   console.info('[parseWebhook] env check', {
     url_defined: !!PARSE_WEBHOOK_URL,
     url_origin: PARSE_WEBHOOK_URL
