@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ViewModeProvider, useViewMode } from './contexts/ViewModeContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -26,6 +26,10 @@ import TrainingsToolsPage from './pages/TrainingsToolsPage'
 import TrainingsHowTosPage from './pages/TrainingsHowTosPage'
 import TrainingsAdminPage from './pages/TrainingsAdminPage'
 import TrainingsViewerPage from './pages/TrainingsViewerPage'
+import PracticeBotsPage from './pages/PracticeBotsPage'
+import OnboardingExercisePage from './pages/OnboardingExercisePage'
+import PlaybookPage from './pages/PlaybookPage'
+import RevenueFrameworkPage from './pages/RevenueFrameworkPage'
 import DashboardGuidePage from './pages/DashboardGuidePage'
 import WhoAreWePage from './pages/WhoAreWePage'
 import WhoAmIPage from './pages/WhoAmIPage'
@@ -235,8 +239,25 @@ function App() {
                 <Route path="/marketing/shot-lists" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><ShotListsPage /></ProtectedRoute>} />
                 <Route path="/marketing/upload" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><UploadPage /></ProtectedRoute>} />
                 <Route path="/officers/:officerKey" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><OfficerPage /></ProtectedRoute>} />
-                <Route path="/trainings" element={<TrainingsDashboardPage />} />
+                {/* /trainings is now a redirect to Onboarding — the tile
+                    dashboard only had one live tile left (Onboarding) so
+                    Roman collapsed it into a direct entry into the
+                    onboarding curriculum. TrainingsDashboardPage is dead
+                    code but kept in the tree until we're sure no
+                    out-of-app link points at it. */}
+                <Route path="/trainings" element={<Navigate to="/trainings/onboarding" replace />} />
+                {/* Practice bots — registered BEFORE /trainings/:category so
+                    the catch-all doesn't swallow "practice". */}
+                <Route path="/trainings/practice" element={<PracticeBotsPage />} />
                 <Route path="/trainings/onboarding" element={<TrainingsOnboardingPage />} />
+                {/* First-week onboarding exercise — must sit before the
+                    /trainings/:category/:subcategory catch-all below. */}
+                <Route path="/trainings/onboarding/exercise" element={<OnboardingExercisePage />} />
+                {/* Playbook — dynamic route reads section + slug from the
+                    URL and looks up content in src/lib/playbookContent.js. */}
+                <Route path="/lead/playbook/:section/:slug" element={<PlaybookPage />} />
+                {/* Revenue Framework — same pattern, single-level slug. */}
+                <Route path="/framework/:slug" element={<RevenueFrameworkPage />} />
                 {/* Role Clarity landing — must be registered before the generic
                     /trainings/:category route below, otherwise that dynamic
                     pattern would swallow "role-clarity" and show the wrong

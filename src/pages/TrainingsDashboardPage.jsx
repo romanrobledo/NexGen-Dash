@@ -6,7 +6,6 @@ import {
   GraduationCap,
   ChevronRight,
   Briefcase,
-  ClipboardList,
   ListTodo,
   CheckCheck,
   LayoutGrid,
@@ -69,50 +68,29 @@ const CATEGORIES = [
       return { done, total, unit: 'steps' }
     },
   },
-  {
-    key: 'trs',
-    permissionKey: 'training_trs',
-    title: 'TRS',
-    description: 'Texas Rising Star 4-Star compliance across all categories.',
-    icon: ShieldCheck,
-    iconClass: 'bg-amber-100 text-amber-600',
-    meterClass: 'bg-amber-500',
-    path: '/trainings/trs',
-    getStats: (allSubjects) => {
-      const subs = allSubjects.filter((s) => !!s.trs_category)
-      const total = subs.reduce((sum, s) => sum + (s.step_count || 0), 0)
-      const done = subs.reduce((sum, s) => sum + (s.completed_steps || 0), 0)
-      return { done, total, unit: 'steps' }
-    },
-  },
-  // Rename history: "Team Fulfillment" → "Teachers". Key, permissionKey,
-  // and path stayed the same so existing role_permissions rows and any
-  // deep links to /trainings/fulfillment keep working; only the label
-  // changed to reflect the audience (classroom teachers).
-  {
-    key: 'team-fulfillment',
-    permissionKey: 'training_team_fulfillment',
-    title: 'Teachers',
-    description: 'Classroom-specific training for every age group.',
-    icon: Briefcase,
-    iconClass: 'bg-emerald-100 text-emerald-600',
-    meterClass: 'bg-emerald-500',
-    path: '/trainings/fulfillment',
-    getStats: () => ({ done: 0, total: 0, unit: 'modules' }),
-  },
-  // Rename history: "Team Administration" → "Administration". Same
-  // key/permission/path preservation as Teachers above.
-  {
-    key: 'team-administration',
-    permissionKey: 'training_team_administration',
-    title: 'Administration',
-    description: 'Admin processes, policies, and operations.',
-    icon: ClipboardList,
-    iconClass: 'bg-purple-100 text-purple-600',
-    meterClass: 'bg-purple-500',
-    path: '/trainings/admin',
-    getStats: () => ({ done: 0, total: 0, unit: 'modules' }),
-  },
+  // TRS tile removed from the ONBOARD → Training dashboard — Roman
+  // moved TRS into ADMIN → Texas Rising Star with its own 4-category
+  // dropdown. The /trainings/trs route + TrainingsTrsPage stay
+  // registered so any deep link keeps resolving. The `training_trs`
+  // permission_key stays valid; nothing to migrate.
+  //
+  // Teachers tile removed — Roman folded the classroom-specific training
+  // (Infant / Older Infant / Young Toddler / Toddler / Pre-Kinder /
+  // Kinder / Afterschool rooms) into Onboarding → Module 3. The
+  // /trainings/fulfillment route + TrainingsFulfillmentPage stay
+  // registered so any deep link keeps resolving, and the
+  // `training_team_fulfillment` permission_key stays valid. Also: the
+  // /trainings dashboard itself now redirects to /trainings/onboarding
+  // (see App.jsx), so this array is only exercised if someone lands on
+  // /trainings via an out-of-app link.
+  //
+  // Administration tile removed from the ONBOARD → Training dashboard —
+  // Roman scoped this page down to the three onboarding tracks (Onboarding,
+  // TRS, Teachers). The /trainings/admin route + TrainingsAdminPage stay
+  // registered so any deep link keeps resolving; the tile is just no
+  // longer discoverable from the dashboard. The `training_team_administration`
+  // permission_key stays valid too — nothing to migrate.
+  //
   // "Team Improvement" and "Team Revenue" tiles removed — Vivid Digital
   // and Bizsync handle those workstreams externally, so the center
   // doesn't need in-house training tracks for them. Routes /trainings/

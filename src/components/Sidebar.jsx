@@ -24,15 +24,23 @@ import {
 // structure or permission keys, edit src/lib/navItems.js.
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Recursively check if any descendant path matches the current location */
+/**
+ * Recursively check if any descendant path matches the current location.
+ *
+ * Children with `exact: true` only match when the pathname equals the
+ * child's path EXACTLY — no prefix matching. Needed for items whose path
+ * is a prefix of sibling routes: e.g., Staff Management → Accounts sits
+ * at `/admin`, but siblings live at `/admin/data-integrity` and
+ * `/admin/performance-compliance`; without `exact: true`, prefix matching
+ * would highlight Staff Management on every /admin/* URL.
+ */
 function hasActiveDescendant(children, pathname) {
   if (!children) return false
-  return children.some(
-    (child) =>
-      (child.path && pathname === child.path) ||
-      (child.path && pathname.startsWith(child.path + '/')) ||
-      hasActiveDescendant(child.children, pathname)
-  )
+  return children.some((child) => {
+    if (child.path && pathname === child.path) return true
+    if (child.path && !child.exact && pathname.startsWith(child.path + '/')) return true
+    return hasActiveDescendant(child.children, pathname)
+  })
 }
 
 // ─── Recursive child-item renderer ───────────────────────────────────────────
@@ -116,9 +124,23 @@ function NavItem({ item, collapsed }) {
   // page now lives under the Org Chart menu — Training should NOT light up
   // while a user is on any Role Clarity or Org Chart page.
   const isNestedActive =
-    (item.label === 'Training' &&
-      ((location.pathname.startsWith('/trainings') &&
-        !location.pathname.startsWith('/trainings/role-clarity')) ||
+    // HELP → Training (bot library, path /trainings/practice) — active on
+    // any /trainings/practice subtree only.
+    (item.path === '/trainings/practice' &&
+      location.pathname.startsWith('/trainings/practice')) ||
+    // ONBOARD → Training (curriculum tile dashboard, path /trainings) —
+    // active on the tile dashboard and its category leaves (onboarding,
+    // trs, teachers, admin, tools, howtos, view). Explicitly excludes
+    // paths owned by sibling nav items: /trainings/practice (HELP →
+    // Training bots), /trainings/onboarding/exercise (ONBOARD → Exercise),
+    // and /trainings/role-clarity (Org Chart). Also matches legacy
+    // /dashboard/* URLs the previous Training check covered.
+    (item.path === '/trainings' &&
+      ((location.pathname === '/trainings' ||
+        (location.pathname.startsWith('/trainings/') &&
+          !location.pathname.startsWith('/trainings/practice') &&
+          !location.pathname.startsWith('/trainings/onboarding/exercise') &&
+          !location.pathname.startsWith('/trainings/role-clarity'))) ||
        location.pathname.startsWith('/dashboard/'))) ||
     (item.label === 'Org Chart' &&
       (location.pathname.startsWith('/org-chart') ||
@@ -135,9 +157,8 @@ function NavItem({ item, collapsed }) {
         !location.pathname.startsWith('/admin/data-integrity') &&
         !location.pathname.startsWith('/admin/performance-compliance')) ||
        location.pathname.startsWith('/staff/'))) ||
-    (item.label === 'Compliance' &&
-      (location.pathname.startsWith('/admin/performance-compliance') ||
-       location.pathname.startsWith('/admin/data-integrity'))) ||
+    (item.label === 'Training Compliance' &&
+      location.pathname.startsWith('/admin/performance-compliance/')) ||
     (item.label === 'Finance' && location.pathname.startsWith('/finance')) ||
     (item.label === 'Pulse' && location.pathname === '/quick-focus') ||
     (item.label === 'Handbooks' && location.pathname === '/handbooks') ||
@@ -203,15 +224,25 @@ function NavItem({ item, collapsed }) {
     <div>
       <button
         onClick={handleClick}
+        title={item.label}
         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium mb-0.5 transition-colors ${
           isParentActive
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
         }`}
       >
-        <div className="flex items-center gap-3">
-          <item.icon className="w-5 h-5" />
-          {item.label}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <item.icon className="w-5 h-5 shrink-0" />
+          {/*
+            `truncate` cuts labels that don't fit at the sidebar's 240px
+            width instead of wrapping to two lines — keeps every row a
+            uniform height. `min-w-0` on the parent + `flex-1` on this
+            container is what actually lets the truncation kick in
+            (without them, flex refuses to shrink the text and the row
+            wraps). `title` on the button gives hover-tooltip access to
+            the full label when truncated.
+          */}
+          <span className="truncate">{item.label}</span>
         </div>
         {hasChildren && (
           <ChevronDown
@@ -284,9 +315,10 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, mobileMode])
 
-  // Filter nav items by user permissions. Separators always pass through.
+  // Filter nav items by user permissions. Separators + section headers
+  // always pass through (they're presentational, not gated).
   const visibleItems = navItems.filter((item) => {
-    if (item.separator) return true
+    if (item.separator || item.sectionHeader) return true
     if (!item.permissionKey) return true
     if (!staff) return true
     return hasPermission(item.permissionKey)
@@ -301,6 +333,30 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
       aria-hidden="true"
     />
   )
+
+  // Section header — a small-caps label with an inline hairline that
+  // starts a few pixels after the label and extends to the sidebar's
+  // right edge (same baseline as the text, not underneath it):
+  //   HELP ─────────────────────────
+  // The `-mx-3` escapes the nav's px-3 horizontal padding so the flex
+  // row reaches both walls; `pl-6` restores label alignment with the
+  // icon column. Falls back to a plain divider when the sidebar is
+  // collapsed to icons — a text label can't render in a 64px rail.
+  const NavSectionHeader = ({ label, collapsed: isCollapsed }) =>
+    isCollapsed ? (
+      <NavDivider collapsed={true} />
+    ) : (
+      <div className="-mx-3 flex items-center gap-2 pt-4 pb-2 mb-2 pl-6 select-none">
+        <span
+          role="heading"
+          aria-level={3}
+          className="shrink-0 text-[10px] font-bold tracking-widest uppercase text-gray-400"
+        >
+          {label}
+        </span>
+        <span className="flex-1 h-px bg-gray-200" aria-hidden="true" />
+      </div>
+    )
 
   // Mobile mode: slide-over drawer.
   if (mobileMode) {
@@ -334,6 +390,12 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
             {visibleItems.map((item, i) =>
               item.separator ? (
                 <NavDivider key={`sep-${i}`} collapsed={false} />
+              ) : item.sectionHeader ? (
+                <NavSectionHeader
+                  key={`sh-${i}`}
+                  label={item.sectionHeader}
+                  collapsed={false}
+                />
               ) : (
                 <NavItem key={`nav-${i}-${item.label}`} item={item} collapsed={false} />
               )
@@ -379,6 +441,12 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
         {visibleItems.map((item, i) =>
           item.separator ? (
             <NavDivider key={`sep-${i}`} collapsed={collapsed} />
+          ) : item.sectionHeader ? (
+            <NavSectionHeader
+              key={`sh-${i}`}
+              label={item.sectionHeader}
+              collapsed={collapsed}
+            />
           ) : (
             <NavItem key={`nav-${i}-${item.label}`} item={item} collapsed={collapsed} />
           )
