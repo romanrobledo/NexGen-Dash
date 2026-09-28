@@ -13,6 +13,16 @@ export default function StaffProfileDatabasePage() {
   const navigate = useNavigate()
   const { mobileMode } = useViewMode()
 
+  // Filter to Active staff only so the roster reads as "who's here right
+  // now." Separated / Removed staff stay in the DB (login gate + audit
+  // history need them), just not on this list. StaffResponsesPage is
+  // untouched — it still shows everyone so historical submissions from
+  // former staff render. Case-insensitive + trimmed to match the login
+  // gate's normalization.
+  const activeStaff = (staff || []).filter(
+    (s) => (s.status || '').trim().toLowerCase() === 'active'
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -45,7 +55,7 @@ export default function StaffProfileDatabasePage() {
       {/* Mobile: stacked cards */}
       {mobileMode ? (
         <div className="space-y-3">
-          {staff.map((teacher) => (
+          {activeStaff.map((teacher) => (
             <button
               key={teacher.id}
               onClick={() => navigate(`/staff/${teacher.id}`)}
@@ -106,7 +116,7 @@ export default function StaffProfileDatabasePage() {
             </tr>
           </thead>
           <tbody>
-            {staff.map((teacher) => (
+            {activeStaff.map((teacher) => (
               <tr
                 key={teacher.id}
                 onClick={() => navigate(`/staff/${teacher.id}`)}

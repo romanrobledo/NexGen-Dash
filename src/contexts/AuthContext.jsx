@@ -159,14 +159,18 @@ export function AuthProvider({ children }) {
       return
     }
 
-    // Safety timeout — if everything takes longer than 10 seconds, just show login.
-    // With navigator.locks bypassed this should never fire, but kept as a safety net.
+    // Safety timeout — if getSession() hasn't resolved in 5s, give up and
+    // treat the user as signed-out. Sends them to the login page instead
+    // of leaving the app stuck on a spinner forever. Trimmed from 10s to
+    // 5s to make the stall recovery noticeable but not annoying: 5s is
+    // long enough that a slow-but-working session check still completes
+    // normally, short enough that a real hang doesn't feel broken.
     const timeout = setTimeout(() => {
       if (!loadingResolved.current) {
         console.warn('Auth loading timeout — finishing loading')
         finishLoading()
       }
-    }, 10000)
+    }, 5000)
 
     // Get initial session (resolves instantly now that navigator.locks are bypassed)
     supabase.auth
