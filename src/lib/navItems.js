@@ -40,8 +40,6 @@ import {
   Siren,
   School,
   HeartHandshake,
-  Sunrise,
-  RefreshCw,
   Hash,
   Inbox,
   Sprout,
@@ -49,7 +47,6 @@ import {
   Package,
   Star,
   Sparkles,
-  Gift,
   Building2,
   Database,
   TrendingUp,
@@ -66,17 +63,30 @@ import {
   Newspaper,
   Bot,
   BookMarked,
-  Headset,
-  Reply,
-  Smile,
-  LifeBuoy,
-  PlayCircle,
   Eye,
   Flag,
   Gem,
   Trophy,
   ClipboardList,
   Globe,
+  LogIn,
+  LogOut,
+  AlertCircle,
+  Lightbulb,
+  HelpCircle,
+  Facebook,
+  BarChart3,
+  Volume2,
+  Timer,
+  PlayCircle,
+  Smile,
+  MapPin,
+  Workflow,
+  Video,
+  Library,
+  Brain,
+  Cog,
+  Waves,
 } from 'lucide-react'
 
 /**
@@ -133,14 +143,15 @@ export const navItems = [
     permissionKey: 'nav_staff',
     path: '/staff/profile-database',
   },
+  // Families — a single "big" profile surface. Combines the old
+  // Guardians directory + Paperwork checklist + communication log +
+  // tour history + payment status into one page per family. Route is
+  // /families for the list; /families/:id for the detail view.
   {
     icon: Users,
     label: 'Families',
     permissionKey: 'nav_families',
-    children: [
-      { label: 'Guardians' },
-      { label: 'Paperwork' },
-    ],
+    path: '/families',
   },
   // Billing — top-level; invoices/payments/plans are family-facing money
   // ops. Finance → Books stays inside FOUNDER for internal bookkeeping.
@@ -155,6 +166,19 @@ export const navItems = [
       { label: 'Plans' },
     ],
   },
+
+  // ── SUBMISSIONS ─────────────────────────────────────────────────────────
+  // Daily inputs staff send in — Check In / Check Out for shift
+  // attendance, Issues for problems the founder or ops needs to know
+  // about, Ideas for improvement suggestions. All gated on `nav_admin`
+  // for now; loosen the key later so staff-tier roles can log in / out
+  // from here directly.
+  { sectionHeader: 'SUBMISSIONS' },
+  { icon: LogIn,       label: 'Check In',   permissionKey: 'nav_admin' },
+  { icon: LogOut,      label: 'Check Out',  permissionKey: 'nav_admin' },
+  { icon: AlertCircle, label: 'Issues',     permissionKey: 'nav_admin' },
+  { icon: Lightbulb,   label: 'Ideas',      permissionKey: 'nav_admin' },
+  { icon: BarChart3,   label: 'Reports',    permissionKey: 'nav_admin' },
 
   // ── ONBOARD ─────────────────────────────────────────────────────────────
   // Training here is the CURRICULUM TILE DASHBOARD at /trainings — the
@@ -232,20 +256,15 @@ export const navItems = [
           { label: 'Bags', path: '/marketing/offers/giveaways/bags' },
           { label: 'Kits', path: '/marketing/offers/giveaways/kits' },
           { label: 'Baskets', path: '/marketing/offers/giveaways/baskets' },
+          // 3 Month Scholarship — moved here from the old Free Goodwill
+          // Offer container. Route stays under /marketing/offers/
+          // free-goodwill/ so the existing page still resolves.
+          { label: '3 Month Scholarship', path: '/marketing/offers/free-goodwill/3-month-scholarship' },
         ],
       },
       { label: 'Decoy', path: '/marketing/offers/decoy' },
       { label: 'Buy X, Get Y', path: '/marketing/offers/buy-x-get-y' },
       { label: 'Pay Less Now or Pay More Later', path: '/marketing/offers/pay-less-now' },
-    ],
-  },
-  {
-    icon: Gift,
-    label: 'Free Goodwill Offer',
-    permissionKey: 'nav_admin',
-    path: '/marketing/offers/free-goodwill',
-    children: [
-      { label: '3 Month Scholarship', path: '/marketing/offers/free-goodwill/3-month-scholarship' },
     ],
   },
   // Upsell / Downsell / Continuity Offers — the three offer categories
@@ -303,18 +322,25 @@ export const navItems = [
   },
 
   // ── LEAD MAGNETS ────────────────────────────────────────────────────────
-  // Four concrete magnet types Roman is planning to run: postcards
-  // (direct mail), tri-folds (in-facility handouts), a CCMS eligibility
-  // bot (qualifies subsidized enrollment leads automatically), and a
-  // magazine (long-form content marketing). Leaves for now — no routes
-  // until each surface is built. Old "Lead Magnets" placeholder leaf
-  // removed; the strategic concept still lives in REVENUE FRAMEWORK →
-  // Lead Magnets which now points at /framework/lead-magnets.
+  // The CCMS Qualification Bot is the only true magnet here — it's the
+  // interactive lead-capture tool for subsidized enrollment. Postcards,
+  // tri-folds, and magazines moved to DELIVERABLES below since those
+  // are physical/print deliverables you produce, not interactive
+  // capture tools. The strategic concept still lives at REVENUE
+  // FRAMEWORK → Lead Magnets (/framework/lead-magnets).
   { sectionHeader: 'LEAD MAGNETS' },
-  { icon: Send,       label: 'Post Cards',              permissionKey: 'nav_admin' },
-  { icon: Newspaper,  label: 'Tri-Folds',               permissionKey: 'nav_admin' },
-  { icon: Bot,        label: 'CCMS Qualification Bot',  permissionKey: 'nav_admin' },
-  { icon: BookMarked, label: 'Magazines',               permissionKey: 'nav_admin' },
+  { icon: Bot, label: 'CCMS Qualification Bot', permissionKey: 'nav_admin' },
+
+  // ── DELIVERABLES ────────────────────────────────────────────────────────
+  // The physical / print deliverables Roman is running as top-of-funnel
+  // touchpoints — postcards (direct mail), tri-folds (in-facility
+  // handouts), magazines (long-form). Split out of LEAD MAGNETS because
+  // deliverable production is a distinct discipline (design → print →
+  // distribute) from interactive lead-capture magnets.
+  { sectionHeader: 'DELIVERABLES' },
+  { icon: Send,       label: 'Post Cards', permissionKey: 'nav_admin' },
+  { icon: Newspaper,  label: 'Tri-Folds',  permissionKey: 'nav_admin' },
+  { icon: BookMarked, label: 'Magazines',  permissionKey: 'nav_admin' },
 
   // ── CORE 7 ──────────────────────────────────────────────────────────────
   // The seven traffic channels expanded into their own top-level items.
@@ -430,56 +456,38 @@ export const navItems = [
   },
 
   // ── NURTURE ─────────────────────────────────────────────────────────────
-  // Placeholder section between CONTENT and SELL — where a warm lead
-  // gets follow-up sequences, tour reminders, and reactivation touches
-  // before they're ready to enroll. Empty for now; drip flows and
-  // reactivation campaigns land here.
+  // How a warm lead gets kept warm — AI Help handles the on-demand
+  // question / conversation surface, Automations run the always-on
+  // sequences, and Cadence sets the rhythm of the touchpoints. All
+  // leaves; no routes wired until surfaces land.
   { sectionHeader: 'NURTURE' },
+  { icon: Brain, label: 'AI Help',     permissionKey: 'nav_admin' },
+  { icon: Cog,   label: 'Automations', permissionKey: 'nav_admin' },
+  { icon: Waves, label: 'Cadence',     permissionKey: 'nav_admin' },
 
   // ── SELL ────────────────────────────────────────────────────────────────
   // Leads / Candidates — everyone touching the front of the enrollment
   // or hiring funnel. Advertising moved out to BUILD above. Families
   // moved out to DAILY (they're already enrolled). Fulfillment is the
   // downstream: what happens after a lead says yes.
-  { sectionHeader: 'SELL' },
-  {
-    icon: UserPlus,
-    label: 'Leads',
-    permissionKey: 'nav_leads',
-    children: [
-      { label: 'Dashboard', path: '/leads' },
-      { label: 'Tours', path: '/leads/tours' },
-      { label: 'Procedures', path: '/leads/procedures' },
-    ],
-  },
-  {
-    icon: UserSearch,
-    label: 'Candidates',
-    permissionKey: 'nav_candidates',
-    children: [
-      { label: 'Dashboard', path: '/candidates' },
-      { label: 'Interviews', path: '/candidates/interviews' },
-      { label: 'Procedures', path: '/candidates/procedures' },
-    ],
-  },
-  // Calendar — unified schedule for both Leads (tours) and Candidates
-  // (interviews). Children reuse the existing routes so nothing needs
-  // duplicating; this is a single place to see both sides of the
-  // top-of-funnel calendar. `nav_admin` because it spans both funnels.
-  {
-    icon: Calendar,
-    label: 'Calendar',
-    permissionKey: 'nav_admin',
-    children: [
-      { label: 'Tours', path: '/leads/tours' },
-      { label: 'Interviews', path: '/candidates/interviews' },
-    ],
-  },
   // ── CLOSE ───────────────────────────────────────────────────────────────
-  // Placeholder section between SELL and FULFILL — where the tour or
-  // interview turns into an actual enrollment (or hire). Empty for now;
-  // scripts, follow-ups, and close-rate tracking land here.
+  // The enrollment funnel — Leads / Tours / Procedures. Renamed from
+  // SELL: for a childcare center, closing a family is more accurate
+  // than "selling" them. Each item is a leaf; existing paths (/leads,
+  // /leads/tours, /leads/procedures) are unchanged.
   { sectionHeader: 'CLOSE' },
+  { icon: UserPlus, label: 'Leads',      permissionKey: 'nav_leads', path: '/leads' },
+  { icon: MapPin,   label: 'Tours',      permissionKey: 'nav_leads', path: '/leads/tours' },
+  { icon: Workflow, label: 'Procedures', permissionKey: 'nav_leads', path: '/leads/procedures' },
+
+  // ── HIRE ────────────────────────────────────────────────────────────────
+  // Hiring funnel — Candidates / Interviews / Procedures. Same flatten
+  // treatment as SELL: each is a leaf pointing at its existing
+  // /candidates/* route.
+  { sectionHeader: 'HIRE' },
+  { icon: UserSearch, label: 'Candidates', permissionKey: 'nav_candidates', path: '/candidates' },
+  { icon: Video,      label: 'Interviews', permissionKey: 'nav_candidates', path: '/candidates/interviews' },
+  { icon: Workflow,   label: 'Procedures', permissionKey: 'nav_candidates', path: '/candidates/procedures' },
 
   // ── FULFILL ─────────────────────────────────────────────────────────────
   // Fulfillment steps for a new NexGen family, ordered by when they
@@ -490,7 +498,7 @@ export const navItems = [
   // childcare). Leaves for now: no path, no children until each surface
   // is built. All gated on `nav_admin` — enrollment/fulfillment is an
   // admin/director workflow, not a teacher-facing one.
-  { sectionHeader: 'FULFILL' },
+  { sectionHeader: 'ONBOARDING NEW CUSTOMERS' },
   {
     icon: FileText,
     label: 'Enrollment Contract',
@@ -521,56 +529,109 @@ export const navItems = [
     label: 'Family Orientation',
     permissionKey: 'nav_admin',
   },
+  // Deliverables — the tangible things a new family walks out with on
+  // Day 1 (uniforms, handbook, welcome kit, room labels, etc.).
+  // Replaced Transition Support and Ongoing Care Plan since those
+  // felt abstract for a fulfillment stage; Deliverables is concrete.
   {
-    icon: Sunrise,
-    label: 'Transition Support',
-    permissionKey: 'nav_admin',
-  },
-  {
-    icon: RefreshCw,
-    label: 'Ongoing Care Plan',
+    icon: Package,
+    label: 'Deliverables',
     permissionKey: 'nav_admin',
   },
 
   // ── CUSTOMER SUCCESS ────────────────────────────────────────────────────
-  // Retention arc — the surfaces that keep enrolled families satisfied
-  // after intake but before they graduate out. Activation lands first
-  // (turning a new family into an engaged one), then service/response/
-  // support/satisfaction. All gated on `nav_admin`; no routes wired
-  // until pages are built.
+  // Three discipline anchors — Customer Onboarding (owns the first-60-
+  // day target ladder as its children), Customer Satisfaction (are they
+  // happy?), Customer Support (are they stuck?). Nesting the target
+  // ladder under Onboarding keeps the checkpoints scoped to the
+  // discipline that owns them.
   { sectionHeader: 'CUSTOMER SUCCESS' },
-  { icon: PlayCircle, label: 'Customer Activation',   permissionKey: 'nav_admin' },
-  { icon: Headset,    label: 'Customer Service',      permissionKey: 'nav_admin' },
-  // Response — how the team replies. Two axes: tone (how you say it)
-  // and speed (how fast you say it). Both are trainable.
+  // Customer Communication Cadence — target ladder is now nested one
+  // level deeper inside an Onboarding container. Leaves room for future
+  // cadence buckets (Retention, Win-Back, etc.) to sit as siblings of
+  // Onboarding without displacing the checkpoints.
   {
-    icon: Reply,
-    label: 'Response',
+    icon: PlayCircle,
+    label: 'Customer Communication Cadence',
     permissionKey: 'nav_admin',
     children: [
-      { label: 'Tonality' },
-      { label: 'Speed to Response' },
+      {
+        label: 'Onboarding',
+        children: [
+          { label: 'Day 1 Target' },
+          { label: 'Day 3 Target' },
+          { label: 'Week 1 Target' },
+          { label: 'Week 2 Target' },
+          { label: '30-Day Target' },
+          { label: '60-Day Target' },
+        ],
+      },
     ],
   },
-  { icon: Smile,      label: 'Customer Satisfaction', permissionKey: 'nav_admin' },
-  { icon: LifeBuoy,   label: 'Customer Support',      permissionKey: 'nav_admin' },
+  // Customer Satisfaction — three progression states a happy customer
+  // moves through. Labels kept short so they don't truncate in the
+  // sidebar; parenthetical definitions Roman gave live here as ground
+  // truth for the pages behind each item:
+  //   * Feeling — Confident in what we do
+  //   * Trust   — Knows we will communicate and get it done
+  //   * Refer   — Loves the product enough to tell other people
+  {
+    icon: Smile,
+    label: 'Customer Satisfaction',
+    permissionKey: 'nav_admin',
+    children: [
+      { label: 'Feeling' },
+      { label: 'Trust' },
+      { label: 'Refer' },
+    ],
+  },
+
+  // ── CUSTOMER SUPPORT ────────────────────────────────────────────────────
+  // Renamed from CUSTOMER SERVICE. The Customer Support leaf in
+  // CUSTOMER SUCCESS was deleted alongside this rename — support is
+  // its own discipline, not a bullet inside the retention arc. Two
+  // trainable axes of a great reply live here — Tonality (how you say
+  // it) and Speed to Response (how fast you say it) — plus the FAQ
+  // knowledge base reps lean on.
+  { sectionHeader: 'CUSTOMER SUPPORT' },
+  { icon: Volume2, label: 'Tonality',          permissionKey: 'nav_admin' },
+  { icon: Timer,   label: 'Speed to Response', permissionKey: 'nav_admin' },
+  // Knowledge Base — a dropdown for the canned answers Roman wants
+  // service reps to lean on. General FAQ for the everyday questions;
+  // Fall Outing FAQ carved out because the seasonal event drives its
+  // own recurring question set (dates, drop-offs, dietary constraints).
+  // More seasonal FAQs land here as siblings.
+  {
+    icon: Library,
+    label: 'Knowledge Base / FAQs',
+    permissionKey: 'nav_admin',
+    children: [
+      { label: 'General FAQ' },
+      { label: 'Fall Outing FAQ' },
+    ],
+  },
 
   // ── BUILD ───────────────────────────────────────────────────────────────
-  // Reactivation surfaces moved out of CAPTURE — these are lifecycle
-  // nurture tools (talk to existing families / prospects), not
-  // top-of-funnel capture tools. Both leaves for now until real
-  // composer/scheduler pages land.
+  // Content-creation surfaces — where the team drafts / composes the
+  // things they distribute. Split employee-facing from customer-facing
+  // for newsletters + SMS blasts so audience is picked at the nav step,
+  // not inside a composer. Some labels overlap with LEAD MAGNETS and
+  // CAPTURE (Landing Pages, Postcards, Tri-Folds, Magazines) — those
+  // are strategy anchors; these are the composer surfaces. Intentional
+  // duplication until Roman decides how to unify. All leaves; no routes
+  // wired until the pages land.
   { sectionHeader: 'BUILD' },
-  {
-    icon: Mail,
-    label: 'Newsletters',
-    permissionKey: 'nav_admin',
-  },
-  {
-    icon: MessageSquare,
-    label: 'SMS Blasts',
-    permissionKey: 'nav_admin',
-  },
+  { icon: Mail,          label: 'Newsletters to Employees', permissionKey: 'nav_admin' },
+  { icon: MessageSquare, label: 'SMS Blasts to Employees',  permissionKey: 'nav_admin' },
+  { icon: Mail,          label: 'Newsletters to Customers', permissionKey: 'nav_admin' },
+  { icon: MessageSquare, label: 'SMS Blasts to Customers',  permissionKey: 'nav_admin' },
+  { icon: HelpCircle,    label: 'AI Response FAQ',          permissionKey: 'nav_admin' },
+  { icon: LayoutTemplate, label: 'Landing Pages',           permissionKey: 'nav_admin' },
+  { icon: Send,          label: 'Postcards',                permissionKey: 'nav_admin' },
+  { icon: Newspaper,     label: 'Tri-Folds',                permissionKey: 'nav_admin' },
+  { icon: BookMarked,    label: 'Magazines',                permissionKey: 'nav_admin' },
+  { icon: Facebook,      label: 'Meta Ad',                  permissionKey: 'nav_admin' },
+  { icon: Megaphone,     label: 'Campaign',                 permissionKey: 'nav_admin' },
 
   // ── LEAD (leadership) ───────────────────────────────────────────────────
   // Playbook + Projects + Meetings + Schedule. Playbook holds the

@@ -163,9 +163,10 @@ function NavItem({ item, collapsed }) {
     (item.label === 'Pulse' && location.pathname === '/quick-focus') ||
     (item.label === 'Handbooks' && location.pathname === '/handbooks') ||
     (item.label === 'Applications' && location.pathname === '/applications') ||
-    (item.label === 'Marketing' && location.pathname.startsWith('/marketing')) ||
-    (item.label === 'Leads' && location.pathname.startsWith('/leads')) ||
-    (item.label === 'Candidates' && location.pathname.startsWith('/candidates')) ||
+    // Marketing / Leads / Candidates nested-active rules removed — those
+    // items are now leaves (SELL and HIRE were flattened). Leaving them
+    // in caused Leads to light up on /leads/tours alongside the Tours
+    // leaf, and same for Candidates on /candidates/interviews.
     (item.label === 'AI Chat' && location.pathname.startsWith('/ai-chat'))
   const isParentActive = isDirectActive || isChildActive || isNestedActive
 
