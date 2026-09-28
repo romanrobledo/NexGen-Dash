@@ -13,8 +13,13 @@ import {
   Phone,
   Mail,
   Send,
+  Plus,
+  Pencil,
+  Star,
+  Ban,
 } from 'lucide-react'
 import { useFamilies } from '../hooks/useFamilies'
+import GuardianEditDrawer from '../components/GuardianEditDrawer'
 
 /**
  * The "one big Families page" — a tabbed profile per household.
@@ -30,7 +35,7 @@ import { useFamilies } from '../hooks/useFamilies'
 const TABS = [
   { key: 'overview',       label: 'Overview',       icon: Users },
   { key: 'children',       label: 'Children',       icon: Baby },
-  { key: 'guardians',      label: 'Guardians',      icon: Users,        placeholder: true },
+  { key: 'guardians',      label: 'Guardians',      icon: Users },
   { key: 'paperwork',      label: 'Paperwork',      icon: FileText,     placeholder: true },
   { key: 'communications', label: 'Communications', icon: MessageSquare, placeholder: true },
   { key: 'tours',          label: 'Tours',          icon: Calendar,     placeholder: true },
@@ -40,8 +45,9 @@ const TABS = [
 export default function FamilyDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { familiesById, loading, error } = useFamilies()
+  const { familiesById, loading, error, refetch } = useFamilies()
   const [activeTab, setActiveTab] = useState('overview')
+  const [guardianDrawer, setGuardianDrawer] = useState(/** @type {{mode:'create'|'edit', guardian?:any}|null} */ (null))
 
   const family = familiesById.get(id) || null
 
@@ -99,11 +105,29 @@ export default function FamilyDetailPage() {
       <Tabs active={activeTab} onSelect={setActiveTab} />
       {activeTab === 'overview'  && <OverviewTab  family={family} />}
       {activeTab === 'children'  && <ChildrenTab  family={family} />}
-      {activeTab === 'guardians' && <PlaceholderTab title="Guardians"      note="Phase 2 — add / edit guardians, mark primary, pickup authorization list." />}
+      {activeTab === 'guardians' && (
+        <GuardiansTab
+          family={family}
+          onAdd={() => setGuardianDrawer({ mode: 'create' })}
+          onEdit={(g) => setGuardianDrawer({ mode: 'edit', guardian: g })}
+        />
+      )}
       {activeTab === 'paperwork' && <PlaceholderTab title="Paperwork"      note="Phase 2 — checklist of required docs per child + PDF upload via Supabase Storage." />}
       {activeTab === 'communications' && <PlaceholderTab title="Communications" note="Phase 3 — check-in/out log, staff notes, and an SMS composer that fires a GoHighLevel / Bizsync webhook." />}
       {activeTab === 'tours'     && <PlaceholderTab title="Tours"          note="Phase 3 — post-enrollment tour + follow-up history (separate from the pre-enrollment leads tour table)." />}
       {activeTab === 'billing'   && <PlaceholderTab title="Billing"        note="Phase 3 — tuition status pulled from bank_statements + plans." />}
+
+      <GuardianEditDrawer
+        open={!!guardianDrawer}
+        mode={guardianDrawer?.mode || 'create'}
+        familyId={family.id}
+        guardian={guardianDrawer?.guardian}
+        onClose={() => setGuardianDrawer(null)}
+        onSaved={async () => {
+          setGuardianDrawer(null)
+          await refetch()
+        }}
+      />
     </div>
   )
 }
@@ -280,6 +304,124 @@ function ChildrenTab({ family }) {
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+/**
+ * Guardians list — one row per person, sorted by is_primary first (star
+ * card at the top), then emergency_priority ASC, then last name. Each
+ * row surfaces relationship, phone, email, and two badges: PRIMARY (if
+ * is_primary) and PICKUP (only shown if pickup_authorized is false — the
+ * default state is authorized so we don't flood the UI with green
+ * PICKUP badges).
+ */
+function GuardiansTab({ family, onAdd, onEdit }) {
+  const guardians = useMemo(() => {
+    return [...family.guardians].sort((a, b) => {
+      if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1
+      const ap = a.emergencyPriority ?? 999
+      const bp = b.emergencyPriority ?? 999
+      if (ap !== bp) return ap - bp
+      return (a.lastName || '').localeCompare(b.lastName || '')
+    })
+  }, [family.guardians])
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500">
+          {guardians.length} guardian{guardians.length === 1 ? '' : 's'} on file
+        </p>
+        <button
+          onClick={onAdd}
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add guardian
+        </button>
+      </div>
+
+      {guardians.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-12 text-center">
+          <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-sm text-gray-600 font-semibold">No guardians on file yet.</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Add at least one guardian so you know who to contact for this family.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {guardians.map((g) => (
+            <GuardianRow key={g.id} guardian={g} onEdit={() => onEdit(g)} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function GuardianRow({ guardian, onEdit }) {
+  return (
+    <div
+      className={`rounded-xl border p-4 flex items-start gap-3 hover:border-gray-300 transition ${
+        guardian.isPrimary ? 'border-blue-200 bg-blue-50/40' : 'border-gray-200 bg-white'
+      }`}
+    >
+      <div className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-sm font-bold shrink-0">
+        {(guardian.firstName?.[0] || '')}{(guardian.lastName?.[0] || '')}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-gray-900">
+            {guardian.firstName} {guardian.lastName}
+          </p>
+          {guardian.relationship && (
+            <span className="text-xs text-gray-500">({guardian.relationship})</span>
+          )}
+          {guardian.isPrimary && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700">
+              <Star className="w-3 h-3" />
+              Primary
+            </span>
+          )}
+          {!guardian.pickupAuthorized && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">
+              <Ban className="w-3 h-3" />
+              No pickup
+            </span>
+          )}
+          {guardian.emergencyPriority != null && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700">
+              Emergency #{guardian.emergencyPriority}
+            </span>
+          )}
+        </div>
+        <div className="mt-1.5 flex items-center gap-3 flex-wrap text-xs text-gray-600">
+          {guardian.phone && (
+            <span className="flex items-center gap-1">
+              <Phone className="w-3 h-3 text-gray-400" />
+              <a href={`tel:${guardian.phone}`} className="hover:text-blue-700">{guardian.phone}</a>
+            </span>
+          )}
+          {guardian.email && (
+            <span className="flex items-center gap-1 truncate max-w-xs">
+              <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+              <a href={`mailto:${guardian.email}`} className="hover:text-blue-700 truncate">{guardian.email}</a>
+            </span>
+          )}
+        </div>
+        {guardian.notes && (
+          <p className="text-xs text-gray-500 mt-2 italic">{guardian.notes}</p>
+        )}
+      </div>
+      <button
+        onClick={onEdit}
+        className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-white transition shrink-0"
+        title="Edit guardian"
+      >
+        <Pencil className="w-4 h-4" />
+      </button>
     </div>
   )
 }
