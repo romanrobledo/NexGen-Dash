@@ -30,6 +30,8 @@ import PracticeBotsPage from './pages/PracticeBotsPage'
 import OnboardingExercisePage from './pages/OnboardingExercisePage'
 import PlaybookPage from './pages/PlaybookPage'
 import RevenueFrameworkPage from './pages/RevenueFrameworkPage'
+import FamiliesListPage from './pages/FamiliesListPage'
+import FamilyDetailPage from './pages/FamilyDetailPage'
 import DashboardGuidePage from './pages/DashboardGuidePage'
 import WhoAreWePage from './pages/WhoAreWePage'
 import WhoAmIPage from './pages/WhoAmIPage'
@@ -184,6 +186,12 @@ function App() {
                     read-only view of children driven by the retired Sheet
                     sync. Lives under Families > Students in the sidebar. */}
                 <Route path="/roster" element={<RosterPage />} />
+                {/* Families — the "one big" household profile surface.
+                    List at /families, detail at /families/:id. Same
+                    BOOKS_ADMIN_ROLES gate as the other family-tier
+                    surfaces; teacher-side scoping lands with Phase 3. */}
+                <Route path="/families" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamiliesListPage /></ProtectedRoute>} />
+                <Route path="/families/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyDetailPage /></ProtectedRoute>} />
                 {/* Books — bank-statement upload, transaction categorization,
                     monthly rollups. All three pages gated by RLS via the
                     current_staff_is_books_admin() predicate; non-admin
