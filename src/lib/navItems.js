@@ -87,6 +87,7 @@ import {
   Brain,
   Cog,
   Waves,
+  GitBranch,
 } from 'lucide-react'
 
 /**
@@ -161,9 +162,9 @@ export const navItems = [
     permissionKey: 'nav_billing',
     children: [
       { label: 'Dashboard', path: '/billing' },
-      { label: 'Invoices' },
-      { label: 'Payments' },
-      { label: 'Plans' },
+      { label: 'Invoices',  path: '/billing/invoices' },
+      { label: 'Payments',  path: '/billing/payments' },
+      { label: 'Plans',     path: '/billing/plans' },
     ],
   },
 
@@ -174,11 +175,11 @@ export const navItems = [
   // for now; loosen the key later so staff-tier roles can log in / out
   // from here directly.
   { sectionHeader: 'SUBMISSIONS' },
-  { icon: LogIn,       label: 'Check In',   permissionKey: 'nav_admin' },
-  { icon: LogOut,      label: 'Check Out',  permissionKey: 'nav_admin' },
-  { icon: AlertCircle, label: 'Issues',     permissionKey: 'nav_admin' },
-  { icon: Lightbulb,   label: 'Ideas',      permissionKey: 'nav_admin' },
-  { icon: BarChart3,   label: 'Reports',    permissionKey: 'nav_admin' },
+  { icon: LogIn,       label: 'Check In',   permissionKey: 'nav_admin', path: '/submissions/check-in'  },
+  { icon: LogOut,      label: 'Check Out',  permissionKey: 'nav_admin', path: '/submissions/check-out' },
+  { icon: AlertCircle, label: 'Issues',     permissionKey: 'nav_admin', path: '/submissions/issues'    },
+  { icon: Lightbulb,   label: 'Ideas',      permissionKey: 'nav_admin', path: '/submissions/ideas'     },
+  { icon: BarChart3,   label: 'Reports',    permissionKey: 'nav_admin', path: '/submissions/reports'   },
 
   // ── ONBOARD ─────────────────────────────────────────────────────────────
   // Training here is the CURRICULUM TILE DASHBOARD at /trainings — the
@@ -213,8 +214,8 @@ export const navItems = [
   // execution surfaces. Leaves for now (no paths) — wire when each
   // concept gets its own strategy doc or dashboard.
   { sectionHeader: 'REVENUE FRAMEWORK' },
-  { icon: UserCircle,     label: 'Avatar',           permissionKey: 'nav_admin' },
-  { icon: Tag,            label: 'Offer',            permissionKey: 'nav_admin' },
+  { icon: UserCircle,     label: 'Avatar',           permissionKey: 'nav_admin', path: '/framework/avatars' },
+  { icon: Tag,            label: 'Offer',            permissionKey: 'nav_admin', path: '/framework/offers' },
   { icon: Award,          label: 'Guarantee',        permissionKey: 'nav_admin' },
   { icon: Magnet,         label: 'Lead Magnets',     permissionKey: 'nav_admin', path: '/framework/lead-magnets' },
   { icon: Hash,           label: 'Core 7',           permissionKey: 'nav_admin' },
@@ -233,6 +234,7 @@ export const navItems = [
     icon: UserCircle,
     label: 'CCMS Cassandra',
     permissionKey: 'nav_admin',
+    path: '/framework/avatars/ccms-cassandra',
   },
 
   // ── OFFERS ──────────────────────────────────────────────────────────────
@@ -713,6 +715,17 @@ export const navItems = [
     label: 'Org Chart',
     permissionKey: 'nav_org_chart',
     path: '/org-chart',
+  },
+  // Org Chart 2 — greenfield visual tree that mirrors Roman's Miro
+  // diagram (Roman → Robyn → Rachel/Leti/Belle/Abby/Margo → teachers)
+  // with proper connectors. The original /org-chart page and its
+  // roleContent scaffolding stay put until Roman decides how to merge
+  // the two.
+  {
+    icon: GitBranch,
+    label: 'Org Chart 2',
+    permissionKey: 'nav_org_chart',
+    path: '/org-chart-2',
   },
   // Vision / Mission / Core Values — the identity docs that anchor the
   // Org Chart above. Same permission key so they inherit Org Chart's

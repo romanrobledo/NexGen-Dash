@@ -85,16 +85,20 @@ export const ROLE_CONTACTS = {
     phone: '',
   },
   operator: {
-    name: 'Robyn',
+    name: 'Robyn Hernandez',
     title: 'Operator',
-    email: '',
-    phone: '',
+    email: 'salinasrobyn@gmail.com',
+    phone: '(956) 244-2665',
   },
+  // Ed Bague was Executive Assistant but is now Separated in the staff
+  // table. Kept the slot with vacant:true so the tile still renders as
+  // "position open" — Roman will fill this when a new EA is hired.
   'executive-assistant': {
-    name: 'Ed',
+    name: 'Open Position',
     title: 'Executive Assistant',
     email: '',
     phone: '',
+    vacant: true,
   },
   'sales-manager': {
     name: 'Open Position',
@@ -103,32 +107,38 @@ export const ROLE_CONTACTS = {
     phone: '',
     vacant: true,
   },
+  // Nickname: Rachel. Real name Raquel Lopez per Roman's mapping.
   director: {
-    name: 'Rachel',
+    name: 'Raquel Lopez',
+    nickname: 'Rachel',
     title: 'Director',
-    email: '',
-    phone: '',
+    email: 'rachellopez1968@gmail.com',
+    phone: '(956) 456-5700',
   },
+  // Nickname: Abby. Real name Maria Martinez per Roman's mapping.
   'assistant-director': {
-    name: 'Abby',
+    name: 'Maria Martinez',
+    nickname: 'Abby',
     title: 'Assistant Director',
-    email: '',
-    phone: '',
+    email: 'lexzacdav123@gmail.com',
+    phone: '(956) 264-7937',
   },
   'admin-classroom-support': {
-    name: 'Anjelica',
+    name: 'Anjelica Sanchez',
     title: 'Administrative & Classroom Support',
-    email: '',
-    phone: '',
+    email: 'angelramos5092@gmail.com',
+    phone: '(361) 290-4050',
   },
   'head-rover': {
-    name: 'Margo',
+    name: 'Margo Rivas',
     title: 'Head Rover / Afterschool Teacher',
-    email: '',
-    phone: '',
+    email: 'rmchuckylove@gmail.com',
+    phone: '(956) 990-0761',
   },
+  // Nickname: Belle. Real name Belia Azua per Roman's mapping.
   'teacher-support-lead': {
-    name: 'Belia',
+    name: 'Belia Azua',
+    nickname: 'Belle',
     title: 'Teacher Support Lead',
     email: '',
     phone: '',

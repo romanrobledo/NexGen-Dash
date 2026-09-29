@@ -32,9 +32,22 @@ import PlaybookPage from './pages/PlaybookPage'
 import RevenueFrameworkPage from './pages/RevenueFrameworkPage'
 import FamiliesListPage from './pages/FamiliesListPage'
 import FamilyDetailPage from './pages/FamilyDetailPage'
+import BillingPlansPage from './pages/BillingPlansPage'
+import InvoicesPage from './pages/InvoicesPage'
+import PaymentsPage from './pages/PaymentsPage'
+import CheckInPage from './pages/CheckInPage'
+import CheckOutPage from './pages/CheckOutPage'
+import IssuesPage from './pages/IssuesPage'
+import IdeasPage from './pages/IdeasPage'
+import SubmissionsReportsPage from './pages/SubmissionsReportsPage'
+import AvatarsListPage from './pages/AvatarsListPage'
+import AvatarDetailPage from './pages/AvatarDetailPage'
+import OffersListPage from './pages/OffersListPage'
+import OfferDetailPage from './pages/OfferDetailPage'
 import DashboardGuidePage from './pages/DashboardGuidePage'
 import WhoAreWePage from './pages/WhoAreWePage'
 import WhoAmIPage from './pages/WhoAmIPage'
+import OrgChart2Page from './pages/OrgChart2Page'
 import WhatDoIDoPage from './pages/WhatDoIDoPage'
 import HowDoIDoItPage from './pages/HowDoIDoItPage'
 import WhyIsItImportantPage from './pages/WhyIsItImportantPage'
@@ -192,6 +205,34 @@ function App() {
                     surfaces; teacher-side scoping lands with Phase 3. */}
                 <Route path="/families" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamiliesListPage /></ProtectedRoute>} />
                 <Route path="/families/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyDetailPage /></ProtectedRoute>} />
+                {/* Billing sub-pages — Invoices, Payments, Plans.
+                    Same BOOKS_ADMIN_ROLES gate as the rest of the family
+                    finance surfaces. Dashboard at /billing is unchanged. */}
+                <Route path="/billing/invoices" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><InvoicesPage /></ProtectedRoute>} />
+                <Route path="/billing/payments" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><PaymentsPage /></ProtectedRoute>} />
+                <Route path="/billing/plans"    element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><BillingPlansPage /></ProtectedRoute>} />
+                {/* Submissions — Check In/Out (any authenticated staff),
+                    Issues + Ideas (self-submit for everyone, triage for
+                    admin), Reports (admin rollup; non-admin sees own rows).
+                    RLS enforces the read scope so route-level gating is a
+                    UI convenience, not the security boundary. */}
+                <Route path="/submissions/check-in"  element={<CheckInPage />} />
+                <Route path="/submissions/check-out" element={<CheckOutPage />} />
+                <Route path="/submissions/issues"    element={<IssuesPage />} />
+                <Route path="/submissions/ideas"     element={<IdeasPage />} />
+                <Route path="/submissions/reports"   element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><SubmissionsReportsPage /></ProtectedRoute>} />
+                {/* Avatars — customer personas for the Revenue Framework.
+                    List page is a gallery, detail pages use the Public
+                    Course Pete layout (Identity / Pains / Goals / Objections).
+                    Read is open to any authenticated staff; write is gated
+                    by RLS to books admins. */}
+                <Route path="/framework/avatars"       element={<AvatarsListPage />} />
+                <Route path="/framework/avatars/:slug" element={<AvatarDetailPage />} />
+                {/* Offers — full Sterling-style offer pages built from
+                    typed section blocks. Same read-open / write-admin
+                    RLS pattern as avatars. */}
+                <Route path="/framework/offers"        element={<OffersListPage />} />
+                <Route path="/framework/offers/:slug"  element={<OfferDetailPage />} />
                 {/* Books — bank-statement upload, transaction categorization,
                     monthly rollups. All three pages gated by RLS via the
                     current_staff_is_books_admin() predicate; non-admin
@@ -221,6 +262,10 @@ function App() {
                     for now — merging those 5 pages into one combined page
                     per role is the next iteration. */}
                 <Route path="/org-chart" element={<WhoAmIPage />} />
+                {/* Org Chart 2 — greenfield visual tree tied to real people.
+                    Sits next to the legacy /org-chart until Roman decides
+                    how to merge the two. */}
+                <Route path="/org-chart-2" element={<OrgChart2Page />} />
                 <Route path="/billing" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><BillingDashboardPage /></ProtectedRoute>} />
                 <Route path="/marketing" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><MarketingDashboardPage /></ProtectedRoute>} />
                 <Route path="/marketing/offers" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><MarketingOffersPage /></ProtectedRoute>} />
