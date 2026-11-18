@@ -25,7 +25,10 @@ export default function FamilyNotifyPage() {
   const admin = isBooksAdmin(staff)
 
   const [mode, setMode] = useState('tag')      // 'tag' | 'smart_list'
-  const [tag, setTag] = useState('enrolled')
+  // Default to the tag Roman actually uses for enrolled families.
+  // See the tag landscape audit done 2026-11-18: 79 contacts carry
+  // 'nexgen parent', only 2 carry 'enrolled'. Editable in the UI.
+  const [tag, setTag] = useState('nexgen parent')
   const [smartListId, setSmartListId] = useState(null)
   const [search, setSearch] = useState('')
 
@@ -102,7 +105,7 @@ export default function FamilyNotifyPage() {
             <input
               value={tag}
               onChange={e => setTag(e.target.value)}
-              placeholder="enrolled"
+              placeholder="nexgen parent"
               className="w-60 h-9 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <p className="text-[11px] text-gray-500 mt-1">
