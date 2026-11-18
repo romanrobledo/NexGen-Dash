@@ -289,7 +289,7 @@ function Header({ canEdit }) {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
         <GitBranch className="w-6 h-6 text-blue-600" />
-        Org Chart 2
+        Org Chart
       </h1>
       <p className="text-sm text-gray-500 mt-1">
         Click any tile to see role details · zoom with +/− or scroll · drag empty canvas to pan.
