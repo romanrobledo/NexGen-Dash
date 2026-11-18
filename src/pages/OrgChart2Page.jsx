@@ -7,23 +7,26 @@ import { GitBranch, Phone, Mail } from 'lucide-react'
  * Structure (top → bottom):
  *   Row 1: Founder                 (Roman)
  *   Row 2: Leads                   (Robyn · Rachel)
- *   Row 3: Assistant Operator      (Abby) — the middle-manager layer
- *   Row 4: Support staff           (Leti · Belle · Margo)
- *   Row 5: Teachers                (6 classroom teachers)
+ *   Row 3: Ops roles               (Leti · Belle · Abby) — three ops
+ *                                   roles side by side. Leti (Cook) and
+ *                                   Belle (Custodian) are peers of Abby
+ *                                   (Assistant Operator), all reporting
+ *                                   directly to Robyn.
+ *   Row 4: Teachers                (7 classroom staff — Sylvia · Mary Jane
+ *                                   · Joanna · Anjelica · Alexa · Ruth ·
+ *                                   Margo). Margo is Head Afterschool but
+ *                                   sits in this row visually because
+ *                                   she's part of the teacher cohort.
  *
  * Reporting:
  *   robyn, rachel → roman                    (primary)
  *   abby → robyn                             (primary)
  *   abby → rachel                            (secondary / dotted)
- *   every support + teacher → abby           (primary)
+ *   leti, belle → robyn                      (primary — direct ops reports)
+ *   every teacher (incl. margo) → abby       (primary)
  *
- * Everything flows UP through Abby → Robyn → Roman, which keeps the
- * connector lines from crossing. Rachel remains visible as a parallel
- * authority via the dotted line to Abby.
- *
- * Connectors are curved SVG paths drawn after mount by measuring tile
- * DOMRects — no hardcoded pixel positions, so the diagram reflows on
- * resize and on mobile stacking.
+ * Teacher connectors funnel through Abby; ops-role connectors go straight
+ * to Robyn. Keeps lines fanning cleanly instead of crossing.
  */
 
 // ── Data ─────────────────────────────────────────────────────────────────────
@@ -66,20 +69,25 @@ const ASSISTANT_OPERATOR = {
   tone: 'assistant',
 }
 
-// All operational staff (support + teachers) report to Abby.
-const SUPPORT = [
-  { id: 'leti',  name: 'Leticia Martinez', nickname: 'Leti',  title: 'Cook',             tone: 'support' },
-  { id: 'belle', name: 'Belia Azua',       nickname: 'Belle', title: 'Custodian',        tone: 'support' },
-  { id: 'margo', name: 'Margo Rivas',                         title: 'Head Afterschool', tone: 'support' },
+// Ops roles that sit on the Assistant Operator row alongside Abby.
+// Both Leti (Cook) and Belle (Custodian) report directly to Robyn —
+// they aren't subordinate to Abby; they're peer operational roles.
+const OPS_PEERS = [
+  { id: 'leti',  name: 'Leticia Martinez', nickname: 'Leti',  title: 'Cook',      tone: 'support' },
+  { id: 'belle', name: 'Belia Azua',       nickname: 'Belle', title: 'Custodian', tone: 'support' },
 ]
 
+// The teacher cohort reports to Abby. Margo is Head Afterschool —
+// different role than classroom teachers but belongs with them visually
+// because her reports are children/parents too, not staff.
 const TEACHERS = [
-  { id: 'sylvia',   name: 'Sylvia Rivera',       title: 'Teacher' },
-  { id: 'maryjane', name: 'Mary Jane Almanza',   title: 'Teacher' },
-  { id: 'joanna',   name: 'Joanna Segura',       title: 'Teacher' },
-  { id: 'anjelica', name: 'Anjelica Sanchez',    title: 'Teacher' },
-  { id: 'alexa',    name: 'Alexa Saldivar',      title: 'Teacher' },
-  { id: 'ruth',     name: 'Ruth Ramirez',        title: 'Teacher' },
+  { id: 'sylvia',   name: 'Sylvia Rivera',     title: 'Teacher' },
+  { id: 'maryjane', name: 'Mary Jane Almanza', title: 'Teacher' },
+  { id: 'joanna',   name: 'Joanna Segura',     title: 'Teacher' },
+  { id: 'anjelica', name: 'Anjelica Sanchez',  title: 'Teacher' },
+  { id: 'alexa',    name: 'Alexa Saldivar',    title: 'Teacher' },
+  { id: 'ruth',     name: 'Ruth Ramirez',      title: 'Teacher' },
+  { id: 'margo',    name: 'Margo Rivas',       title: 'Head Afterschool' },
 ]
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -101,7 +109,7 @@ function Header() {
         Org Chart 2
       </h1>
       <p className="text-sm text-gray-500 mt-1">
-        Working visual tree. Reporting flows up through Abby (Assistant Operator) to the leads, then to Roman.
+        Working visual tree. Teachers roll up through Abby to Robyn; Leti and Belle report directly to Robyn as operational peers.
       </p>
     </div>
   )
@@ -122,11 +130,12 @@ function ChartCanvas() {
     // Leads report up to Roman.
     out.push({ from: 'robyn',  to: 'roman', tone: 'primary' })
     out.push({ from: 'rachel', to: 'roman', tone: 'primary' })
-    // Assistant Operator sits below both leads.
+    // Abby reports to Robyn primarily, with dotted directorial oversight from Rachel.
     out.push({ from: 'abby', to: 'robyn',  tone: 'primary' })
     out.push({ from: 'abby', to: 'rachel', tone: 'secondary' })
-    // All operational staff report to Abby.
-    for (const s of SUPPORT)  out.push({ from: s.id, to: 'abby', tone: 'primary' })
+    // Leti and Belle are peers of Abby — they report straight to Robyn.
+    for (const p of OPS_PEERS) out.push({ from: p.id, to: 'robyn', tone: 'primary' })
+    // Teachers (incl. Margo / Head Afterschool) report to Abby.
     for (const t of TEACHERS) out.push({ from: t.id, to: 'abby', tone: 'primary' })
     return out
   }, [])
@@ -206,22 +215,18 @@ function ChartCanvas() {
           <PersonTile innerRef={registerTile('rachel')} person={LEADS[1]} />
         </div>
 
-        {/* Row 3 — Assistant Operator, centered */}
-        <div className="flex justify-center">
-          <div className="w-full sm:w-80">
-            <PersonTile innerRef={registerTile(ASSISTANT_OPERATOR.id)} person={ASSISTANT_OPERATOR} />
-          </div>
-        </div>
-
-        {/* Row 4 — Support staff */}
+        {/* Row 3 — Ops peers (Leti · Belle · Abby). All three share this
+            row visually; reporting is drawn by connectors (Leti+Belle →
+            Robyn, Abby → Robyn primary + Rachel dotted). */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto">
-          {SUPPORT.map((s) => (
-            <PersonTile key={s.id} innerRef={registerTile(s.id)} person={s} compact />
-          ))}
+          <PersonTile innerRef={registerTile('leti')}  person={OPS_PEERS[0]} compact />
+          <PersonTile innerRef={registerTile('belle')} person={OPS_PEERS[1]} compact />
+          <PersonTile innerRef={registerTile(ASSISTANT_OPERATOR.id)} person={ASSISTANT_OPERATOR} compact />
         </div>
 
-        {/* Row 5 — Teachers */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Row 4 — Teacher cohort (7 incl. Margo). 7-col on wide screens
+            so Margo sits flush at the right edge. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           {TEACHERS.map((t) => (
             <PersonTile key={t.id} innerRef={registerTile(t.id)} person={{ ...t, tone: 'teacher' }} compact />
           ))}
