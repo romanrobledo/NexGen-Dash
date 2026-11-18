@@ -19,7 +19,7 @@ import {
   listContacts, searchContacts, listContactsByTag,
   getContact, getThreadForContact, getThreadByPhone,
   listOwners, listSmartLists,
-  sendMessage, sendSmsByPhone,
+  sendMessage, sendSmsByPhone, fireNotifyWebhook,
 } from '../lib/ghl.js'
 
 async function hydrateOwners(rows) {
@@ -100,7 +100,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'contactIds array required' })
       }
       if (!message) return res.status(400).json({ error: 'message required' })
-      // Fire sequentially to stay under GHL rate limits (10 req/s burst).
+      // Legacy path — direct per-contact send. Kept for one-off bursts
+      // where you don't want GHL's workflow throttling. For regular
+      // audience blasts use notify_blast (GHL workflow handles pacing).
       const results = []
       for (const id of contactIds) {
         try {
@@ -112,6 +114,15 @@ export default async function handler(req, res) {
       }
       const sent = results.filter(r => r.ok).length
       return res.json({ ok: true, sent, failed: results.length - sent, results })
+    }
+    if (req.method === 'POST' && action === 'notify_blast') {
+      // Fires the Notify workflow webhook. GHL loops over the tagged
+      // audience with its own Wait step between sends, so the throttle
+      // lives in the workflow builder, not in our code. Returns fast.
+      const { tag, message, audienceLabel, senderName } = req.body || {}
+      if (!tag || !message) return res.status(400).json({ error: 'tag + message required' })
+      const r = await fireNotifyWebhook({ tag, message, audienceLabel, senderName })
+      return res.json(r)
     }
 
     res.setHeader('Allow', 'GET, POST')

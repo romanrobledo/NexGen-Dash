@@ -146,6 +146,19 @@ export async function sendBulkSms({ contactIds, message }) {
   }
 }
 
+/**
+ * Fire the Notify webhook into GHL. Returns fast — GHL handles the
+ * per-contact fan-out and throttling via its own workflow.
+ */
+export async function fireNotifyBlast({ tag, message, audienceLabel, senderName }) {
+  try {
+    const r = await apiPost('notify_blast', { tag, message, audienceLabel, senderName })
+    return { ok: true, ...r }
+  } catch (e) {
+    return { ok: false, error: e.message }
+  }
+}
+
 // ── low-level helpers ───────────────────────────────────────────────────────
 
 async function apiGet(action, params = {}) {
