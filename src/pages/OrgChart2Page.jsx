@@ -102,6 +102,7 @@ function defaultConnections() {
 // ── Geometry helpers (defined up-top so recompute() can use them) ──────────
 
 function clampZoom(z) { return Math.max(0.4, Math.min(2.5, z)) }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
 
 /** Return the local (x,y) of a tile's anchor on the given side. */
 function sideAnchor(rect, side, toLocal) {
@@ -316,14 +317,16 @@ function ChartCanvas({ canEdit }) {
     function onMove(e) {
       if (!dragState.current) return
       const d = dragState.current
-      // Divide by zoom so one screen-pixel of mouse motion = one chart-pixel
-      const dx = d.baseDx + (e.clientX - d.startX) / zoom
-      const dy = d.baseDy + (e.clientY - d.startY) / zoom
+      // Divide by zoom so one screen-pixel of mouse motion = one chart-pixel.
+      // Clamp offsets so tiles can't slide too far off their default spot
+      // — once a tile leaves the canvas it's impossible to click back.
+      const MAX_OFFSET = 600
+      const dx = clamp(d.baseDx + (e.clientX - d.startX) / zoom, -MAX_OFFSET, MAX_OFFSET)
+      const dy = clamp(d.baseDy + (e.clientY - d.startY) / zoom, -MAX_OFFSET, MAX_OFFSET)
       setOffsets(prev => ({ ...prev, [d.id]: { dx, dy } }))
     }
     function onUp() {
       if (dragState.current) {
-        // Persist on mouse-up so we don't thrash localStorage on every move.
         setOffsets(prev => { saveOffsets(prev); return prev })
       }
       dragState.current = null
@@ -445,17 +448,19 @@ function ChartCanvas({ canEdit }) {
           }}
         >
           {/* SVG connectors — inside the transform so they scale with tiles.
-              Each edge renders TWO paths: a thin visible one, and a
-              wider invisible one on top that accepts the click (easier
-              hit target). Pointer events only enabled in edit mode. */}
+              The SVG itself is pointer-pass-through so clicks on empty
+              space fall through to the canvas (preserving pan). Only
+              the per-edge hit-target path accepts pointer events, and
+              only within its stroke (pointer-events=stroke). Without
+              this the giant SVG surface eats every background click. */}
           <svg
-            className={`absolute inset-0 ${editMode ? '' : 'pointer-events-none'}`}
-            style={{ width: '100%', height: '100%', overflow: 'visible' }}
+            className="absolute inset-0"
+            style={{ width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}
           >
             {edges.map((e, i) => {
               const d = curvePath(e)
               return (
-                <g key={i} className={editMode ? 'cursor-pointer group' : 'pointer-events-none'}>
+                <g key={i} className={editMode ? 'group' : ''}>
                   <path
                     d={d}
                     fill="none"
@@ -463,14 +468,15 @@ function ChartCanvas({ canEdit }) {
                     strokeWidth={e.tone === 'secondary' ? 1.5 : 1.75}
                     strokeDasharray={e.tone === 'secondary' ? '5 4' : undefined}
                     strokeLinecap="round"
-                    style={{ pointerEvents: 'none' }}
                   />
                   {editMode && (
                     <path
                       d={d}
                       fill="none"
                       stroke="transparent"
-                      strokeWidth={14}
+                      strokeWidth={10}
+                      className="cursor-pointer"
+                      style={{ pointerEvents: 'stroke' }}
                       onClick={(ev) => { ev.stopPropagation(); removeConnection(e.from, e.to) }}
                     >
                       <title>Click to delete: {e.from} → {e.to}</title>
