@@ -35,6 +35,9 @@ import FamilyDetailPage from './pages/FamilyDetailPage'
 import FamilyNotifyPage from './pages/FamilyNotifyPage'
 import GhlContactsPage from './pages/GhlContactsPage'
 import GhlContactDetailPage from './pages/GhlContactDetailPage'
+import FamilyIncidentsPage from './pages/FamilyIncidentsPage'
+import FacilityIncidentsPage from './pages/FacilityIncidentsPage'
+import ClassroomIncidentsPage from './pages/ClassroomIncidentsPage'
 import BillingPlansPage from './pages/BillingPlansPage'
 import InvoicesPage from './pages/InvoicesPage'
 import PaymentsPage from './pages/PaymentsPage'
@@ -214,6 +217,12 @@ function App() {
                 <Route path="/families/contacts" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlContactsPage /></ProtectedRoute>} />
                 <Route path="/families/contacts/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlContactDetailPage /></ProtectedRoute>} />
                 <Route path="/families/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyDetailPage /></ProtectedRoute>} />
+                {/* Report menu — three incident-scope pages, shared
+                    facility_incidents table. Any authenticated staff can
+                    log + read; admin update/delete. */}
+                <Route path="/report/family"    element={<FamilyIncidentsPage />} />
+                <Route path="/report/facility"  element={<FacilityIncidentsPage />} />
+                <Route path="/report/classroom" element={<ClassroomIncidentsPage />} />
                 {/* Billing sub-pages — Invoices, Payments, Plans.
                     Same BOOKS_ADMIN_ROLES gate as the rest of the family
                     finance surfaces. Dashboard at /billing is unchanged. */}

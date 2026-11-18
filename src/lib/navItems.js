@@ -158,6 +158,20 @@ export const navItems = [
       { label: 'Notify',    path: '/families/notify' },
     ],
   },
+  // Report — centralized incident logging. Three scopes, one Supabase
+  // table (facility_incidents). Family + Classroom pages take the
+  // place of the FacilityMapPage's inline "Family & Parent Incidents"
+  // widget, which can stay as a quick-access shortcut if Roman wants.
+  {
+    icon: AlertCircle,
+    label: 'Report',
+    permissionKey: 'nav_families',
+    children: [
+      { label: 'Family / Parent Incident', path: '/report/family' },
+      { label: 'Facility Incident',        path: '/report/facility' },
+      { label: 'Classroom Incident',       path: '/report/classroom' },
+    ],
+  },
   // Billing — top-level; invoices/payments/plans are family-facing money
   // ops. Finance → Books stays inside FOUNDER for internal bookkeeping.
   {
