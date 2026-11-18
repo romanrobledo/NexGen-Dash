@@ -457,9 +457,10 @@ function ChartCanvas({ canEdit }) {
         )}
       </div>
 
-      {/* Connect-mode floating hint */}
+      {/* Connect-mode floating hint — pinned to the LEFT so it doesn't
+          overlap the Edit/Drag/Connect/Reset toolbar on the right. */}
       {editMode && subMode === 'connect' && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-3 z-20 inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-600 text-white text-xs shadow-md max-w-[90%]">
+        <div className="absolute left-3 top-3 z-20 inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-600 text-white text-xs shadow-md max-w-[60%]">
           <Link2 className="w-3.5 h-3.5 shrink-0" />
           {connectSource
             ? <span className="truncate">Picked <b>{connectSource.id}</b>{connectSource.side ? ` (${connectSource.side})` : ''} — click another tile or one of its side-dots to finish.</span>
@@ -503,7 +504,7 @@ function ChartCanvas({ canEdit }) {
               this the giant SVG surface eats every background click. */}
           <svg
             className="absolute inset-0"
-            style={{ width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}
+            style={{ width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 2 }}
           >
             {edges.map((e, i) => {
               const d = curvePath(e)
