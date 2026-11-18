@@ -6,6 +6,34 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { isBooksAdmin } from '../lib/roles'
+import OrgRoleDrawer from '../components/OrgRoleDrawer'
+
+/**
+ * Map this chart's tile ids → legacy roleContent ids. Driving the
+ * drawer this way lets us reuse everything OrgRoleDrawer already
+ * knows how to render (contact strip, five Compass sections) without
+ * duplicating per-person content.
+ *
+ * Teachers point at the generic 'teacher' role unless the specific
+ * person has a dedicated entry in ROLE_CONTACTS (e.g. Anjelica has
+ * 'admin-classroom-support'). When a mapping is missing the drawer
+ * still opens and renders a "content coming" placeholder.
+ */
+const TILE_TO_ROLE_ID = {
+  roman:    'visionary',
+  robyn:    'operator',
+  rachel:   'director',
+  abby:     'assistant-director',
+  leti:     'kitchen-manager',       // Cook — maps to kitchen-manager content
+  belle:    'teacher-support-lead',  // Custodian in OC2, legacy content under TSL
+  margo:    'head-rover',
+  anjelica: 'admin-classroom-support',
+  sylvia:   'teacher',
+  maryjane: 'teacher',
+  joanna:   'teacher',
+  alexa:    'teacher',
+  ruth:     'teacher',
+}
 
 /**
  * Interactive org chart — Miro-like canvas.
@@ -160,10 +188,10 @@ function Header({ canEdit }) {
         Org Chart 2
       </h1>
       <p className="text-sm text-gray-500 mt-1">
-        Zoom with the +/− buttons or scroll-wheel · drag the empty canvas to pan.
+        Click any tile to see role details · zoom with +/− or scroll · drag empty canvas to pan.
         {canEdit
           ? ' Edit layout → drag tiles · Connect → click two tiles to wire them · click any line to delete.'
-          : ' Only admins can rearrange tiles.'}
+          : ''}
       </p>
     </div>
   )
@@ -186,6 +214,9 @@ function ChartCanvas({ canEdit }) {
   // clicked. When they clicked a dot, side is set; when they clicked the
   // tile body, side is null (= auto-pick).
   const [connectSource, setConnectSource] = useState(/** @type {{id:string,side:Side|null}|null} */ (null))
+  // When the user clicks a tile in VIEW mode, open the legacy
+  // OrgRoleDrawer for the mapped roleId.
+  const [openRoleId, setOpenRoleId] = useState(/** @type {string|null} */ (null))
 
   // Reset the pending source whenever the user flips OUT of connect mode.
   useEffect(() => {
@@ -280,6 +311,15 @@ function ChartCanvas({ canEdit }) {
     document.body.style.cursor = 'grabbing'
   }
 
+  // View-mode tile click → open the role drawer with mapped roleId.
+  // No-op in edit mode (the mousedown handler owns that interaction).
+  function onTileClick(e, id) {
+    if (editMode) return
+    e.stopPropagation()
+    const roleId = TILE_TO_ROLE_ID[id] || id
+    setOpenRoleId(roleId)
+  }
+
   // Shared handler for both tile-body clicks (auto anchor) and side-dot
   // clicks (explicit anchor). side=null means auto.
   function handleConnectClick(id, side) {
@@ -354,6 +394,14 @@ function ChartCanvas({ canEdit }) {
 
   return (
     <div className="relative">
+      {/* Role drawer — opens when a tile is clicked in VIEW mode */}
+      {openRoleId && (
+        <OrgRoleDrawer
+          roleId={openRoleId}
+          onClose={() => setOpenRoleId(null)}
+        />
+      )}
+
       {/* Floating zoom controls (bottom right) */}
       <div className="absolute right-3 bottom-3 z-20 flex flex-col gap-1 bg-white border border-gray-200 rounded-xl shadow-sm p-1">
         <IconBtn onClick={() => setZoom(z => clampZoom(z + 0.1))} title="Zoom in"><Plus className="w-4 h-4" /></IconBtn>
@@ -496,7 +544,7 @@ function ChartCanvas({ canEdit }) {
                 <PersonTile tileId={FOUNDER.id} innerRef={registerTile(FOUNDER.id)}
                   person={FOUNDER} editMode={editMode} subMode={subMode} canEdit={canEdit}
                   isConnectSource={connectSource?.id === FOUNDER.id} connectSide={connectSource?.id === FOUNDER.id ? connectSource.side : null}
-                  offset={offsets[FOUNDER.id]} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
+                  offset={offsets[FOUNDER.id]} onMouseDown={onTileMouseDown} onClick={onTileClick} onDotClick={handleConnectClick} />
               </div>
             </div>
 
@@ -506,7 +554,7 @@ function ChartCanvas({ canEdit }) {
                 <PersonTile key={p.id} tileId={p.id} innerRef={registerTile(p.id)}
                   person={p} editMode={editMode} subMode={subMode} canEdit={canEdit}
                   isConnectSource={connectSource?.id === p.id} connectSide={connectSource?.id === p.id ? connectSource.side : null}
-                  offset={offsets[p.id]} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
+                  offset={offsets[p.id]} onMouseDown={onTileMouseDown} onClick={onTileClick} onDotClick={handleConnectClick} />
               ))}
             </div>
 
@@ -515,15 +563,15 @@ function ChartCanvas({ canEdit }) {
               <PersonTile tileId="leti"  innerRef={registerTile('leti')}  person={OPS_PEERS[0]}
                 compact editMode={editMode} subMode={subMode} canEdit={canEdit}
                 isConnectSource={connectSource?.id === 'leti'} connectSide={connectSource?.id === 'leti' ? connectSource.side : null}
-                offset={offsets.leti}  onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
+                offset={offsets.leti}  onMouseDown={onTileMouseDown} onClick={onTileClick} onDotClick={handleConnectClick} />
               <PersonTile tileId="belle" innerRef={registerTile('belle')} person={OPS_PEERS[1]}
                 compact editMode={editMode} subMode={subMode} canEdit={canEdit}
                 isConnectSource={connectSource?.id === 'belle'} connectSide={connectSource?.id === 'belle' ? connectSource.side : null}
-                offset={offsets.belle} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
+                offset={offsets.belle} onMouseDown={onTileMouseDown} onClick={onTileClick} onDotClick={handleConnectClick} />
               <PersonTile tileId={ASSISTANT_OPERATOR.id} innerRef={registerTile(ASSISTANT_OPERATOR.id)}
                 person={ASSISTANT_OPERATOR} compact editMode={editMode} subMode={subMode} canEdit={canEdit}
                 isConnectSource={connectSource?.id === ASSISTANT_OPERATOR.id} connectSide={connectSource?.id === ASSISTANT_OPERATOR.id ? connectSource.side : null}
-                offset={offsets[ASSISTANT_OPERATOR.id]} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
+                offset={offsets[ASSISTANT_OPERATOR.id]} onMouseDown={onTileMouseDown} onClick={onTileClick} onDotClick={handleConnectClick} />
             </div>
 
             {/* Row 4 — Teacher cohort. Stepped breakpoints so Margo (7th)
@@ -537,7 +585,7 @@ function ChartCanvas({ canEdit }) {
                   <PersonTile tileId={t.id} innerRef={registerTile(t.id)}
                     person={{ ...t, tone: 'teacher' }} compact editMode={editMode} subMode={subMode} canEdit={canEdit}
                     isConnectSource={connectSource?.id === t.id} connectSide={connectSource?.id === t.id ? connectSource.side : null}
-                    offset={offsets[t.id]} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
+                    offset={offsets[t.id]} onMouseDown={onTileMouseDown} onClick={onTileClick} onDotClick={handleConnectClick} />
                 </div>
               ))}
             </div>
@@ -577,7 +625,7 @@ function SubModeBtn({ active, onClick, icon: Icon, label }) {
 }
 
 
-function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canEdit, isConnectSource, connectSide, offset, onMouseDown, onDotClick }) {
+function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canEdit, isConnectSource, connectSide, offset, onMouseDown, onClick, onDotClick }) {
   const tones = {
     founder:   'border-purple-300 bg-purple-50',
     operator:  'border-blue-300 bg-blue-50',
@@ -601,7 +649,7 @@ function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canE
     isConnectSource ? 'ring-2 ring-indigo-500' :
     isConnect       ? 'ring-1 ring-indigo-200 cursor-pointer hover:ring-indigo-400' :
     isDrag          ? 'ring-1 ring-amber-200 cursor-grab active:cursor-grabbing' :
-    ''
+    'cursor-pointer hover:border-indigo-300 hover:shadow-md transition-shadow'
 
   return (
     <div
@@ -609,6 +657,7 @@ function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canE
       data-tile-root="true"
       style={{ ...style, position: 'relative' }}
       onMouseDown={(e) => onMouseDown(e, tileId)}
+      onClick={(e) => onClick?.(e, tileId)}
       className={`rounded-xl border ${cls} p-3 shadow-sm ${compact ? 'text-center' : ''} ${editRing} select-none`}
     >
       {/* Side-anchor dots — only in connect sub-mode. Positioned outside
