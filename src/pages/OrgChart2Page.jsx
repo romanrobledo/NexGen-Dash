@@ -2,23 +2,28 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { GitBranch, Phone, Mail } from 'lucide-react'
 
 /**
- * Greenfield org chart — mirrors Roman's Miro diagram exactly.
+ * Greenfield org chart — mirrors Roman's Miro diagram.
  *
- * Structure (top to bottom):
- *   Row 1: Role-title tags   (Cook, Custodian, Assistant Operator,
- *                             Head Afterschool)
- *   Row 2: Support layer     (Leti, Belle, Abby, Margo) — each pinned
- *                             under their role-title tag.
- *   Row 3: Leadership row    (Roman, Robyn, Rachel)
- *   Row 4: Teachers          (six teachers, all reporting to both
- *                             Robyn and Rachel)
+ * Structure (top → bottom):
+ *   Row 1: Founder                 (Roman)
+ *   Row 2: Leads                   (Robyn · Rachel)
+ *   Row 3: Assistant Operator      (Abby) — the middle-manager layer
+ *   Row 4: Support staff           (Leti · Belle · Margo)
+ *   Row 5: Teachers                (6 classroom teachers)
  *
- * SVG connectors are drawn AFTER the layout mounts by measuring tile
- * bounding boxes — no hardcoded pixel positions, so the diagram
- * reflows correctly on window resize and on mobile stacking.
+ * Reporting:
+ *   robyn, rachel → roman                    (primary)
+ *   abby → robyn                             (primary)
+ *   abby → rachel                            (secondary / dotted)
+ *   every support + teacher → abby           (primary)
  *
- * The old /org-chart page + roleContent lib stay put — Roman will
- * merge them into this page once the visual anchor exists.
+ * Everything flows UP through Abby → Robyn → Roman, which keeps the
+ * connector lines from crossing. Rachel remains visible as a parallel
+ * authority via the dotted line to Abby.
+ *
+ * Connectors are curved SVG paths drawn after mount by measuring tile
+ * DOMRects — no hardcoded pixel positions, so the diagram reflows on
+ * resize and on mobile stacking.
  */
 
 // ── Data ─────────────────────────────────────────────────────────────────────
@@ -31,7 +36,7 @@ const FOUNDER = {
   tone: 'founder',
 }
 
-const LEADERSHIP = [
+const LEADS = [
   {
     id: 'robyn',
     name: 'Robyn Hernandez',
@@ -51,51 +56,31 @@ const LEADERSHIP = [
   },
 ]
 
+// Assistant Operator — the single middle-manager tier between leads and
+// operational staff. Reports to Robyn primarily; dotted to Rachel.
+const ASSISTANT_OPERATOR = {
+  id: 'abby',
+  name: 'Maria Martinez',
+  nickname: 'Abby',
+  title: 'Assistant Operator',
+  tone: 'assistant',
+}
+
+// All operational staff (support + teachers) report to Abby.
 const SUPPORT = [
-  {
-    id: 'leti',
-    name: 'Leticia Martinez',
-    nickname: 'Leti',
-    role: 'Cook',
-    reportsTo: ['robyn'],
-    tone: 'support',
-  },
-  {
-    id: 'belle',
-    name: 'Belia Azua',
-    nickname: 'Belle',
-    role: 'Custodian',
-    reportsTo: ['robyn'],
-    tone: 'support',
-  },
-  {
-    id: 'abby',
-    name: 'Maria Martinez',
-    nickname: 'Abby',
-    role: 'Assistant Operator',
-    reportsTo: ['robyn', 'rachel'],
-    tone: 'support',
-  },
-  {
-    id: 'margo',
-    name: 'Margo Rivas',
-    role: 'Head Afterschool',
-    reportsTo: ['rachel'],
-    tone: 'support',
-  },
+  { id: 'leti',  name: 'Leticia Martinez', nickname: 'Leti',  title: 'Cook',             tone: 'support' },
+  { id: 'belle', name: 'Belia Azua',       nickname: 'Belle', title: 'Custodian',        tone: 'support' },
+  { id: 'margo', name: 'Margo Rivas',                         title: 'Head Afterschool', tone: 'support' },
 ]
 
 const TEACHERS = [
-  { id: 'sylvia',   name: 'Sylvia Rivera' },
-  { id: 'maryjane', name: 'Mary Jane Almanza' },
-  { id: 'joanna',   name: 'Joanna Segura' },
-  { id: 'anjelica', name: 'Anjelica Sanchez' },
-  { id: 'alexa',    name: 'Alexa Saldivar' },
-  { id: 'ruth',     name: 'Ruth Ramirez' },
+  { id: 'sylvia',   name: 'Sylvia Rivera',       title: 'Teacher' },
+  { id: 'maryjane', name: 'Mary Jane Almanza',   title: 'Teacher' },
+  { id: 'joanna',   name: 'Joanna Segura',       title: 'Teacher' },
+  { id: 'anjelica', name: 'Anjelica Sanchez',    title: 'Teacher' },
+  { id: 'alexa',    name: 'Alexa Saldivar',      title: 'Teacher' },
+  { id: 'ruth',     name: 'Ruth Ramirez',        title: 'Teacher' },
 ]
-
-// Every teacher reports to both Robyn and Rachel.
-const TEACHER_MANAGERS = ['robyn', 'rachel']
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function OrgChart2Page() {
@@ -110,61 +95,47 @@ export default function OrgChart2Page() {
 
 function Header() {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-          <GitBranch className="w-6 h-6 text-blue-600" />
-          Org Chart 2
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Working visual tree — matches Roman's Miro diagram. The original
-          role-based Org Chart stays at <code className="px-1 py-0.5 rounded bg-gray-100 text-xs">/org-chart</code> until we merge the two.
-        </p>
-      </div>
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+        <GitBranch className="w-6 h-6 text-blue-600" />
+        Org Chart 2
+      </h1>
+      <p className="text-sm text-gray-500 mt-1">
+        Working visual tree. Reporting flows up through Abby (Assistant Operator) to the leads, then to Roman.
+      </p>
     </div>
   )
 }
 
 /**
- * The tree. Uses a plain CSS layout for tile positions and an SVG
- * overlay that measures every tile's DOMRect to draw connectors on top.
- * Connectors reposition automatically on window resize.
+ * The tree. CSS grid for tile positions; SVG overlay with curved
+ * cubic-bezier paths for the connectors. Connectors reposition on
+ * resize via ResizeObserver.
  */
 function ChartCanvas() {
   const canvasRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   const tileRefs = useRef(/** @type {Map<string, HTMLDivElement>} */ (new Map()))
   const [edges, setEdges] = useState(/** @type {Edge[]} */ ([]))
 
-  // Reporting relationships → edges. From/To are tile ids.
   const relationships = useMemo(() => {
-    /** @type {{from: string, to: string, tone: 'primary'|'secondary'}[]} */
     const out = []
-    // Roman ↑ Robyn ↑ Rachel
+    // Leads report up to Roman.
     out.push({ from: 'robyn',  to: 'roman', tone: 'primary' })
-    out.push({ from: 'rachel', to: 'robyn', tone: 'primary' })
-    // Support → managers (also draw a small hop up to the role tag).
-    for (const s of SUPPORT) {
-      out.push({ from: s.id, to: `role-${s.id}`, tone: 'role' })
-      for (const mgr of s.reportsTo) {
-        out.push({ from: s.id, to: mgr, tone: 'primary' })
-      }
-    }
-    // Teachers → both managers.
-    for (const t of TEACHERS) {
-      for (const mgr of TEACHER_MANAGERS) {
-        out.push({ from: t.id, to: mgr, tone: 'secondary' })
-      }
-    }
+    out.push({ from: 'rachel', to: 'roman', tone: 'primary' })
+    // Assistant Operator sits below both leads.
+    out.push({ from: 'abby', to: 'robyn',  tone: 'primary' })
+    out.push({ from: 'abby', to: 'rachel', tone: 'secondary' })
+    // All operational staff report to Abby.
+    for (const s of SUPPORT)  out.push({ from: s.id, to: 'abby', tone: 'primary' })
+    for (const t of TEACHERS) out.push({ from: t.id, to: 'abby', tone: 'primary' })
     return out
   }, [])
 
-  // Layout effect: after every render, remeasure tiles and rebuild the
-  // edge geometry. Also re-run on window resize.
   useEffect(() => {
     function recompute() {
       const canvas = canvasRef.current
       if (!canvas) return
-      const canvasRect = canvas.getBoundingClientRect()
+      const cr = canvas.getBoundingClientRect()
       const next = []
       for (const rel of relationships) {
         const a = tileRefs.current.get(rel.from)
@@ -172,21 +143,13 @@ function ChartCanvas() {
         if (!a || !b) continue
         const ar = a.getBoundingClientRect()
         const br = b.getBoundingClientRect()
-        // Anchor points: bottom-center of `from`, top-center of `to`.
-        // Or top-center / bottom-center depending on relative position.
-        const aCenterX = ar.left + ar.width / 2 - canvasRect.left
-        const bCenterX = br.left + br.width / 2 - canvasRect.left
-        const aY = (ar.top + ar.height / 2 < br.top + br.height / 2 ? ar.bottom : ar.top) - canvasRect.top
-        const bY = (ar.top + ar.height / 2 < br.top + br.height / 2 ? br.top : br.bottom) - canvasRect.top
-        next.push({
-          from: rel.from,
-          to: rel.to,
-          tone: rel.tone,
-          x1: aCenterX,
-          y1: aY,
-          x2: bCenterX,
-          y2: bY,
-        })
+        const aCx = ar.left + ar.width / 2 - cr.left
+        const bCx = br.left + br.width / 2 - cr.left
+        // `from` is always LOWER in the tree (child → parent), so from's
+        // top anchors to the parent's bottom.
+        const aY = ar.top - cr.top
+        const bY = br.bottom - cr.top
+        next.push({ ...rel, x1: aCx, y1: aY, x2: bCx, y2: bY })
       }
       setEdges(next)
     }
@@ -194,10 +157,7 @@ function ChartCanvas() {
     const ro = new ResizeObserver(recompute)
     if (canvasRef.current) ro.observe(canvasRef.current)
     window.addEventListener('resize', recompute)
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', recompute)
-    }
+    return () => { ro.disconnect(); window.removeEventListener('resize', recompute) }
   }, [relationships])
 
   const registerTile = (id) => (el) => {
@@ -210,55 +170,57 @@ function ChartCanvas() {
       ref={canvasRef}
       className="relative bg-white rounded-2xl border border-gray-200 p-6 sm:p-10 overflow-x-auto"
     >
-      {/* SVG connector overlay — sits above the tiles but pointer-events
-          none so tile clicks still work. */}
+      {/* Connector overlay — behind the tiles so hover/click works. */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 1 }}
+        style={{ zIndex: 0 }}
       >
         {edges.map((e, i) => (
-          <line
+          <path
             key={i}
-            x1={e.x1}
-            y1={e.y1}
-            x2={e.x2}
-            y2={e.y2}
+            d={curvePath(e)}
+            fill="none"
             className={
-              e.tone === 'role'
-                ? 'stroke-gray-300'
-                : e.tone === 'secondary'
-                  ? 'stroke-blue-200'
-                  : 'stroke-blue-400'
+              e.tone === 'secondary'
+                ? 'stroke-emerald-300'
+                : 'stroke-blue-400'
             }
-            strokeWidth={e.tone === 'primary' ? 2 : 1.5}
-            strokeDasharray={e.tone === 'role' ? '4 3' : undefined}
+            strokeWidth={e.tone === 'secondary' ? 1.5 : 1.75}
+            strokeDasharray={e.tone === 'secondary' ? '5 4' : undefined}
+            strokeLinecap="round"
           />
         ))}
       </svg>
 
-      <div className="relative space-y-10" style={{ zIndex: 2 }}>
-        {/* Row 1 — role tags for the four support people (Cook, Custodian, etc.) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="relative space-y-12" style={{ zIndex: 1 }}>
+        {/* Row 1 — Founder, centered */}
+        <div className="flex justify-center">
+          <div className="w-full sm:w-80">
+            <PersonTile innerRef={registerTile(FOUNDER.id)} person={FOUNDER} />
+          </div>
+        </div>
+
+        {/* Row 2 — Leads */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          <PersonTile innerRef={registerTile('robyn')}  person={LEADS[0]} />
+          <PersonTile innerRef={registerTile('rachel')} person={LEADS[1]} />
+        </div>
+
+        {/* Row 3 — Assistant Operator, centered */}
+        <div className="flex justify-center">
+          <div className="w-full sm:w-80">
+            <PersonTile innerRef={registerTile(ASSISTANT_OPERATOR.id)} person={ASSISTANT_OPERATOR} />
+          </div>
+        </div>
+
+        {/* Row 4 — Support staff */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto">
           {SUPPORT.map((s) => (
-            <RoleTag key={s.id} innerRef={registerTile(`role-${s.id}`)} label={s.role} />
+            <PersonTile key={s.id} innerRef={registerTile(s.id)} person={s} compact />
           ))}
         </div>
 
-        {/* Row 2 — Support layer */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {SUPPORT.map((s) => (
-            <PersonTile key={s.id} innerRef={registerTile(s.id)} person={s} />
-          ))}
-        </div>
-
-        {/* Row 3 — Leadership. Roman on the left, Robyn center, Rachel right. */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start pt-2">
-          <PersonTile innerRef={registerTile(FOUNDER.id)} person={FOUNDER} />
-          <PersonTile innerRef={registerTile('robyn')} person={LEADERSHIP[0]} />
-          <PersonTile innerRef={registerTile('rachel')} person={LEADERSHIP[1]} />
-        </div>
-
-        {/* Row 4 — Teachers */}
+        {/* Row 5 — Teachers */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {TEACHERS.map((t) => (
             <PersonTile key={t.id} innerRef={registerTile(t.id)} person={{ ...t, tone: 'teacher' }} compact />
@@ -269,31 +231,31 @@ function ChartCanvas() {
   )
 }
 
-function RoleTag({ innerRef, label }) {
-  return (
-    <div
-      ref={innerRef}
-      className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-center"
-    >
-      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-        Role
-      </p>
-      <p className="text-sm font-semibold text-gray-800 mt-0.5">{label}</p>
-    </div>
-  )
+/**
+ * Cubic-bezier path for a connector. Control points pulled vertically
+ * so the curve slopes gently in and out of each tile — gives the tree
+ * a clean "branches" look instead of straight diagonal spaghetti.
+ */
+function curvePath({ x1, y1, x2, y2 }) {
+  const dy = Math.abs(y1 - y2)
+  // Larger pull on wider spans so the curve doesn't over-arc on short hops.
+  const pull = Math.max(24, Math.min(80, dy * 0.45))
+  const cy1 = y1 - pull   // from's handle lifts UP (we're drawing child→parent)
+  const cy2 = y2 + pull   // to's handle drops DOWN
+  return `M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}`
 }
 
 function PersonTile({ innerRef, person, compact }) {
   const tones = {
-    founder:  'border-purple-300 bg-purple-50',
-    operator: 'border-blue-300 bg-blue-50',
-    director: 'border-emerald-300 bg-emerald-50',
-    support:  'border-amber-200 bg-amber-50',
-    teacher:  'border-gray-200 bg-white',
+    founder:   'border-purple-300 bg-purple-50',
+    operator:  'border-blue-300 bg-blue-50',
+    director:  'border-emerald-300 bg-emerald-50',
+    assistant: 'border-indigo-300 bg-indigo-50',
+    support:   'border-amber-200 bg-amber-50',
+    teacher:   'border-gray-200 bg-white',
   }
   const cls = tones[person.tone] || tones.teacher
-  const displayName = person.name
-  const displayTitle = person.title || person.role
+  const displayTitle = person.title
 
   return (
     <div
@@ -302,12 +264,10 @@ function PersonTile({ innerRef, person, compact }) {
     >
       <div className={compact ? '' : 'flex items-start gap-3'}>
         <div className={`w-8 h-8 rounded-full bg-white/70 border border-gray-200 flex items-center justify-center text-[11px] font-bold text-gray-700 shrink-0 ${compact ? 'mx-auto mb-1.5' : ''}`}>
-          {getInitials(displayName)}
+          {getInitials(person.name)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className={`text-sm font-bold text-gray-900 truncate`}>
-            {displayName}
-          </p>
+          <p className="text-sm font-bold text-gray-900 truncate">{person.name}</p>
           {person.nickname && (
             <p className="text-[11px] text-gray-500">"{person.nickname}"</p>
           )}
@@ -340,16 +300,12 @@ function Legend() {
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-500 px-2">
       <span className="flex items-center gap-1.5">
-        <span className="inline-block w-4 h-0.5 bg-blue-400" />
-        Reports to
+        <span className="inline-block w-5 h-0.5 bg-blue-400" />
+        Direct reporting
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="inline-block w-4 h-0.5 bg-blue-200" />
-        Secondary reporting (teachers → both leads)
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="inline-block w-4 h-0.5 border-t border-dashed border-gray-400" />
-        Role title
+        <span className="inline-block w-5 h-0.5 border-t border-dashed border-emerald-400" />
+        Secondary (Abby → Rachel)
       </span>
     </div>
   )
@@ -368,7 +324,7 @@ function getInitials(name) {
  * @typedef {Object} Edge
  * @property {string} from
  * @property {string} to
- * @property {'primary'|'secondary'|'role'} tone
+ * @property {'primary'|'secondary'} tone
  * @property {number} x1
  * @property {number} y1
  * @property {number} x2
