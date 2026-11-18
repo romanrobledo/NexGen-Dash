@@ -714,20 +714,12 @@ export const navItems = [
   // and Events lives in CONTENT. The /calendar route stays wired so any
   // deep link still resolves — just no sidebar entry point.
   { sectionHeader: 'STRUCTURE' },
+  // Legacy /org-chart route stays wired so deep links + roleContent /
+  // OrgRoleDrawer imports don't break; sidebar entry removed 2026-11-18
+  // per Roman — everything lives in the interactive Org Chart below.
   {
     icon: Network,
     label: 'Org Chart',
-    permissionKey: 'nav_org_chart',
-    path: '/org-chart',
-  },
-  // Org Chart 2 — greenfield visual tree that mirrors Roman's Miro
-  // diagram (Roman → Robyn → Rachel/Leti/Belle/Abby/Margo → teachers)
-  // with proper connectors. The original /org-chart page and its
-  // roleContent scaffolding stay put until Roman decides how to merge
-  // the two.
-  {
-    icon: GitBranch,
-    label: 'Org Chart 2',
     permissionKey: 'nav_org_chart',
     path: '/org-chart-2',
   },
