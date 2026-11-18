@@ -517,14 +517,14 @@ function ChartCanvas({ canEdit }) {
         className={`relative bg-white rounded-2xl border border-gray-200 overflow-hidden ${
           editMode ? 'ring-2 ring-amber-300' : ''
         }`}
-        style={{ cursor: panState.current ? 'grabbing' : 'grab', minHeight: 640 }}
+        style={{ cursor: panState.current ? 'grabbing' : 'grab', minHeight: 360 }}
       >
         <div
           ref={innerRef}
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transformOrigin: '0 0',
-            padding: '1.25rem',
+            padding: '0.75rem',
             // Width = parent so tile grids distribute evenly inside the
             // visible canvas. Panning still works — pan.x/y is applied
             // to the transform, not to the element's intrinsic width.
@@ -572,7 +572,7 @@ function ChartCanvas({ canEdit }) {
             })}
           </svg>
 
-          <div className="relative space-y-12" style={{ zIndex: 1 }}>
+          <div className="relative space-y-4" style={{ zIndex: 1 }}>
             {/* Row 1 — Founder */}
             <div className="flex justify-center">
               <div className="w-full sm:w-80">
