@@ -625,27 +625,22 @@ function ChartCanvas({ canEdit }) {
               ))}
             </div>
 
-            {/* Additional roles — placed-but-unconnected until Roman wires
-                them in Connect mode. Grouped visually with a header + a
-                dashed divider so they read as a staging area, not part
-                of the main hierarchy. */}
-            <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-200">
-              <div className="mb-3">
-                <h3 className="text-sm font-bold text-gray-700 tracking-tight">Additional Roles</h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Not wired yet — use Edit layout → Connect to drop lines to the main chart. Click any tile to see its role details.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-                {UNPLACED_ROLES.map(r => (
-                  <div key={r.id} className="min-w-0">
-                    <PersonTile tileId={r.id} innerRef={registerTile(r.id)}
-                      person={r} compact editMode={editMode} subMode={subMode} canEdit={canEdit}
-                      isConnectSource={connectSource?.id === r.id} connectSide={connectSource?.id === r.id ? connectSource.side : null}
-                      offset={offsets[r.id]} onMouseDown={onTileMouseDown} onClick={onTileClick} onDotClick={handleConnectClick} />
-                  </div>
-                ))}
-              </div>
+            {/* Additional role tiles. Originally rendered under an
+                "Additional Roles" header; Roman has since dragged every
+                tile into the main chart via localStorage offsets, so the
+                staging-area framing was just visual noise. Dropped the
+                header + dashed divider — tiles still get their initial
+                grid positions here and get translated into place by the
+                persisted offsets. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+              {UNPLACED_ROLES.map(r => (
+                <div key={r.id} className="min-w-0">
+                  <PersonTile tileId={r.id} innerRef={registerTile(r.id)}
+                    person={r} compact editMode={editMode} subMode={subMode} canEdit={canEdit}
+                    isConnectSource={connectSource?.id === r.id} connectSide={connectSource?.id === r.id ? connectSource.side : null}
+                    offset={offsets[r.id]} onMouseDown={onTileMouseDown} onClick={onTileClick} onDotClick={handleConnectClick} />
+                </div>
+              ))}
             </div>
           </div>
         </div>
