@@ -147,12 +147,15 @@ export async function sendBulkSms({ contactIds, message }) {
 }
 
 /**
- * Fire the Notify webhook into GHL. Returns fast — GHL handles the
- * per-contact fan-out and throttling via its own workflow.
+ * Fan out the Notify webhook: our serverless pulls every contact with
+ * the given tag and fires the GHL workflow webhook once per contact,
+ * staggered by `throttleSeconds`. Each workflow instance waits its own
+ * stagger before sending, so SMS actually fan out one every N seconds
+ * without burning serverless time.
  */
-export async function fireNotifyBlast({ tag, message, audienceLabel, senderName }) {
+export async function fireNotifyBlast({ tag, message, throttleSeconds = 30, audienceLabel, senderName }) {
   try {
-    const r = await apiPost('notify_blast', { tag, message, audienceLabel, senderName })
+    const r = await apiPost('notify_blast', { tag, message, throttleSeconds, audienceLabel, senderName })
     return { ok: true, ...r }
   } catch (e) {
     return { ok: false, error: e.message }

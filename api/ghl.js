@@ -19,7 +19,7 @@ import {
   listContacts, searchContacts, listContactsByTag,
   getContact, getThreadForContact, getThreadByPhone,
   listOwners, listSmartLists,
-  sendMessage, sendSmsByPhone, fireNotifyWebhook,
+  sendMessage, sendSmsByPhone, fanOutNotifyWebhook,
 } from '../lib/ghl.js'
 
 async function hydrateOwners(rows) {
@@ -116,12 +116,20 @@ export default async function handler(req, res) {
       return res.json({ ok: true, sent, failed: results.length - sent, results })
     }
     if (req.method === 'POST' && action === 'notify_blast') {
-      // Fires the Notify workflow webhook. GHL loops over the tagged
-      // audience with its own Wait step between sends, so the throttle
-      // lives in the workflow builder, not in our code. Returns fast.
-      const { tag, message, audienceLabel, senderName } = req.body || {}
+      // Fetches every contact with `tag` from GHL, fires the Notify
+      // workflow webhook once per contact with a per-contact
+      // delay_seconds (staggered 0s, Ns, 2Ns, …). GHL workflow waits
+      // its own delay then sends. Keeps the throttle intact without
+      // needing tag filtering in the workflow action.
+      const { tag, message, throttleSeconds, audienceLabel, senderName } = req.body || {}
       if (!tag || !message) return res.status(400).json({ error: 'tag + message required' })
-      const r = await fireNotifyWebhook({ tag, message, audienceLabel, senderName })
+      const r = await fanOutNotifyWebhook({
+        tag,
+        message,
+        throttleSeconds: Number(throttleSeconds) || 30,
+        audienceLabel,
+        senderName,
+      })
       return res.json(r)
     }
 

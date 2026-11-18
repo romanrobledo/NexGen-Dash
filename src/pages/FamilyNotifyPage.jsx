@@ -55,6 +55,7 @@ export default function FamilyNotifyPage() {
   const withoutPhone = contacts.rows.length - withPhone
 
   const [message, setMessage] = useState('')
+  const [throttleSeconds, setThrottleSeconds] = useState(30)
   const [sending, setSending] = useState(false)
   const [result,  setResult]  = useState(null)
   const [confirming, setConfirming] = useState(false)
@@ -66,6 +67,7 @@ export default function FamilyNotifyPage() {
     const r = await fireNotifyBlast({
       tag: activeTag,
       message: message.trim(),
+      throttleSeconds,
       audienceLabel,
       senderName,
     })
@@ -73,6 +75,14 @@ export default function FamilyNotifyPage() {
     setResult(r)
     if (r.ok) setMessage('')
   }
+
+  // Estimated completion time at current throttle
+  const etaSeconds = withPhone > 0 ? (withPhone - 1) * throttleSeconds : 0
+  const etaLabel = etaSeconds < 60
+    ? `${etaSeconds}s`
+    : etaSeconds < 3600
+      ? `${Math.round(etaSeconds / 60)}m`
+      : `${(etaSeconds / 3600).toFixed(1)}h`
 
   if (!admin) {
     return (
@@ -93,7 +103,7 @@ export default function FamilyNotifyPage() {
           Notify
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Bulk SMS a GHL audience. One POST to the GHL workflow — GHL fans out to every contact with a Wait step between sends, so your throttle lives in GHL's workflow builder (no spam flags, no serverless timeouts).
+          Bulk SMS a GHL audience. We fan out one webhook per contact with a staggered delay, GHL waits per its instance then sends. Carriers see one SMS every N seconds instead of a burst.
         </p>
       </div>
 
@@ -173,6 +183,44 @@ export default function FamilyNotifyPage() {
         />
         <div className="text-[11px] text-gray-500 text-right">{message.length} / 1000</div>
 
+        {/* Throttle picker */}
+        <div className="pt-2 border-t border-gray-100">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Wait between sends</div>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Spacing between individual SMS so carriers don't flag as spam.
+                {withPhone > 0 && (
+                  <> Full audience done in <b className="text-gray-700">~{etaLabel}</b>.</>
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {[5, 15, 30, 60, 120].map(n => (
+                <button key={n}
+                  onClick={() => setThrottleSeconds(n)}
+                  className={`h-8 px-2.5 rounded-lg text-xs font-semibold border ${
+                    throttleSeconds === n
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {n < 60 ? `${n}s` : `${n / 60}m`}
+                </button>
+              ))}
+              <input
+                type="number"
+                min={0}
+                max={3600}
+                value={throttleSeconds}
+                onChange={e => setThrottleSeconds(Math.max(0, Number(e.target.value) || 0))}
+                className="w-16 h-8 rounded-lg border border-gray-200 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                title="Custom seconds"
+              />
+            </div>
+          </div>
+        </div>
+
         {result && !result.ok && (
           <div className="rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2 text-sm inline-flex items-start gap-1.5">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -190,7 +238,11 @@ export default function FamilyNotifyPage() {
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 px-3 py-2 text-sm inline-flex items-start gap-1.5">
             <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
             <div>
-              <b>Queued in GHL.</b> The workflow is fanning out to {withPhone} contact{withPhone === 1 ? '' : 's'} on the <b>{audienceLabel}</b> audience right now — check Conversations in GHL for live status.
+              <b>Queued {result.queued} message{result.queued === 1 ? '' : 's'} in GHL.</b>{' '}
+              The last send goes out in about{' '}
+              <b>{formatEta(result.lastSendEtaSeconds)}</b>.
+              {result.skippedNoPhone > 0 && <> {result.skippedNoPhone} contact{result.skippedNoPhone === 1 ? '' : 's'} skipped (no phone).</>}
+              {result.failed > 0 && <> {result.failed} webhook fire{result.failed === 1 ? '' : 's'} failed — check Vercel logs.</>}
             </div>
           </div>
         )}
@@ -209,7 +261,8 @@ export default function FamilyNotifyPage() {
         ) : (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
             <div className="text-sm text-amber-900">
-              Fire this message to <b>{withPhone}</b> contact{withPhone === 1 ? '' : 's'} tagged <code className="px-1 py-0.5 rounded bg-white border border-amber-300">{activeTag}</code>? Once posted to GHL it cannot be cancelled mid-drip.
+              Fire this to <b>{withPhone}</b> contact{withPhone === 1 ? '' : 's'} tagged <code className="px-1 py-0.5 rounded bg-white border border-amber-300">{activeTag}</code>?{' '}
+              Last message goes out in about <b>{etaLabel}</b> at {throttleSeconds}s spacing. Once queued in GHL, workflow instances cannot be cancelled mid-drip.
             </div>
             <div className="flex justify-end gap-2">
               <button
@@ -224,7 +277,7 @@ export default function FamilyNotifyPage() {
                 className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
               >
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Yes, fire webhook
+                Yes, fire {withPhone} webhook{withPhone === 1 ? '' : 's'}
               </button>
             </div>
           </div>
@@ -232,6 +285,13 @@ export default function FamilyNotifyPage() {
       </section>
     </div>
   )
+}
+
+function formatEta(seconds) {
+  if (!seconds || seconds <= 0) return 'a few seconds'
+  if (seconds < 60) return `${seconds}s`
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`
+  return `${(seconds / 3600).toFixed(1)}h`
 }
 
 function PresetBtn({ active, onClick, icon: Icon, label }) {

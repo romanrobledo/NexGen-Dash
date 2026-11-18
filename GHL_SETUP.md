@@ -37,44 +37,51 @@ Then **Redeploy** the production branch for the vars to take effect (Vercel does
 
 ## 3b. Build the Notify workflow in GHL (one-time)
 
-The Notify page (`/families/notify`) fires ONE POST to a GHL inbound-webhook trigger. GHL takes over from there, loops over the tagged audience, and sends with its own `Wait` step between messages — the throttle lever against spam flags. Setup is ~10 minutes of clicking in GHL.
+**Architecture note:** GHL's workflow "Find Contact" action can't filter by Tag (we verified this live). So the fan-out happens on OUR side: our serverless pulls every contact with the chosen tag, then fires the webhook once per contact. Each call opens a workflow instance that waits its own per-contact delay (0s, 30s, 60s, …) before sending. All 120 POSTs happen from our side in a few seconds; GHL queues 120 instances; SMS fan out one every 30s.
+
+The workflow itself is only **three steps**:
 
 1. GHL → **Automation** → **Workflows** → **+ Create Workflow** → start from scratch. Name it `NexGen Notify`.
 2. **Add Trigger** → **Inbound Webhook**.
-   - Save the trigger. GHL generates a webhook URL that looks like `https://services.leadconnectorhq.com/hooks/.../webhook-trigger/...`
-   - Copy that URL. This is what goes into `GHL_NOTIFY_WEBHOOK_URL` in Vercel (step 3).
-3. **Add Action** → **Find Contacts** (or whatever your GHL workspace calls the "fetch contacts by filter" action).
-   - Filter: `Tag contains {{inboundWebhookRequest.tag}}`
-   - This pulls everyone with the tag we posted.
-4. **Add Action** → **For Each** (loops over the found contacts).
-   - Inside the loop add:
-     - **Send SMS** → message body = `{{inboundWebhookRequest.message}}`
-     - **Wait** → pick your throttle. Start with **`Wait: 30 seconds`** — safe against carrier spam filters for 80–120 message sends. Dial it up or down later.
-5. **Publish** the workflow (toggle at the top of the builder).
+   - After saving, in the trigger's settings find **"Identify Contact by"** (or "Contact Lookup Field") and set it to the payload field **`contact_id`**. This tells the workflow which contact each webhook relates to — we send the GHL contact id in that field.
+   - Copy the generated webhook URL. Goes into `GHL_NOTIFY_WEBHOOK_URL` in Vercel (step 3).
+3. **Add Action** → **Wait**.
+   - Duration: `{{inboundWebhookRequest.delay_seconds}}` with unit **seconds**.
+   - This is what staggers each contact. Our app computes it: contact #1 gets 0, #2 gets 30, #3 gets 60, etc.
+4. **Add Action** → **Send SMS**.
+   - Message body = `{{inboundWebhookRequest.message}}`.
+   - No recipient to configure — the workflow already identified the contact via the trigger, so it sends to that contact.
+5. **Publish** the workflow.
 
-### The payload we send
+### The payload we send (one per contact)
 
 ```json
 {
-  "tag": "nexgen parent",
-  "message": "Hi — quick note from NexGen…",
+  "contact_id":     "nmL2k9ab...",
+  "message":        "Hi — quick note from NexGen…",
+  "delay_seconds":  60,
   "audience_label": "Enrolled Parents",
-  "sender_name": "Roman Robledo",
-  "fired_at": "2026-11-18T21:45:00Z"
+  "sender_name":    "Roman Robledo",
+  "fired_at":       "2026-11-18T21:45:00Z"
 }
 ```
 
-Every field is available inside the workflow as `{{inboundWebhookRequest.FIELD_NAME}}` — use `sender_name` if you want to sign the SMS, use `audience_label` for internal logs, etc.
+- `contact_id` — GHL identifies the contact via this (set in the trigger's "Identify Contact by")
+- `delay_seconds` — used by the Wait action
+- `message` — used by the Send SMS action
+- `audience_label` / `sender_name` — optional, bind inside the workflow if you want to sign messages or log by audience
 
-### Throttle guide
+### Throttle (set from the Notify page, not inside the workflow)
 
-| `Wait` step | 120 msgs take | When to use |
+The Notify page has a `Wait between sends` picker: 5s · 15s · 30s · 60s · 2m · custom. 30s is the default. The workflow's Wait action reads whatever you pick — change it per-send without touching the workflow.
+
+| Throttle | 120 msgs last send | When to use |
 |---|---|---|
-| 2 seconds | ~4 min | Aggressive. Risk flags on non-verified brands. |
-| **30 seconds** | ~1 hour | **Default — balances speed vs safety** |
-| 2 minutes | ~4 hours | Very conservative, drip territory |
+| 5s | ~10 min | Aggressive. Risk flags on non-verified brands. |
+| **30s** | ~1 hour | **Default — balances speed vs safety** |
+| 2 min | ~4 hours | Very conservative, drip territory |
 
-If you ever get carrier feedback that messages are being flagged, bump the Wait higher — no code change needed.
+If carriers flag messages, bump the picker higher — no code or workflow change needed.
 
 ## 4. Test it
 
