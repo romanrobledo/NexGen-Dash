@@ -31,6 +31,10 @@ import GuardianEditDrawer from '../components/GuardianEditDrawer'
 import PaperworkUploadDrawer from '../components/PaperworkUploadDrawer'
 import CommunicationLogDrawer from '../components/CommunicationLogDrawer'
 import TourLogDrawer from '../components/TourLogDrawer'
+import SendSmsModal from '../components/SendSmsModal'
+import GhlConversationPanel from '../components/GhlConversationPanel'
+import GhlActivityPanel from '../components/GhlActivityPanel'
+import { useGhlThread } from '../hooks/useGhl'
 
 /**
  * The "one big Families page" — a tabbed profile per household.
@@ -145,9 +149,19 @@ export default function FamilyDetailPage() {
 
 /**
  * Big header card — family name, room chips, primary guardian one-liner.
+ * The Send SMS button fires via GHL (lands on primary guardian's phone).
+ * Disabled when there's no primary or no phone — safer than "silently
+ * routes to secondary" since there's no explicit secondary concept yet.
  */
 function FamilyHeader({ family }) {
   const g = family.primaryGuardian
+  const [smsOpen, setSmsOpen] = useState(false)
+  const canSms = !!(g && g.phone)
+  const smsTitle = !g
+    ? 'No primary guardian set — star one on the Guardians tab'
+    : !g.phone
+      ? 'Primary guardian has no phone on file'
+      : `SMS ${g.firstName || g.lastName || 'primary'} via GHL`
   return (
     <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6">
       <div className="flex items-start gap-4">
@@ -177,14 +191,29 @@ function FamilyHeader({ family }) {
           </div>
         </div>
         <button
-          disabled
-          title="SMS notification (Phase 3)"
-          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm text-gray-400 cursor-not-allowed"
+          disabled={!canSms}
+          onClick={() => setSmsOpen(true)}
+          title={smsTitle}
+          className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border ${
+            canSms
+              ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
+              : 'bg-white text-gray-400 border-gray-200 cursor-not-allowed'
+          }`}
         >
           <Send className="w-3.5 h-3.5" />
           Send SMS
         </button>
       </div>
+      {g && (
+        <SendSmsModal
+          open={smsOpen}
+          onClose={() => setSmsOpen(false)}
+          toPhone={g.phone}
+          toName={`${g.firstName || ''} ${g.lastName || ''}`.trim()}
+          firstName={g.firstName}
+          lastName={g.lastName}
+        />
+      )}
     </div>
   )
 }
@@ -610,114 +639,105 @@ function fmtShortDate(iso) {
 }
 
 /**
- * Communications timeline — reverse-chronological feed of every interaction
- * (call, email, sms, in-person, note). Plus a compact SMS composer at the
- * top when a phone number is on file for the primary guardian.
+ * Communications tab — GHL-style layout.
+ *
+ *   TOP: 2-column
+ *     LEFT  (wide): GhlConversationPanel — live SMS/call/email thread
+ *                   with the primary guardian, inline send box
+ *     RIGHT (narrow): GhlActivityPanel — contact source, tags, custom
+ *                   fields, attribution footer
+ *
+ *   BELOW: collapsible "Internal notes" — the existing Supabase-backed
+ *          CommunicationLog (staff notes about in-person interactions,
+ *          not SMS/call traffic). Kept so nothing from the old flow
+ *          disappears; not primary focus anymore.
  */
 function CommunicationsTab({ family }) {
   const comms = useFamilyCommunications(family.id)
   const [drawer, setDrawer] = useState(/** @type {{mode:'create'|'edit', entry?:any}|null} */ (null))
-  const [smsBody, setSmsBody] = useState('')
-  const [smsError, setSmsError] = useState(/** @type {string|null} */ (null))
+  const [notesOpen, setNotesOpen] = useState(false)
 
-  const primaryPhone = family.primaryGuardian?.phone || ''
-  const primaryName  = family.primaryGuardian
-    ? `${family.primaryGuardian.firstName} ${family.primaryGuardian.lastName}`
-    : ''
+  const g = family.primaryGuardian
+  const primaryPhone = g?.phone || ''
+  const primaryName  = g ? `${g.firstName || ''} ${g.lastName || ''}`.trim() : ''
 
-  async function handleSendSms() {
-    setSmsError(null)
-    if (!primaryPhone) { setSmsError('No phone on file for the primary guardian.'); return }
-    if (!smsBody.trim()) { setSmsError('Message is empty.'); return }
-    const { ok, error: sErr } = await comms.sendSms({
-      toPhone: primaryPhone,
-      body: smsBody.trim(),
-      familyId: family.id,
-      guardianName: primaryName,
-    })
-    if (!ok) { setSmsError(sErr); return }
-    setSmsBody('')
-  }
+  // Shared GHL fetch — both panels read from this so we only make one
+  // /api/ghl?action=thread_by_phone call per tab load.
+  const ghl = useGhlThread({ phone: primaryPhone, enabled: !!primaryPhone })
 
   return (
     <div className="space-y-4">
-      {/* SMS composer */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-            <Send className="w-4 h-4 text-blue-600" />
-            Send SMS
-            {!comms.smsConfigured && (
-              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-                webhook not set
-              </span>
-            )}
-          </h3>
-          <p className="text-[11px] text-gray-500">
-            To: {primaryName || '—'} {primaryPhone && `· ${primaryPhone}`}
-          </p>
+      {!g && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 text-amber-800 px-3 py-2 text-sm inline-flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <div>
+            No primary guardian set for this family. Star one on the <b>Guardians</b> tab — the conversation thread below will populate from GHL once a phone is on file.
+          </div>
         </div>
-        <textarea
-          rows={3}
-          value={smsBody}
-          onChange={(e) => setSmsBody(e.target.value)}
-          placeholder="Hey — quick note from NexGen…"
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-        />
-        {smsError && (
-          <p className="text-xs text-red-600 flex items-start gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-            {smsError}
-          </p>
-        )}
-        <div className="flex items-center justify-end gap-2">
-          <span className="text-[11px] text-gray-400">Auto-logs as outbound SMS.</span>
-          <button
-            onClick={handleSendSms}
-            disabled={comms.sending || !primaryPhone}
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50"
-          >
-            {comms.sending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Send
-          </button>
-        </div>
-      </div>
-
-      {/* Timeline */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">
-          {comms.rows.length} log entry{comms.rows.length === 1 ? '' : 'ies'}
-        </p>
-        <button
-          onClick={() => setDrawer({ mode: 'create' })}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Log entry
-        </button>
-      </div>
-
-      {comms.loading ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-xs text-gray-500">
-          Loading…
-        </div>
-      ) : comms.rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-12 text-center">
-          <MessageSquare className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-600 font-semibold">No log entries yet.</p>
-          <p className="text-xs text-gray-400 mt-1">Log a call, text, or staff note above.</p>
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {comms.rows.map((r) => (
-            <CommunicationRow
-              key={r.id}
-              row={r}
-              onEdit={() => setDrawer({ mode: 'edit', entry: r })}
-            />
-          ))}
-        </ul>
       )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
+        <GhlConversationPanel
+          phone={primaryPhone}
+          toName={primaryName}
+          thread={ghl}
+        />
+        <GhlActivityPanel phone={primaryPhone} thread={ghl} />
+      </div>
+
+      {/* Internal notes — collapsed by default, holds the old manual log */}
+      <div className="rounded-xl border border-gray-200 bg-white">
+        <button
+          onClick={() => setNotesOpen(v => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+        >
+          <span className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-gray-500" />
+            Internal notes
+            <span className="text-xs text-gray-500 font-normal">
+              ({comms.loading ? '…' : comms.rows.length})
+            </span>
+          </span>
+          <span className="text-xs text-gray-400">{notesOpen ? 'Hide' : 'Show'}</span>
+        </button>
+
+        {notesOpen && (
+          <div className="border-t border-gray-100 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                Staff-authored notes (not SMS/call history — that's above).
+              </p>
+              <button
+                onClick={() => setDrawer({ mode: 'create' })}
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-white border border-gray-200 hover:border-gray-300 text-xs font-semibold text-gray-800"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Log entry
+              </button>
+            </div>
+
+            {comms.loading ? (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-xs text-gray-500">
+                Loading…
+              </div>
+            ) : comms.rows.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-xs text-gray-500">
+                No internal notes yet.
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {comms.rows.map((r) => (
+                  <CommunicationRow
+                    key={r.id}
+                    row={r}
+                    onEdit={() => setDrawer({ mode: 'edit', entry: r })}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
 
       <CommunicationLogDrawer
         open={!!drawer}

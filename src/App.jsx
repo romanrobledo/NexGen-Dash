@@ -32,6 +32,7 @@ import PlaybookPage from './pages/PlaybookPage'
 import RevenueFrameworkPage from './pages/RevenueFrameworkPage'
 import FamiliesListPage from './pages/FamiliesListPage'
 import FamilyDetailPage from './pages/FamilyDetailPage'
+import FamilyNotifyPage from './pages/FamilyNotifyPage'
 import BillingPlansPage from './pages/BillingPlansPage'
 import InvoicesPage from './pages/InvoicesPage'
 import PaymentsPage from './pages/PaymentsPage'
@@ -204,6 +205,9 @@ function App() {
                     BOOKS_ADMIN_ROLES gate as the other family-tier
                     surfaces; teacher-side scoping lands with Phase 3. */}
                 <Route path="/families" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamiliesListPage /></ProtectedRoute>} />
+                {/* /families/notify MUST come before /families/:id or
+                    the :id matcher swallows the literal path. */}
+                <Route path="/families/notify" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyNotifyPage /></ProtectedRoute>} />
                 <Route path="/families/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyDetailPage /></ProtectedRoute>} />
                 {/* Billing sub-pages — Invoices, Payments, Plans.
                     Same BOOKS_ADMIN_ROLES gate as the rest of the family

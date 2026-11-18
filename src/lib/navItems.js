@@ -152,7 +152,10 @@ export const navItems = [
     icon: Users,
     label: 'Families',
     permissionKey: 'nav_families',
-    path: '/families',
+    children: [
+      { label: 'Directory', path: '/families' },
+      { label: 'Notify',    path: '/families/notify' },
+    ],
   },
   // Billing — top-level; invoices/payments/plans are family-facing money
   // ops. Finance → Books stays inside FOUNDER for internal bookkeeping.
