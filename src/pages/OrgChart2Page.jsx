@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import {
   GitBranch, Phone, Mail,
   Plus, Minus, Maximize2, Lock, Pencil, RotateCcw,
+  Link2, Move, X,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { isBooksAdmin } from '../lib/roles'
@@ -57,6 +58,8 @@ const TEACHERS = [
 
 // ── Persistence (localStorage, per browser) ────────────────────────────────
 const OFFSETS_KEY = 'orgchart2.offsets.v1'
+const CONNS_KEY   = 'orgchart2.connections.v1'
+
 function loadOffsets() {
   try {
     const raw = localStorage.getItem(OFFSETS_KEY)
@@ -65,6 +68,31 @@ function loadOffsets() {
 }
 function saveOffsets(offsets) {
   try { localStorage.setItem(OFFSETS_KEY, JSON.stringify(offsets)) } catch {}
+}
+function loadConnections() {
+  try {
+    const raw = localStorage.getItem(CONNS_KEY)
+    const parsed = raw ? JSON.parse(raw) : null
+    return Array.isArray(parsed) ? parsed : null
+  } catch { return null }
+}
+function saveConnections(conns) {
+  try {
+    if (conns) localStorage.setItem(CONNS_KEY, JSON.stringify(conns))
+    else       localStorage.removeItem(CONNS_KEY)
+  } catch {}
+}
+
+// Default reporting edges — used until the user customizes.
+function defaultConnections() {
+  const out = []
+  out.push({ from: 'robyn',  to: 'roman',  tone: 'primary' })
+  out.push({ from: 'rachel', to: 'roman',  tone: 'primary' })
+  out.push({ from: 'abby',   to: 'robyn',  tone: 'primary' })
+  out.push({ from: 'abby',   to: 'rachel', tone: 'secondary' })
+  for (const p of OPS_PEERS) out.push({ from: p.id, to: 'robyn', tone: 'primary' })
+  for (const t of TEACHERS)  out.push({ from: t.id, to: 'abby',  tone: 'primary' })
+  return out
 }
 
 // ── Page ────────────────────────────────────────────────────────────────────
@@ -90,7 +118,7 @@ function Header({ canEdit }) {
       <p className="text-sm text-gray-500 mt-1">
         Zoom with the +/− buttons or scroll-wheel · drag the empty canvas to pan.
         {canEdit
-          ? ' Click Edit layout to drag tiles into place.'
+          ? ' Edit layout → drag tiles · Connect → click two tiles to wire them · click any line to delete.'
           : ' Only admins can rearrange tiles.'}
       </p>
     </div>
@@ -106,19 +134,20 @@ function ChartCanvas({ canEdit }) {
   const [zoom,  setZoom]    = useState(1)
   const [pan,   setPan]     = useState({ x: 0, y: 0 })
   const [editMode, setEditMode] = useState(false)
+  // 'drag' = drag tiles to reposition · 'connect' = click two tiles to wire
+  const [subMode,  setSubMode]  = useState(/** @type {'drag'|'connect'} */ ('drag'))
   const [offsets, setOffsets]   = useState(/** @type {Record<string,{dx:number,dy:number}>} */ (loadOffsets()))
+  const [customConns, setCustomConns] = useState(/** @type {null | Array<{from:string,to:string,tone:string}>} */ (loadConnections()))
+  const [connectSource, setConnectSource] = useState(/** @type {string|null} */ (null))
 
-  // ── reporting edges ───────────────────────────────────────────────────
-  const relationships = useMemo(() => {
-    const out = []
-    out.push({ from: 'robyn',  to: 'roman',  tone: 'primary' })
-    out.push({ from: 'rachel', to: 'roman',  tone: 'primary' })
-    out.push({ from: 'abby',   to: 'robyn',  tone: 'primary' })
-    out.push({ from: 'abby',   to: 'rachel', tone: 'secondary' })
-    for (const p of OPS_PEERS) out.push({ from: p.id, to: 'robyn', tone: 'primary' })
-    for (const t of TEACHERS)  out.push({ from: t.id, to: 'abby',  tone: 'primary' })
-    return out
-  }, [])
+  // Reset the pending source whenever the user flips OUT of connect mode
+  // so the next time they open connect mode it starts fresh.
+  useEffect(() => {
+    if (!editMode || subMode !== 'connect') setConnectSource(null)
+  }, [editMode, subMode])
+
+  // ── reporting edges — custom overrides defaults when present ─────────
+  const relationships = useMemo(() => customConns || defaultConnections(), [customConns])
 
   // ── connector recompute ──────────────────────────────────────────────
   const recompute = useCallback(() => {
@@ -187,14 +216,51 @@ function ChartCanvas({ canEdit }) {
     setZoom(z => clampZoom(z + delta))
   }
 
-  // ── tile drag (admin edit mode) ──────────────────────────────────────
-  const dragState = useRef(/** @type {null | {id:string,startX:number,startY:number,baseDx:number,baseDy:number}} */ (null))
+  // ── tile drag (admin edit, drag sub-mode only) ───────────────────────
+  const dragState = useRef(/** @type {null | {id:string,startX:number,startY:number,baseDx:number,baseDy:number,moved:boolean}} */ (null))
   function onTileMouseDown(e, id) {
     if (!editMode || !canEdit) return
     e.stopPropagation()
+    if (subMode === 'connect') {
+      // Click-to-connect: first click selects source, second creates edge.
+      if (!connectSource) {
+        setConnectSource(id)
+      } else if (connectSource === id) {
+        setConnectSource(null)
+      } else {
+        addConnection(connectSource, id)
+        setConnectSource(null)
+      }
+      return
+    }
+    // Drag sub-mode.
     const base = offsets[id] || { dx: 0, dy: 0 }
-    dragState.current = { id, startX: e.clientX, startY: e.clientY, baseDx: base.dx, baseDy: base.dy }
+    dragState.current = { id, startX: e.clientX, startY: e.clientY, baseDx: base.dx, baseDy: base.dy, moved: false }
     document.body.style.cursor = 'grabbing'
+  }
+
+  // ── connection helpers ───────────────────────────────────────────────
+  function currentConnections() {
+    return customConns || defaultConnections()
+  }
+  function addConnection(from, to) {
+    const list = currentConnections()
+    // De-dup: skip if the same directed edge already exists.
+    if (list.find(c => c.from === from && c.to === to)) return
+    const next = [...list, { from, to, tone: 'primary' }]
+    setCustomConns(next)
+    saveConnections(next)
+  }
+  function removeConnection(from, to) {
+    const list = currentConnections()
+    const next = list.filter(c => !(c.from === from && c.to === to))
+    setCustomConns(next)
+    saveConnections(next)
+  }
+  function resetConnections() {
+    if (!window.confirm('Revert to the default reporting lines?')) return
+    setCustomConns(null)
+    saveConnections(null)
   }
   useEffect(() => {
     function onMove(e) {
@@ -242,7 +308,7 @@ function ChartCanvas({ canEdit }) {
       </div>
 
       {/* Edit controls (top right) */}
-      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5">
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 flex-wrap justify-end max-w-[70%]">
         {canEdit ? (
           <>
             <button
@@ -256,14 +322,30 @@ function ChartCanvas({ canEdit }) {
               <Pencil className="w-3.5 h-3.5" />
               {editMode ? 'Editing' : 'Edit layout'}
             </button>
+            {editMode && (
+              <div className="inline-flex items-center rounded-lg border border-gray-200 bg-white overflow-hidden">
+                <SubModeBtn active={subMode === 'drag'}    onClick={() => setSubMode('drag')}    icon={Move}   label="Drag" />
+                <SubModeBtn active={subMode === 'connect'} onClick={() => setSubMode('connect')} icon={Link2}  label="Connect" />
+              </div>
+            )}
             {editMode && Object.keys(offsets).length > 0 && (
               <button
                 onClick={resetLayout}
                 className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs font-semibold bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
-                title="Clear all custom positions"
+                title="Clear all custom tile positions"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Reset
+                Reset layout
+              </button>
+            )}
+            {editMode && customConns && (
+              <button
+                onClick={resetConnections}
+                className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs font-semibold bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                title="Revert to default reporting lines"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset lines
               </button>
             )}
           </>
@@ -273,6 +355,21 @@ function ChartCanvas({ canEdit }) {
           </span>
         )}
       </div>
+
+      {/* Connect-mode floating hint */}
+      {editMode && subMode === 'connect' && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-3 z-20 inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-600 text-white text-xs shadow-md">
+          <Link2 className="w-3.5 h-3.5" />
+          {connectSource
+            ? <>Picked <b>{connectSource}</b> — click another tile to draw a line (or click it again to cancel).</>
+            : <>Click a tile to start a connection.</>}
+          {connectSource && (
+            <button onClick={() => setConnectSource(null)} className="ml-1 p-0.5 rounded hover:bg-white/20">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* The scroll/pan/zoom surface */}
       <div
@@ -297,22 +394,41 @@ function ChartCanvas({ canEdit }) {
             boxSizing: 'border-box',
           }}
         >
-          {/* SVG connectors — inside the transform so they scale with tiles */}
+          {/* SVG connectors — inside the transform so they scale with tiles.
+              Each edge renders TWO paths: a thin visible one, and a
+              wider invisible one on top that accepts the click (easier
+              hit target). Pointer events only enabled in edit mode. */}
           <svg
-            className="absolute inset-0 pointer-events-none"
+            className={`absolute inset-0 ${editMode ? '' : 'pointer-events-none'}`}
             style={{ width: '100%', height: '100%', overflow: 'visible' }}
           >
-            {edges.map((e, i) => (
-              <path
-                key={i}
-                d={curvePath(e)}
-                fill="none"
-                className={e.tone === 'secondary' ? 'stroke-emerald-300' : 'stroke-blue-400'}
-                strokeWidth={e.tone === 'secondary' ? 1.5 : 1.75}
-                strokeDasharray={e.tone === 'secondary' ? '5 4' : undefined}
-                strokeLinecap="round"
-              />
-            ))}
+            {edges.map((e, i) => {
+              const d = curvePath(e)
+              return (
+                <g key={i} className={editMode ? 'cursor-pointer group' : 'pointer-events-none'}>
+                  <path
+                    d={d}
+                    fill="none"
+                    className={e.tone === 'secondary' ? 'stroke-emerald-300 group-hover:stroke-rose-400' : 'stroke-blue-400 group-hover:stroke-rose-500'}
+                    strokeWidth={e.tone === 'secondary' ? 1.5 : 1.75}
+                    strokeDasharray={e.tone === 'secondary' ? '5 4' : undefined}
+                    strokeLinecap="round"
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  {editMode && (
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke="transparent"
+                      strokeWidth={14}
+                      onClick={(ev) => { ev.stopPropagation(); if (window.confirm(`Delete this line (${e.from} → ${e.to})?`)) removeConnection(e.from, e.to) }}
+                    >
+                      <title>Click to delete: {e.from} → {e.to}</title>
+                    </path>
+                  )}
+                </g>
+              )
+            })}
           </svg>
 
           <div className="relative space-y-12" style={{ zIndex: 1 }}>
@@ -320,7 +436,8 @@ function ChartCanvas({ canEdit }) {
             <div className="flex justify-center">
               <div className="w-full sm:w-80">
                 <PersonTile tileId={FOUNDER.id} innerRef={registerTile(FOUNDER.id)}
-                  person={FOUNDER} editMode={editMode} canEdit={canEdit}
+                  person={FOUNDER} editMode={editMode} subMode={subMode} canEdit={canEdit}
+                  isConnectSource={connectSource === FOUNDER.id}
                   offset={offsets[FOUNDER.id]} onMouseDown={onTileMouseDown} />
               </div>
             </div>
@@ -329,7 +446,8 @@ function ChartCanvas({ canEdit }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
               {LEADS.map(p => (
                 <PersonTile key={p.id} tileId={p.id} innerRef={registerTile(p.id)}
-                  person={p} editMode={editMode} canEdit={canEdit}
+                  person={p} editMode={editMode} subMode={subMode} canEdit={canEdit}
+                  isConnectSource={connectSource === p.id}
                   offset={offsets[p.id]} onMouseDown={onTileMouseDown} />
               ))}
             </div>
@@ -337,13 +455,16 @@ function ChartCanvas({ canEdit }) {
             {/* Row 3 — Leti · Belle · Abby */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto">
               <PersonTile tileId="leti"  innerRef={registerTile('leti')}  person={OPS_PEERS[0]}
-                compact editMode={editMode} canEdit={canEdit}
+                compact editMode={editMode} subMode={subMode} canEdit={canEdit}
+                isConnectSource={connectSource === 'leti'}
                 offset={offsets.leti}  onMouseDown={onTileMouseDown} />
               <PersonTile tileId="belle" innerRef={registerTile('belle')} person={OPS_PEERS[1]}
-                compact editMode={editMode} canEdit={canEdit}
+                compact editMode={editMode} subMode={subMode} canEdit={canEdit}
+                isConnectSource={connectSource === 'belle'}
                 offset={offsets.belle} onMouseDown={onTileMouseDown} />
               <PersonTile tileId={ASSISTANT_OPERATOR.id} innerRef={registerTile(ASSISTANT_OPERATOR.id)}
-                person={ASSISTANT_OPERATOR} compact editMode={editMode} canEdit={canEdit}
+                person={ASSISTANT_OPERATOR} compact editMode={editMode} subMode={subMode} canEdit={canEdit}
+                isConnectSource={connectSource === ASSISTANT_OPERATOR.id}
                 offset={offsets[ASSISTANT_OPERATOR.id]} onMouseDown={onTileMouseDown} />
             </div>
 
@@ -356,7 +477,8 @@ function ChartCanvas({ canEdit }) {
               {TEACHERS.map(t => (
                 <div key={t.id} className="min-w-0">
                   <PersonTile tileId={t.id} innerRef={registerTile(t.id)}
-                    person={{ ...t, tone: 'teacher' }} compact editMode={editMode} canEdit={canEdit}
+                    person={{ ...t, tone: 'teacher' }} compact editMode={editMode} subMode={subMode} canEdit={canEdit}
+                    isConnectSource={connectSource === t.id}
                     offset={offsets[t.id]} onMouseDown={onTileMouseDown} />
                 </div>
               ))}
@@ -381,6 +503,21 @@ function IconBtn({ onClick, title, children }) {
   )
 }
 
+function SubModeBtn({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1 h-8 px-2.5 text-xs font-semibold ${
+        active ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+      }`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      {label}
+    </button>
+  )
+}
+
 function clampZoom(z) { return Math.max(0.4, Math.min(2.5, z)) }
 
 function curvePath({ x1, y1, x2, y2 }) {
@@ -391,7 +528,7 @@ function curvePath({ x1, y1, x2, y2 }) {
   return `M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}`
 }
 
-function PersonTile({ tileId, innerRef, person, compact, editMode, canEdit, offset, onMouseDown }) {
+function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canEdit, isConnectSource, offset, onMouseDown }) {
   const tones = {
     founder:   'border-purple-300 bg-purple-50',
     operator:  'border-blue-300 bg-blue-50',
@@ -403,19 +540,26 @@ function PersonTile({ tileId, innerRef, person, compact, editMode, canEdit, offs
   const cls = tones[person.tone] || tones.teacher
   const displayTitle = person.title
 
-  const draggable = editMode && canEdit
+  const editable = editMode && canEdit
+  const isDrag    = editable && subMode === 'drag'
+  const isConnect = editable && subMode === 'connect'
+
   const style = offset
     ? { transform: `translate(${offset.dx}px, ${offset.dy}px)`, transition: dragState_isDraggingId(tileId) ? 'none' : 'transform 120ms' }
     : {}
+
+  const editRing =
+    isConnectSource ? 'ring-2 ring-indigo-500' :
+    isConnect       ? 'ring-1 ring-indigo-200 cursor-pointer hover:ring-indigo-400' :
+    isDrag          ? 'ring-1 ring-amber-200 cursor-grab active:cursor-grabbing' :
+    ''
 
   return (
     <div
       ref={innerRef}
       style={style}
       onMouseDown={(e) => onMouseDown(e, tileId)}
-      className={`rounded-xl border ${cls} p-3 shadow-sm ${compact ? 'text-center' : ''} ${
-        draggable ? 'cursor-grab active:cursor-grabbing ring-1 ring-amber-200' : ''
-      } select-none`}
+      className={`rounded-xl border ${cls} p-3 shadow-sm ${compact ? 'text-center' : ''} ${editRing} select-none`}
     >
       <div className={compact ? '' : 'flex items-start gap-3'}>
         <div className={`w-8 h-8 rounded-full bg-white/70 border border-gray-200 flex items-center justify-center text-[11px] font-bold text-gray-700 shrink-0 ${compact ? 'mx-auto mb-1.5' : ''}`}>
@@ -464,7 +608,10 @@ function Legend() {
       </span>
       <span className="flex items-center gap-1.5">
         <span className="inline-block w-5 h-0.5 border-t border-dashed border-emerald-400" />
-        Secondary (Abby → Rachel)
+        Secondary
+      </span>
+      <span className="text-gray-400">
+        In edit mode: hover a line to highlight it, click to delete.
       </span>
     </div>
   )
