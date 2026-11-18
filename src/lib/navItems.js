@@ -154,6 +154,7 @@ export const navItems = [
     permissionKey: 'nav_families',
     children: [
       { label: 'Directory', path: '/families' },
+      { label: 'Contacts',  path: '/families/contacts' },
       { label: 'Notify',    path: '/families/notify' },
     ],
   },

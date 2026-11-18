@@ -80,6 +80,30 @@ export function useGhlThread({ phone, enabled = true } = {}) {
   return { contact, conversationId, messages, loading, error, sending, refetch: fetchThread, sendSms }
 }
 
+/**
+ * One contact by id. Used by GhlContactDetailPage.
+ */
+export function useGhlContact({ id, enabled = true } = {}) {
+  const [contact, setContact] = useState(null)
+  const [loading, setLoading] = useState(enabled)
+  const [error, setError] = useState(null)
+
+  const fetchRow = useCallback(async () => {
+    if (!enabled || !id) { setLoading(false); return }
+    try {
+      setError(null); setLoading(true)
+      const r = await apiGet('contact_get', { id })
+      setContact(r.contact || null)
+    } catch (e) {
+      setError(e.message)
+    } finally { setLoading(false) }
+  }, [id, enabled])
+
+  useEffect(() => { fetchRow() }, [fetchRow])
+
+  return { contact, loading, error, refetch: fetchRow }
+}
+
 export function useGhlSmartLists({ enabled = true } = {}) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(enabled)
