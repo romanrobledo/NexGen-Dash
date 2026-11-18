@@ -104,6 +104,45 @@ export function useGhlContact({ id, enabled = true } = {}) {
   return { contact, loading, error, refetch: fetchRow }
 }
 
+/**
+ * Location-wide conversation list for the Conversations inbox.
+ *
+ * Auto-refreshes every `refreshMs` (default 30s) so new inbound messages
+ * show up without a manual reload. Set `refreshMs=0` to disable polling
+ * (e.g. when the tab is in the background).
+ *
+ * Returns { rows, loading, error, refetch }.
+ */
+export function useGhlConversations({ limit = 50, unreadOnly = false, query = '', refreshMs = 30_000, enabled = true } = {}) {
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(enabled)
+  const [error, setError] = useState(null)
+
+  const fetchRows = useCallback(async () => {
+    if (!enabled) { setLoading(false); return }
+    try {
+      setError(null)
+      const params = { limit }
+      if (unreadOnly) params.unreadOnly = 'true'
+      if (query?.trim()) params.q = query.trim()
+      const r = await apiGet('list_conversations', params)
+      setRows(r.conversations || [])
+    } catch (e) {
+      setError(e.message)
+    } finally { setLoading(false) }
+  }, [limit, unreadOnly, query, enabled])
+
+  useEffect(() => { if (enabled) { setLoading(true); fetchRows() } }, [fetchRows, enabled])
+
+  useEffect(() => {
+    if (!enabled || !refreshMs) return
+    const id = setInterval(fetchRows, refreshMs)
+    return () => clearInterval(id)
+  }, [fetchRows, refreshMs, enabled])
+
+  return { rows, loading, error, refetch: fetchRows }
+}
+
 export function useGhlSmartLists({ enabled = true } = {}) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(enabled)

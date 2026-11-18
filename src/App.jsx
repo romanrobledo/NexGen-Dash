@@ -35,6 +35,7 @@ import FamilyDetailPage from './pages/FamilyDetailPage'
 import FamilyNotifyPage from './pages/FamilyNotifyPage'
 import GhlContactsPage from './pages/GhlContactsPage'
 import GhlContactDetailPage from './pages/GhlContactDetailPage'
+import GhlConversationsPage from './pages/GhlConversationsPage'
 import FamilyIncidentsPage from './pages/FamilyIncidentsPage'
 import FacilityIncidentsPage from './pages/FacilityIncidentsPage'
 import ClassroomIncidentsPage from './pages/ClassroomIncidentsPage'
@@ -214,6 +215,7 @@ function App() {
                     before /families/:id or the :id matcher swallows the
                     literal paths. */}
                 <Route path="/families/notify" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyNotifyPage /></ProtectedRoute>} />
+                <Route path="/families/conversations" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlConversationsPage /></ProtectedRoute>} />
                 <Route path="/families/contacts" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlContactsPage /></ProtectedRoute>} />
                 <Route path="/families/contacts/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlContactDetailPage /></ProtectedRoute>} />
                 <Route path="/families/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyDetailPage /></ProtectedRoute>} />

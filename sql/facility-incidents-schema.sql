@@ -7,6 +7,22 @@
 
 BEGIN;
 
+-- Guard: if an earlier partial run left a `facility_incidents` table without
+-- the `scope` column, `CREATE TABLE IF NOT EXISTS` silently skips, then the
+-- index build on `scope` dies with a confusing "column does not exist" error.
+-- Fail loudly instead so the operator knows to drop or migrate the old table.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = 'facility_incidents')
+     AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_schema = 'public' AND table_name = 'facility_incidents'
+                       AND column_name = 'scope')
+  THEN
+    RAISE EXCEPTION 'facility_incidents exists without `scope` column — drop it first (DROP TABLE public.facility_incidents CASCADE;) if empty, or add the column manually, then re-run.';
+  END IF;
+END$$;
+
 CREATE TABLE IF NOT EXISTS public.facility_incidents (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   scope         text        NOT NULL CHECK (scope IN ('family', 'facility', 'classroom')),

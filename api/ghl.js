@@ -18,6 +18,7 @@
 import {
   listContacts, searchContacts, listContactsByTag,
   getContact, getThreadForContact, getThreadByPhone,
+  listConversations,
   listOwners, listSmartLists,
   sendMessage, sendSmsByPhone, fanOutNotifyWebhook,
 } from '../lib/ghl.js'
@@ -79,6 +80,14 @@ export default async function handler(req, res) {
     }
     if (req.method === 'GET' && action === 'smart_lists') {
       return res.json({ smart_lists: await listSmartLists() })
+    }
+    if (req.method === 'GET' && action === 'list_conversations') {
+      const conversations = await listConversations({
+        limit:      Number(req.query.limit) || 50,
+        unreadOnly: String(req.query.unreadOnly || '') === 'true',
+        query:      req.query.q || '',
+      })
+      return res.json({ conversations })
     }
 
     // ── POSTs ───────────────────────────────────────────────────────────
