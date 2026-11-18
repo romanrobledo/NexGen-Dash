@@ -97,7 +97,6 @@ const TEACHERS = [
 const UNPLACED_ROLES = [
   // Admin tier
   { id: 'integrator',             name: 'Ryan',                   title: 'Integrator',            tone: 'emerald' },
-  { id: 'executive-assistant',    name: 'Open Position',          title: 'Executive Assistant',   tone: 'emerald', vacant: true },
   { id: 'sales-manager',          name: 'Open Position',          title: 'Sales Manager',         tone: 'blue',    vacant: true },
   { id: 'hiring-manager',         name: 'Hiring Manager',         title: 'Admin',                 tone: 'red' },
   { id: 'tour-manager',           name: 'Tour Manager',           title: 'Admin',                 tone: 'purple' },
@@ -114,10 +113,9 @@ const UNPLACED_ROLES = [
   { id: 'teacher-assistant',      name: 'Teacher Assistants',     title: 'Teacher Assistant',     tone: 'cyan' },
   { id: 'classroom-operations',   name: 'Classroom Operations',   title: 'Under Abby',            tone: 'blue' },
   { id: 'student-experience',     name: 'Student Experience',     title: 'Under Abby',            tone: 'blue' },
-  // Support functions
+  // Support functions (kitchen-manager + executive-assistant removed per Roman 2026-11-18)
   { id: 'front-desk',             name: 'Front Desk Manager',     title: 'Support',               tone: 'amber' },
   { id: 'lesson-plans',           name: 'Lesson Plans Manager',   title: 'Support',               tone: 'emerald' },
-  { id: 'kitchen-manager',        name: 'Kitchen Manager',        title: 'Support',               tone: 'amber' },
   { id: 'asst-kitchen',           name: 'Asst. Kitchen Manager',  title: 'Support',               tone: 'cyan' },
   { id: 'bus-driver',             name: 'Bus Driver',             title: 'Support',               tone: 'red' },
 ]
