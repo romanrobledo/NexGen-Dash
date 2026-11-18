@@ -120,6 +120,78 @@ const UNPLACED_ROLES = [
   { id: 'bus-driver',             name: 'Bus Driver',             title: 'Support',               tone: 'red' },
 ]
 
+// ── Default layout (baked from Roman's saved layout 2026-11-18) ─────────────
+// Captured from his browser's localStorage after he arranged every tile
+// and wired every connection. These become the out-of-the-box layout
+// for every user; their own drags still persist in their own localStorage.
+const DEFAULT_OFFSETS = {
+  roman:                 { dx: -104.5, dy: -657.5 },
+  robyn:                 { dx:  76.4,  dy:  -87.0 },
+  rachel:                { dx: 329.2,  dy:  -71.6 },
+  abby:                  { dx: 155.8,  dy:  165.2 },
+  leti:                  { dx: -377.8, dy: -494.7 },
+  belle:                 { dx: -891.8, dy: -314.4 },
+  sylvia:                { dx: 464.6,  dy:  340.3 },
+  maryjane:              { dx: 480.5,  dy:  353.4 },
+  joanna:                { dx: 492.2,  dy:  374.6 },
+  anjelica:              { dx: 502.7,  dy:  385.3 },
+  alexa:                 { dx: 518.2,  dy:  382.4 },
+  ruth:                  { dx: 533.2,  dy:  378.4 },
+  margo:                 { dx: 536.9,  dy:  338.1 },
+  integrator:            { dx: 365.7,  dy: -816.3 },
+  'sales-manager':       { dx: -830.7, dy: -469.7 },
+  'hiring-manager':      { dx: -893.5, dy: -323.8 },
+  'tour-manager':        { dx: -849.0, dy: -197.0 },
+  scheduling:            { dx: -540.7, dy:  -89.3 },
+  documentation:         { dx: -914.1, dy:  -98.7 },
+  'internal-communication': { dx:  378.2, dy: -193.1 },
+  tours:                 { dx: -1238.9, dy: -668.7 },
+  'follow-up':           { dx: -1322.2, dy: -377.8 },
+  enrollment:            { dx: -1582.2, dy: -520.9 },
+  'community-outreach':  { dx:  -92.4,  dy: -727.3 },
+  'front-desk':          { dx: -151.3,  dy: -497.3 },
+  'bus-driver':          { dx: -828.0,  dy: -949.2 },
+  'lesson-plans':        { dx:  751.1,  dy: -395.6 },
+  'asst-kitchen':        { dx: -1224.5, dy: -1056.1 },
+  'teacher-assistant':   { dx:  397.4,  dy: -141.9 },
+  'classroom-operations':{ dx: 1318.2,  dy: -593.3 },
+  'student-experience':  { dx: 1137.7,  dy: -740.2 },
+}
+
+const DEFAULT_CONNECTIONS = [
+  { from: 'abby',                   to: 'rachel',               tone: 'secondary' },
+  { from: 'sylvia',                 to: 'abby',                 tone: 'primary' },
+  { from: 'maryjane',               to: 'abby',                 tone: 'primary' },
+  { from: 'joanna',                 to: 'abby',                 tone: 'primary' },
+  { from: 'anjelica',               to: 'abby',                 tone: 'primary' },
+  { from: 'alexa',                  to: 'abby',                 tone: 'primary' },
+  { from: 'ruth',                   to: 'abby',                 tone: 'primary' },
+  { from: 'margo',                  to: 'abby',                 tone: 'primary' },
+  { from: 'rachel',                 to: 'classroom-operations', tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'front-desk',             to: 'robyn',                tone: 'primary', fromSide: 'top',   toSide: 'bottom' },
+  { from: 'abby',                   to: 'robyn',                tone: 'primary', fromSide: 'top',   toSide: 'bottom' },
+  { from: 'robyn',                  to: 'bus-driver',           tone: 'primary', fromSide: 'left',  toSide: 'bottom' },
+  { from: 'lesson-plans',           to: 'abby',                 tone: 'primary', fromSide: 'left',  toSide: 'right' },
+  { from: 'tours',                  to: 'sales-manager',        tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'enrollment',             to: 'sales-manager',        tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'robyn',                  to: 'community-outreach',   tone: 'primary', fromSide: 'right', toSide: 'bottom' },
+  { from: 'follow-up',              to: 'sales-manager',        tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'sales-manager',          to: 'robyn',                tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'hiring-manager',         to: 'robyn',                tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'documentation',          to: 'front-desk',           tone: 'primary', fromSide: 'top',   toSide: 'bottom' },
+  { from: 'scheduling',             to: 'front-desk',           tone: 'primary', fromSide: 'top',   toSide: 'bottom' },
+  { from: 'internal-communication', to: 'front-desk',           tone: 'primary', fromSide: 'top',   toSide: 'bottom' },
+  { from: 'rachel',                 to: 'student-experience',   tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'robyn',                  to: 'integrator',           tone: 'primary', fromSide: 'top',   toSide: 'bottom' },
+  { from: 'integrator',             to: 'roman',                tone: 'primary', fromSide: 'top',   toSide: 'bottom' },
+  { from: 'tour-manager',           to: 'robyn',                tone: 'primary', fromSide: 'top',   toSide: 'left' },
+  { from: 'robyn',                  to: 'leti',                 tone: 'primary', fromSide: 'left',  toSide: 'bottom' },
+  { from: 'abby',                   to: 'teacher-assistant',    tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'front-desk',             to: 'abby',                 tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'belle',                  to: 'robyn',                tone: 'primary', fromSide: 'right', toSide: 'left' },
+  { from: 'leti',                   to: 'asst-kitchen',         tone: 'primary', fromSide: 'left',  toSide: 'bottom' },
+]
+
 // ── Persistence (localStorage, per browser) ────────────────────────────────
 const OFFSETS_KEY = 'orgchart2.offsets.v1'
 const CONNS_KEY   = 'orgchart2.connections.v1'
@@ -127,8 +199,8 @@ const CONNS_KEY   = 'orgchart2.connections.v1'
 function loadOffsets() {
   try {
     const raw = localStorage.getItem(OFFSETS_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch { return {} }
+    return raw ? JSON.parse(raw) : { ...DEFAULT_OFFSETS }
+  } catch { return { ...DEFAULT_OFFSETS } }
 }
 function saveOffsets(offsets) {
   try { localStorage.setItem(OFFSETS_KEY, JSON.stringify(offsets)) } catch {}
@@ -147,19 +219,7 @@ function saveConnections(conns) {
   } catch {}
 }
 
-// Default reporting edges. `fromSide` / `toSide` are optional: when
-// absent, the connector auto-picks top/bottom based on relative tile
-// position. When set, the line anchors to that specific edge.
-function defaultConnections() {
-  const out = []
-  out.push({ from: 'robyn',  to: 'roman',  tone: 'primary' })
-  out.push({ from: 'rachel', to: 'roman',  tone: 'primary' })
-  out.push({ from: 'abby',   to: 'robyn',  tone: 'primary' })
-  out.push({ from: 'abby',   to: 'rachel', tone: 'secondary' })
-  for (const p of OPS_PEERS) out.push({ from: p.id, to: 'robyn', tone: 'primary' })
-  for (const t of TEACHERS)  out.push({ from: t.id, to: 'abby',  tone: 'primary' })
-  return out
-}
+function defaultConnections() { return DEFAULT_CONNECTIONS }
 
 /** @typedef {'top'|'right'|'bottom'|'left'} Side */
 
@@ -414,9 +474,10 @@ function ChartCanvas({ canEdit }) {
   }, [zoom])
 
   function resetLayout() {
-    if (!window.confirm('Clear all custom tile positions?')) return
-    setOffsets({})
-    saveOffsets({})
+    if (!window.confirm('Reset tile positions to the default layout?')) return
+    const defaults = { ...DEFAULT_OFFSETS }
+    setOffsets(defaults)
+    saveOffsets(defaults)
   }
 
   function fitToScreen() { setZoom(1); setPan({ x: 0, y: 0 }) }
