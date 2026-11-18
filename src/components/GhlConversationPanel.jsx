@@ -155,15 +155,21 @@ function MessageBubble({ m }) {
   const TypeIcon = typeIcon(m.type)
   const ts = m.created_at ? new Date(m.created_at) : null
 
-  // Call rows get a centered activity-style strip rather than a bubble,
-  // matching the "Opportunity created in Facebook Ads Pipeline" look.
-  if (m.type === 'CALL' && !m.recording_url) {
+  // Centered activity strips for: CALL without recording, pipeline /
+  // opportunity events (TYPE_ACTIVITY_*, ACTIVITY), and anything GHL
+  // labels as a DnD / system event. Mirrors the "Opportunity created
+  // in Facebook Ads Pipeline" row from the native GHL UI.
+  const isActivity =
+    (m.type === 'CALL' && !m.recording_url) ||
+    /^(ACTIVITY|TYPE_ACTIVITY)/i.test(m.type || '')
+  if (isActivity) {
+    const label = prettyActivity(m.type, m.body)
     return (
       <div className="flex items-center justify-center">
-        <div className="text-[11px] text-gray-600 bg-white border border-gray-200 rounded-full px-3 py-1 inline-flex items-center gap-1.5">
-          <Phone className="w-3 h-3 text-gray-500" />
-          {m.body}
-          {ts && <span className="text-gray-400">· {fmtTime(ts)}</span>}
+        <div className="text-[11px] text-gray-600 bg-white border border-gray-200 rounded-full px-3 py-1 inline-flex items-center gap-1.5 max-w-full">
+          <TypeIcon className="w-3 h-3 text-gray-500 shrink-0" />
+          <span className="truncate">{label}</span>
+          {ts && <span className="text-gray-400 shrink-0">· {fmtTime(ts)}</span>}
         </div>
       </div>
     )
@@ -208,12 +214,22 @@ function MessageBubble({ m }) {
 // ── small helpers ─────────────────────────────────────────────────────────
 
 function typeIcon(type) {
-  switch (type) {
-    case 'CALL':      return Phone
-    case 'EMAIL':     return Mail
-    case 'VOICEMAIL': return Voicemail
-    default:          return MessageSquare
-  }
+  if (!type) return MessageSquare
+  if (/CALL/i.test(type))             return Phone
+  if (/EMAIL/i.test(type))            return Mail
+  if (/VOICEMAIL/i.test(type))        return Voicemail
+  if (/OPPORTUNITY|PIPELINE|ACTIVITY/i.test(type)) return RefreshCw
+  return MessageSquare
+}
+
+function prettyActivity(type, body) {
+  if (body && body.trim()) return body
+  // Fallback: humanize the type when there's no body ("DnD enabled" etc.)
+  return String(type || 'Activity')
+    .replace(/^TYPE_ACTIVITY_?/i, '')
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/^./, c => c.toUpperCase())
 }
 
 function groupByDay(messages) {
