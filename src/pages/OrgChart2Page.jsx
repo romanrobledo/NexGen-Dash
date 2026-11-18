@@ -83,7 +83,9 @@ function saveConnections(conns) {
   } catch {}
 }
 
-// Default reporting edges — used until the user customizes.
+// Default reporting edges. `fromSide` / `toSide` are optional: when
+// absent, the connector auto-picks top/bottom based on relative tile
+// position. When set, the line anchors to that specific edge.
 function defaultConnections() {
   const out = []
   out.push({ from: 'robyn',  to: 'roman',  tone: 'primary' })
@@ -93,6 +95,47 @@ function defaultConnections() {
   for (const p of OPS_PEERS) out.push({ from: p.id, to: 'robyn', tone: 'primary' })
   for (const t of TEACHERS)  out.push({ from: t.id, to: 'abby',  tone: 'primary' })
   return out
+}
+
+/** @typedef {'top'|'right'|'bottom'|'left'} Side */
+
+// ── Geometry helpers (defined up-top so recompute() can use them) ──────────
+
+function clampZoom(z) { return Math.max(0.4, Math.min(2.5, z)) }
+
+/** Return the local (x,y) of a tile's anchor on the given side. */
+function sideAnchor(rect, side, toLocal) {
+  switch (side) {
+    case 'top':    return toLocal(rect.left + rect.width / 2, rect.top)
+    case 'bottom': return toLocal(rect.left + rect.width / 2, rect.bottom)
+    case 'left':   return toLocal(rect.left,                  rect.top + rect.height / 2)
+    case 'right':  return toLocal(rect.right,                 rect.top + rect.height / 2)
+    default:       return toLocal(rect.left + rect.width / 2, rect.top + rect.height / 2)
+  }
+}
+
+/**
+ * Bezier path with handles perpendicular to each anchor's edge, so
+ * top/bottom anchors curve vertically and left/right anchors curve
+ * horizontally — matches the native Miro look.
+ */
+function curvePath({ x1, y1, x2, y2, fromSide, toSide }) {
+  const dist = Math.hypot(x2 - x1, y2 - y1)
+  const pull = Math.max(24, Math.min(110, dist * 0.35))
+  const [h1x, h1y] = handleOffset(fromSide, pull)
+  const [h2x, h2y] = handleOffset(toSide,   pull)
+  const cx1 = x1 + h1x, cy1 = y1 + h1y
+  const cx2 = x2 + h2x, cy2 = y2 + h2y
+  return `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`
+}
+function handleOffset(side, pull) {
+  switch (side) {
+    case 'top':    return [0, -pull]
+    case 'bottom': return [0,  pull]
+    case 'left':   return [-pull, 0]
+    case 'right':  return [ pull, 0]
+    default:       return [0, 0]
+  }
 }
 
 // ── Page ────────────────────────────────────────────────────────────────────
@@ -137,11 +180,13 @@ function ChartCanvas({ canEdit }) {
   // 'drag' = drag tiles to reposition · 'connect' = click two tiles to wire
   const [subMode,  setSubMode]  = useState(/** @type {'drag'|'connect'} */ ('drag'))
   const [offsets, setOffsets]   = useState(/** @type {Record<string,{dx:number,dy:number}>} */ (loadOffsets()))
-  const [customConns, setCustomConns] = useState(/** @type {null | Array<{from:string,to:string,tone:string}>} */ (loadConnections()))
-  const [connectSource, setConnectSource] = useState(/** @type {string|null} */ (null))
+  const [customConns, setCustomConns] = useState(/** @type {null | Array<{from:string,to:string,tone:string,fromSide?:Side,toSide?:Side}>} */ (loadConnections()))
+  // Pending source holds the tile id AND optionally the side the user
+  // clicked. When they clicked a dot, side is set; when they clicked the
+  // tile body, side is null (= auto-pick).
+  const [connectSource, setConnectSource] = useState(/** @type {{id:string,side:Side|null}|null} */ (null))
 
-  // Reset the pending source whenever the user flips OUT of connect mode
-  // so the next time they open connect mode it starts fresh.
+  // Reset the pending source whenever the user flips OUT of connect mode.
   useEffect(() => {
     if (!editMode || subMode !== 'connect') setConnectSource(null)
   }, [editMode, subMode])
@@ -154,6 +199,10 @@ function ChartCanvas({ canEdit }) {
     const inner = innerRef.current
     if (!inner) return
     const cr = inner.getBoundingClientRect()
+    const toLocal = (clientX, clientY) => ({
+      x: (clientX - cr.left) / zoom,
+      y: (clientY - cr.top)  / zoom,
+    })
     const next = []
     for (const rel of relationships) {
       const a = tileRefs.current.get(rel.from)
@@ -161,18 +210,14 @@ function ChartCanvas({ canEdit }) {
       if (!a || !b) continue
       const ar = a.getBoundingClientRect()
       const br = b.getBoundingClientRect()
-      // Convert to inner's local coords, then undo the zoom so lines
-      // live in the same unscaled coordinate space as the tiles in CSS.
-      const toLocal = (clientX, clientY) => ({
-        x: (clientX - cr.left) / zoom,
-        y: (clientY - cr.top)  / zoom,
-      })
       const aCenter = toLocal(ar.left + ar.width / 2, ar.top + ar.height / 2)
       const bCenter = toLocal(br.left + br.width / 2, br.top + br.height / 2)
-      const fromBelow = aCenter.y > bCenter.y
-      const a1 = toLocal(ar.left + ar.width / 2, fromBelow ? ar.top : ar.bottom)
-      const b1 = toLocal(br.left + br.width / 2, fromBelow ? br.bottom : br.top)
-      next.push({ ...rel, x1: a1.x, y1: a1.y, x2: b1.x, y2: b1.y })
+      // Pick sides: explicit > auto-vertical based on relative position.
+      const aSide = rel.fromSide || (aCenter.y > bCenter.y ? 'top' : 'bottom')
+      const bSide = rel.toSide   || (aCenter.y > bCenter.y ? 'bottom' : 'top')
+      const a1 = sideAnchor(ar, aSide, toLocal)
+      const b1 = sideAnchor(br, bSide, toLocal)
+      next.push({ ...rel, fromSide: aSide, toSide: bSide, x1: a1.x, y1: a1.y, x2: b1.x, y2: b1.y })
     }
     setEdges(next)
   }, [relationships, zoom])
@@ -222,15 +267,8 @@ function ChartCanvas({ canEdit }) {
     if (!editMode || !canEdit) return
     e.stopPropagation()
     if (subMode === 'connect') {
-      // Click-to-connect: first click selects source, second creates edge.
-      if (!connectSource) {
-        setConnectSource(id)
-      } else if (connectSource === id) {
-        setConnectSource(null)
-      } else {
-        addConnection(connectSource, id)
-        setConnectSource(null)
-      }
+      // Clicking the tile BODY (not a side-dot) means "auto-anchor".
+      handleConnectClick(id, null)
       return
     }
     // Drag sub-mode.
@@ -239,28 +277,40 @@ function ChartCanvas({ canEdit }) {
     document.body.style.cursor = 'grabbing'
   }
 
+  // Shared handler for both tile-body clicks (auto anchor) and side-dot
+  // clicks (explicit anchor). side=null means auto.
+  function handleConnectClick(id, side) {
+    if (!connectSource) {
+      setConnectSource({ id, side })
+    } else if (connectSource.id === id) {
+      setConnectSource(null)   // clicking the source again cancels
+    } else {
+      addConnection(connectSource.id, id, connectSource.side, side)
+      setConnectSource(null)
+    }
+  }
+
   // ── connection helpers ───────────────────────────────────────────────
   function currentConnections() {
     return customConns || defaultConnections()
   }
-  function addConnection(from, to) {
+  function addConnection(from, to, fromSide, toSide) {
     const list = currentConnections()
-    // De-dup: skip if the same directed edge already exists.
     if (list.find(c => c.from === from && c.to === to)) return
-    const next = [...list, { from, to, tone: 'primary' }]
-    setCustomConns(next)
-    saveConnections(next)
+    const entry = { from, to, tone: 'primary' }
+    if (fromSide) entry.fromSide = fromSide
+    if (toSide)   entry.toSide   = toSide
+    const next = [...list, entry]
+    setCustomConns(next); saveConnections(next)
   }
   function removeConnection(from, to) {
     const list = currentConnections()
     const next = list.filter(c => !(c.from === from && c.to === to))
-    setCustomConns(next)
-    saveConnections(next)
+    setCustomConns(next); saveConnections(next)
   }
   function resetConnections() {
     if (!window.confirm('Revert to the default reporting lines?')) return
-    setCustomConns(null)
-    saveConnections(null)
+    setCustomConns(null); saveConnections(null)
   }
   useEffect(() => {
     function onMove(e) {
@@ -358,13 +408,13 @@ function ChartCanvas({ canEdit }) {
 
       {/* Connect-mode floating hint */}
       {editMode && subMode === 'connect' && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-3 z-20 inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-600 text-white text-xs shadow-md">
-          <Link2 className="w-3.5 h-3.5" />
+        <div className="absolute left-1/2 -translate-x-1/2 top-3 z-20 inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-600 text-white text-xs shadow-md max-w-[90%]">
+          <Link2 className="w-3.5 h-3.5 shrink-0" />
           {connectSource
-            ? <>Picked <b>{connectSource}</b> — click another tile to draw a line (or click it again to cancel).</>
-            : <>Click a tile to start a connection.</>}
+            ? <span className="truncate">Picked <b>{connectSource.id}</b>{connectSource.side ? ` (${connectSource.side})` : ''} — click another tile or one of its side-dots to finish.</span>
+            : <span>Click a tile for an auto-routed line, or click one of its edge dots to anchor from that side.</span>}
           {connectSource && (
-            <button onClick={() => setConnectSource(null)} className="ml-1 p-0.5 rounded hover:bg-white/20">
+            <button onClick={() => setConnectSource(null)} className="ml-1 p-0.5 rounded hover:bg-white/20 shrink-0">
               <X className="w-3 h-3" />
             </button>
           )}
@@ -421,7 +471,7 @@ function ChartCanvas({ canEdit }) {
                       fill="none"
                       stroke="transparent"
                       strokeWidth={14}
-                      onClick={(ev) => { ev.stopPropagation(); if (window.confirm(`Delete this line (${e.from} → ${e.to})?`)) removeConnection(e.from, e.to) }}
+                      onClick={(ev) => { ev.stopPropagation(); removeConnection(e.from, e.to) }}
                     >
                       <title>Click to delete: {e.from} → {e.to}</title>
                     </path>
@@ -437,8 +487,8 @@ function ChartCanvas({ canEdit }) {
               <div className="w-full sm:w-80">
                 <PersonTile tileId={FOUNDER.id} innerRef={registerTile(FOUNDER.id)}
                   person={FOUNDER} editMode={editMode} subMode={subMode} canEdit={canEdit}
-                  isConnectSource={connectSource === FOUNDER.id}
-                  offset={offsets[FOUNDER.id]} onMouseDown={onTileMouseDown} />
+                  isConnectSource={connectSource?.id === FOUNDER.id} connectSide={connectSource?.id === FOUNDER.id ? connectSource.side : null}
+                  offset={offsets[FOUNDER.id]} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
               </div>
             </div>
 
@@ -447,8 +497,8 @@ function ChartCanvas({ canEdit }) {
               {LEADS.map(p => (
                 <PersonTile key={p.id} tileId={p.id} innerRef={registerTile(p.id)}
                   person={p} editMode={editMode} subMode={subMode} canEdit={canEdit}
-                  isConnectSource={connectSource === p.id}
-                  offset={offsets[p.id]} onMouseDown={onTileMouseDown} />
+                  isConnectSource={connectSource?.id === p.id} connectSide={connectSource?.id === p.id ? connectSource.side : null}
+                  offset={offsets[p.id]} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
               ))}
             </div>
 
@@ -456,16 +506,16 @@ function ChartCanvas({ canEdit }) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto">
               <PersonTile tileId="leti"  innerRef={registerTile('leti')}  person={OPS_PEERS[0]}
                 compact editMode={editMode} subMode={subMode} canEdit={canEdit}
-                isConnectSource={connectSource === 'leti'}
-                offset={offsets.leti}  onMouseDown={onTileMouseDown} />
+                isConnectSource={connectSource?.id === 'leti'} connectSide={connectSource?.id === 'leti' ? connectSource.side : null}
+                offset={offsets.leti}  onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
               <PersonTile tileId="belle" innerRef={registerTile('belle')} person={OPS_PEERS[1]}
                 compact editMode={editMode} subMode={subMode} canEdit={canEdit}
-                isConnectSource={connectSource === 'belle'}
-                offset={offsets.belle} onMouseDown={onTileMouseDown} />
+                isConnectSource={connectSource?.id === 'belle'} connectSide={connectSource?.id === 'belle' ? connectSource.side : null}
+                offset={offsets.belle} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
               <PersonTile tileId={ASSISTANT_OPERATOR.id} innerRef={registerTile(ASSISTANT_OPERATOR.id)}
                 person={ASSISTANT_OPERATOR} compact editMode={editMode} subMode={subMode} canEdit={canEdit}
-                isConnectSource={connectSource === ASSISTANT_OPERATOR.id}
-                offset={offsets[ASSISTANT_OPERATOR.id]} onMouseDown={onTileMouseDown} />
+                isConnectSource={connectSource?.id === ASSISTANT_OPERATOR.id} connectSide={connectSource?.id === ASSISTANT_OPERATOR.id ? connectSource.side : null}
+                offset={offsets[ASSISTANT_OPERATOR.id]} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
             </div>
 
             {/* Row 4 — Teacher cohort. Stepped breakpoints so Margo (7th)
@@ -478,8 +528,8 @@ function ChartCanvas({ canEdit }) {
                 <div key={t.id} className="min-w-0">
                   <PersonTile tileId={t.id} innerRef={registerTile(t.id)}
                     person={{ ...t, tone: 'teacher' }} compact editMode={editMode} subMode={subMode} canEdit={canEdit}
-                    isConnectSource={connectSource === t.id}
-                    offset={offsets[t.id]} onMouseDown={onTileMouseDown} />
+                    isConnectSource={connectSource?.id === t.id} connectSide={connectSource?.id === t.id ? connectSource.side : null}
+                    offset={offsets[t.id]} onMouseDown={onTileMouseDown} onDotClick={handleConnectClick} />
                 </div>
               ))}
             </div>
@@ -518,17 +568,8 @@ function SubModeBtn({ active, onClick, icon: Icon, label }) {
   )
 }
 
-function clampZoom(z) { return Math.max(0.4, Math.min(2.5, z)) }
 
-function curvePath({ x1, y1, x2, y2 }) {
-  const dy = Math.abs(y1 - y2)
-  const pull = Math.max(24, Math.min(80, dy * 0.45))
-  const cy1 = y1 + (y1 > y2 ? -pull : pull)
-  const cy2 = y2 + (y2 > y1 ? -pull : pull)
-  return `M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}`
-}
-
-function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canEdit, isConnectSource, offset, onMouseDown }) {
+function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canEdit, isConnectSource, connectSide, offset, onMouseDown, onDotClick }) {
   const tones = {
     founder:   'border-purple-300 bg-purple-50',
     operator:  'border-blue-300 bg-blue-50',
@@ -557,10 +598,20 @@ function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canE
   return (
     <div
       ref={innerRef}
-      style={style}
+      style={{ ...style, position: 'relative' }}
       onMouseDown={(e) => onMouseDown(e, tileId)}
       className={`rounded-xl border ${cls} p-3 shadow-sm ${compact ? 'text-center' : ''} ${editRing} select-none`}
     >
+      {/* Side-anchor dots — only in connect sub-mode. Positioned outside
+          the border so the dots don't overlap tile content. */}
+      {isConnect && (
+        <>
+          <AnchorDot side="top"    active={connectSide === 'top'}    onClick={() => onDotClick(tileId, 'top')} />
+          <AnchorDot side="right"  active={connectSide === 'right'}  onClick={() => onDotClick(tileId, 'right')} />
+          <AnchorDot side="bottom" active={connectSide === 'bottom'} onClick={() => onDotClick(tileId, 'bottom')} />
+          <AnchorDot side="left"   active={connectSide === 'left'}   onClick={() => onDotClick(tileId, 'left')} />
+        </>
+      )}
       <div className={compact ? '' : 'flex items-start gap-3'}>
         <div className={`w-8 h-8 rounded-full bg-white/70 border border-gray-200 flex items-center justify-center text-[11px] font-bold text-gray-700 shrink-0 ${compact ? 'mx-auto mb-1.5' : ''}`}>
           {getInitials(person.name)}
@@ -599,6 +650,31 @@ function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canE
 // for the sake of keeping PersonTile prop-light.
 function dragState_isDraggingId(_id) { return false /* always false — reserved for future live-drag smoothing */ }
 
+function AnchorDot({ side, active, onClick }) {
+  // Positioned so the center of the dot sits exactly on the midpoint
+  // of that edge, outside the tile border.
+  const pos = {
+    top:    { top: -6,    left: '50%', transform: 'translateX(-50%)' },
+    bottom: { bottom: -6, left: '50%', transform: 'translateX(-50%)' },
+    left:   { left: -6,   top: '50%',  transform: 'translateY(-50%)' },
+    right:  { right: -6,  top: '50%',  transform: 'translateY(-50%)' },
+  }[side]
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); onClick() }}
+      style={pos}
+      title={`Anchor from ${side}`}
+      className={`absolute w-3 h-3 rounded-full border-2 ${
+        active
+          ? 'bg-indigo-600 border-indigo-800'
+          : 'bg-white border-indigo-400 hover:bg-indigo-100'
+      }`}
+    />
+  )
+}
+
 function Legend() {
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-500 px-2">
@@ -611,7 +687,7 @@ function Legend() {
         Secondary
       </span>
       <span className="text-gray-400">
-        In edit mode: hover a line to highlight it, click to delete.
+        In edit mode: click any line to delete it instantly. In Connect sub-mode, the dots on each side of a tile let you anchor a new line to that edge.
       </span>
     </div>
   )
