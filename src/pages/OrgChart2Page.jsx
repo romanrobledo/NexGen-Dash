@@ -84,6 +84,44 @@ const TEACHERS = [
   { id: 'margo',    name: 'Margo Rivas',       title: 'Head Afterschool' },
 ]
 
+/**
+ * Additional role tiles — pulled from the legacy /org-chart taxonomy
+ * (ROLE_CONTACTS / ROLE_META in src/lib/roleContent.js). These exist as
+ * placed-but-unconnected tiles at the bottom of the board. Roman wires
+ * them to the main hierarchy via Connect mode, then tells me to save
+ * the layout as default.
+ *
+ * Each id matches its roleContent key so TILE_TO_ROLE_ID falls through
+ * (identity mapping) and the drawer opens with that role's content.
+ */
+const UNPLACED_ROLES = [
+  // Admin tier
+  { id: 'integrator',             name: 'Ryan',                   title: 'Integrator',            tone: 'emerald' },
+  { id: 'executive-assistant',    name: 'Open Position',          title: 'Executive Assistant',   tone: 'emerald', vacant: true },
+  { id: 'sales-manager',          name: 'Open Position',          title: 'Sales Manager',         tone: 'blue',    vacant: true },
+  { id: 'hiring-manager',         name: 'Hiring Manager',         title: 'Admin',                 tone: 'red' },
+  { id: 'tour-manager',           name: 'Tour Manager',           title: 'Admin',                 tone: 'purple' },
+  // Under Ed (Executive Assistant's reports)
+  { id: 'scheduling',             name: 'Scheduling',             title: 'Under Ed',              tone: 'emerald' },
+  { id: 'documentation',          name: 'Documentation',          title: 'Under Ed',              tone: 'emerald' },
+  { id: 'internal-communication', name: 'Internal Communication', title: 'Under Ed',              tone: 'emerald' },
+  // Under Sales (Sales Manager's reports)
+  { id: 'tours',                  name: 'Tours',                  title: 'Under Sales',           tone: 'blue' },
+  { id: 'follow-up',              name: 'Follow-Up',              title: 'Under Sales',           tone: 'blue' },
+  { id: 'enrollment',             name: 'Enrollment',             title: 'Under Sales',           tone: 'blue' },
+  { id: 'community-outreach',     name: 'Community Outreach',     title: 'Under Sales',           tone: 'blue' },
+  // Classroom / Under Abby
+  { id: 'teacher-assistant',      name: 'Teacher Assistants',     title: 'Teacher Assistant',     tone: 'cyan' },
+  { id: 'classroom-operations',   name: 'Classroom Operations',   title: 'Under Abby',            tone: 'blue' },
+  { id: 'student-experience',     name: 'Student Experience',     title: 'Under Abby',            tone: 'blue' },
+  // Support functions
+  { id: 'front-desk',             name: 'Front Desk Manager',     title: 'Support',               tone: 'amber' },
+  { id: 'lesson-plans',           name: 'Lesson Plans Manager',   title: 'Support',               tone: 'emerald' },
+  { id: 'kitchen-manager',        name: 'Kitchen Manager',        title: 'Support',               tone: 'amber' },
+  { id: 'asst-kitchen',           name: 'Asst. Kitchen Manager',  title: 'Support',               tone: 'cyan' },
+  { id: 'bus-driver',             name: 'Bus Driver',             title: 'Support',               tone: 'red' },
+]
+
 // ── Persistence (localStorage, per browser) ────────────────────────────────
 const OFFSETS_KEY = 'orgchart2.offsets.v1'
 const CONNS_KEY   = 'orgchart2.connections.v1'
@@ -588,6 +626,29 @@ function ChartCanvas({ canEdit }) {
                 </div>
               ))}
             </div>
+
+            {/* Additional roles — placed-but-unconnected until Roman wires
+                them in Connect mode. Grouped visually with a header + a
+                dashed divider so they read as a staging area, not part
+                of the main hierarchy. */}
+            <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-200">
+              <div className="mb-3">
+                <h3 className="text-sm font-bold text-gray-700 tracking-tight">Additional Roles</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Not wired yet — use Edit layout → Connect to drop lines to the main chart. Click any tile to see its role details.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                {UNPLACED_ROLES.map(r => (
+                  <div key={r.id} className="min-w-0">
+                    <PersonTile tileId={r.id} innerRef={registerTile(r.id)}
+                      person={r} compact editMode={editMode} subMode={subMode} canEdit={canEdit}
+                      isConnectSource={connectSource?.id === r.id} connectSide={connectSource?.id === r.id ? connectSource.side : null}
+                      offset={offsets[r.id]} onMouseDown={onTileMouseDown} onClick={onTileClick} onDotClick={handleConnectClick} />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -632,6 +693,14 @@ function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canE
     assistant: 'border-indigo-300 bg-indigo-50',
     support:   'border-amber-200 bg-amber-50',
     teacher:   'border-gray-200 bg-white',
+    // ROLE_META tones from legacy roleContent, used by UNPLACED_ROLES.
+    blue:      'border-blue-300 bg-blue-50',
+    emerald:   'border-emerald-300 bg-emerald-50',
+    cyan:      'border-cyan-300 bg-cyan-50',
+    amber:     'border-amber-300 bg-amber-50',
+    red:       'border-red-300 bg-red-50',
+    purple:    'border-purple-300 bg-purple-50',
+    indigo:    'border-indigo-300 bg-indigo-50',
   }
   const cls = tones[person.tone] || tones.teacher
   const displayTitle = person.title
