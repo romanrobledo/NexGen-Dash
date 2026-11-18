@@ -234,8 +234,10 @@ function ChartCanvas({ canEdit }) {
   // ── pan via background drag ──────────────────────────────────────────
   const panState = useRef(/** @type {null | {startX:number,startY:number,baseX:number,baseY:number}} */ (null))
   function onCanvasMouseDown(e) {
-    // Only begin a pan if the target is the canvas background itself.
-    if (e.target !== outerRef.current && e.target !== innerRef.current) return
+    // Pan unless the click landed on something interactive. Grid-row
+    // divs (empty space between tiles) all pan the board; tiles and
+    // their descendants, buttons, and inputs do not.
+    if (e.target.closest && e.target.closest('[data-tile-root], button, input, textarea, select, a, svg path')) return
     panState.current = { startX: e.clientX, startY: e.clientY, baseX: pan.x, baseY: pan.y }
     document.body.style.cursor = 'grabbing'
   }
@@ -604,6 +606,7 @@ function PersonTile({ tileId, innerRef, person, compact, editMode, subMode, canE
   return (
     <div
       ref={innerRef}
+      data-tile-root="true"
       style={{ ...style, position: 'relative' }}
       onMouseDown={(e) => onMouseDown(e, tileId)}
       className={`rounded-xl border ${cls} p-3 shadow-sm ${compact ? 'text-center' : ''} ${editRing} select-none`}
