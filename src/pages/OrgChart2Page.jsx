@@ -130,7 +130,6 @@ function defaultConnections() {
 // ── Geometry helpers (defined up-top so recompute() can use them) ──────────
 
 function clampZoom(z) { return Math.max(0.4, Math.min(2.5, z)) }
-function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
 
 /** Return the local (x,y) of a tile's anchor on the given side. */
 function sideAnchor(rect, side, toLocal) {
@@ -360,11 +359,10 @@ function ChartCanvas({ canEdit }) {
       if (!dragState.current) return
       const d = dragState.current
       // Divide by zoom so one screen-pixel of mouse motion = one chart-pixel.
-      // Clamp offsets so tiles can't slide too far off their default spot
-      // — once a tile leaves the canvas it's impossible to click back.
-      const MAX_OFFSET = 600
-      const dx = clamp(d.baseDx + (e.clientX - d.startX) / zoom, -MAX_OFFSET, MAX_OFFSET)
-      const dy = clamp(d.baseDy + (e.clientY - d.startY) / zoom, -MAX_OFFSET, MAX_OFFSET)
+      // No clamp — Miro-style unlimited canvas. If a tile ends up off-
+      // screen, panning or Reset layout brings it back.
+      const dx = d.baseDx + (e.clientX - d.startX) / zoom
+      const dy = d.baseDy + (e.clientY - d.startY) / zoom
       setOffsets(prev => ({ ...prev, [d.id]: { dx, dy } }))
     }
     function onUp() {
