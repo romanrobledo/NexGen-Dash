@@ -68,6 +68,7 @@ export default function FamilyNotifyPage() {
       tag: activeTag,
       message: message.trim(),
       throttleSeconds,
+      audienceKey: preset,       // 'staff' | 'enrolled' | 'custom'
       audienceLabel,
       senderName,
     })

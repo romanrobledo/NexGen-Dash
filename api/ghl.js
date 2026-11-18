@@ -118,15 +118,15 @@ export default async function handler(req, res) {
     if (req.method === 'POST' && action === 'notify_blast') {
       // Fetches every contact with `tag` from GHL, fires the Notify
       // workflow webhook once per contact with a per-contact
-      // delay_seconds (staggered 0s, Ns, 2Ns, …). GHL workflow waits
-      // its own delay then sends. Keeps the throttle intact without
-      // needing tag filtering in the workflow action.
-      const { tag, message, throttleSeconds, audienceLabel, senderName } = req.body || {}
+      // delay_seconds (staggered 0s, Ns, 2Ns, …). audienceKey picks
+      // which GHL workflow's webhook URL to use.
+      const { tag, message, throttleSeconds, audienceKey, audienceLabel, senderName } = req.body || {}
       if (!tag || !message) return res.status(400).json({ error: 'tag + message required' })
       const r = await fanOutNotifyWebhook({
         tag,
         message,
         throttleSeconds: Number(throttleSeconds) || 30,
+        audienceKey,
         audienceLabel,
         senderName,
       })

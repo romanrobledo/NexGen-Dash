@@ -152,10 +152,14 @@ export async function sendBulkSms({ contactIds, message }) {
  * staggered by `throttleSeconds`. Each workflow instance waits its own
  * stagger before sending, so SMS actually fan out one every N seconds
  * without burning serverless time.
+ *
+ * `audienceKey` picks which webhook URL to use (enrolled/staff/custom),
+ * mapping to its own GHL workflow. Falls back to the generic URL if
+ * the audience-specific env var isn't set.
  */
-export async function fireNotifyBlast({ tag, message, throttleSeconds = 30, audienceLabel, senderName }) {
+export async function fireNotifyBlast({ tag, message, throttleSeconds = 30, audienceKey, audienceLabel, senderName }) {
   try {
-    const r = await apiPost('notify_blast', { tag, message, throttleSeconds, audienceLabel, senderName })
+    const r = await apiPost('notify_blast', { tag, message, throttleSeconds, audienceKey, audienceLabel, senderName })
     return { ok: true, ...r }
   } catch (e) {
     return { ok: false, error: e.message }

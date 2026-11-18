@@ -30,8 +30,20 @@ Vercel dashboard → project → **Settings** → **Environment Variables**. Add
 |---|---|---|
 | `GHL_LOCATION_ID` | the Location ID from step 2 | Production, Preview, Development |
 | `GHL_PIT` | the `pit-us-...` token from step 1 | Production, Preview, Development |
-| `GHL_NOTIFY_WEBHOOK_URL` | the URL from the Notify workflow (see §3b below) | Production, Preview, Development |
+| `GHL_NOTIFY_WEBHOOK_URL` | **fallback** URL — used when a preset-specific one isn't set | Production, Preview, Development |
+| `GHL_NOTIFY_WEBHOOK_PARENTS_URL` | *(optional)* dedicated URL for the **Enrolled Parents** preset | Production, Preview, Development |
+| `GHL_NOTIFY_WEBHOOK_STAFF_URL` | *(optional)* dedicated URL for the **Staff** preset | Production, Preview, Development |
 | `GHL_PROXY_API_KEY` | *(optional)* a random string if you want server-to-server calls to work | Production |
+
+**Audience → webhook mapping:**
+
+| Preset in Notify page | Env var it reads | Fallback |
+|---|---|---|
+| **Enrolled Parents** | `GHL_NOTIFY_WEBHOOK_PARENTS_URL` | `GHL_NOTIFY_WEBHOOK_URL` |
+| **Staff** | `GHL_NOTIFY_WEBHOOK_STAFF_URL` | `GHL_NOTIFY_WEBHOOK_URL` |
+| **Custom tag** | — | `GHL_NOTIFY_WEBHOOK_URL` |
+
+Set the preset-specific vars only when each audience has its own GHL workflow. Until then everything falls back to `GHL_NOTIFY_WEBHOOK_URL`, so a partial setup still works.
 
 Then **Redeploy** the production branch for the vars to take effect (Vercel doesn't hot-reload env on running deploys).
 
