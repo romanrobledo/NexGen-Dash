@@ -225,7 +225,16 @@ function defaultConnections() { return DEFAULT_CONNECTIONS }
 
 // ── Geometry helpers (defined up-top so recompute() can use them) ──────────
 
-function clampZoom(z) { return Math.max(0.4, Math.min(2.5, z)) }
+// Zoom display math: the raw scale value is what gets applied to the
+// CSS transform, but the user sees a user-friendly percentage where
+// ZOOM_BASELINE renders as 100%. The baseline matches the baked
+// layout's fit-everything zoom.
+const ZOOM_BASELINE = 0.4
+const ZOOM_MIN      = 0.1   // 25% in display terms
+const ZOOM_MAX      = 1.0   // 250% in display terms
+const ZOOM_STEP     = 0.04  // one button click = 10% in display terms
+function clampZoom(z) { return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z)) }
+function displayPct(z) { return Math.round((z / ZOOM_BASELINE) * 100) }
 
 /** Return the local (x,y) of a tile's anchor on the given side. */
 function sideAnchor(rect, side, toLocal) {
@@ -298,9 +307,9 @@ function ChartCanvas({ canEdit }) {
   const tileRefs = useRef(/** @type {Map<string, HTMLDivElement>} */ (new Map()))
 
   const [edges, setEdges]   = useState(/** @type {Edge[]} */ ([]))
-  // Default zoom shows the whole baked layout at a glance — Roman's
-  // layout spans a wide canvas and 1.0 cropped the edges.
-  const [zoom,  setZoom]    = useState(0.4)
+  // Default zoom = ZOOM_BASELINE so the whole baked layout is visible
+  // at a glance and the readout reads 100%.
+  const [zoom,  setZoom]    = useState(ZOOM_BASELINE)
   const [pan,   setPan]     = useState({ x: 0, y: 0 })
   const [editMode, setEditMode] = useState(false)
   // 'drag' = drag tiles to reposition · 'connect' = click two tiles to wire
@@ -388,7 +397,8 @@ function ChartCanvas({ canEdit }) {
   function onWheel(e) {
     if (!e.ctrlKey && !e.metaKey && Math.abs(e.deltaY) < 20) return  // ignore trackpad scroll
     e.preventDefault()
-    const delta = -e.deltaY * 0.0015
+    // Scaled down to match the tighter ZOOM range (0.1–1.0 ≈ 25%–250%).
+    const delta = -e.deltaY * 0.0006
     setZoom(z => clampZoom(z + delta))
   }
 
@@ -482,7 +492,7 @@ function ChartCanvas({ canEdit }) {
     saveOffsets(defaults)
   }
 
-  function fitToScreen() { setZoom(0.4); setPan({ x: 0, y: 0 }) }
+  function fitToScreen() { setZoom(ZOOM_BASELINE); setPan({ x: 0, y: 0 }) }
 
   const registerTile = (id) => (el) => {
     if (el) tileRefs.current.set(id, el)
@@ -501,9 +511,9 @@ function ChartCanvas({ canEdit }) {
 
       {/* Floating zoom controls (bottom right) */}
       <div className="absolute right-3 bottom-3 z-20 flex flex-col gap-1 bg-white border border-gray-200 rounded-xl shadow-sm p-1">
-        <IconBtn onClick={() => setZoom(z => clampZoom(z + 0.1))} title="Zoom in"><Plus className="w-4 h-4" /></IconBtn>
-        <IconBtn onClick={() => setZoom(z => clampZoom(z - 0.1))} title="Zoom out"><Minus className="w-4 h-4" /></IconBtn>
-        <div className="text-[10px] text-gray-500 text-center">{Math.round(zoom * 100)}%</div>
+        <IconBtn onClick={() => setZoom(z => clampZoom(z + ZOOM_STEP))} title="Zoom in"><Plus className="w-4 h-4" /></IconBtn>
+        <IconBtn onClick={() => setZoom(z => clampZoom(z - ZOOM_STEP))} title="Zoom out"><Minus className="w-4 h-4" /></IconBtn>
+        <div className="text-[10px] text-gray-500 text-center">{displayPct(zoom)}%</div>
         <IconBtn onClick={fitToScreen} title="Reset view"><Maximize2 className="w-4 h-4" /></IconBtn>
       </div>
 
