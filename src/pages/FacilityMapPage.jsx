@@ -23,6 +23,7 @@ import { useViewMode } from '../contexts/ViewModeContext'
 import { useClassrooms, findRoomByNumber } from '../hooks/useClassrooms'
 import { useChildren } from '../hooks/useChildren'
 import { computeRoomHealth } from '../lib/ratios'
+import RosterPage from './RosterPage'
 import FacilityFloorPlan from '../components/FacilityFloorPlan'
 import RoomDetailDrawer from '../components/RoomDetailDrawer'
 import CohortDrawer from '../components/CohortDrawer'
@@ -683,43 +684,13 @@ export default function FacilityMapPage() {
         </div>
       </div>
 
-      {/* Family / parent incidents */}
-      <FamilyIncidentsSection
-        items={familyIncidents}
-        form={familyForm}
-        onFormChange={setFamilyForm}
-        onAdd={addFamilyIncident}
-        onRemove={removeFamilyIncident}
-      />
-
-      {/* Submit — swaps between CTA card and post-submit success panel */}
-      {submittedInfo ? (
-        <SubmittedPanel
-          info={submittedInfo}
-          onReset={() => setSubmittedInfo(null)}
-          onSubmitNext={openConfirmModal}
-        />
-      ) : (
-        <div className="mt-6 bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900">
-              Submit Facility Report
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Three times a day: Morning, Afternoon, Closing. The modal
-              auto-detects the current period — you can override before
-              sending.
-            </p>
-          </div>
-          <button
-            onClick={openConfirmModal}
-            className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors flex-shrink-0"
-          >
-            <Send className="w-4 h-4" />
-            Submit Report
-          </button>
-        </div>
-      )}
+      {/* Students roster — moved onto the Facility page per Roman 2026-11-18
+          when the standalone Students sidebar entry was retired. The Family
+          & Parent Incidents + Submit Facility Report sections that used to
+          live here moved to the new Report menu (/report/family + /report/
+          facility). Dead state (familyIncidents, submittedInfo, submit modal
+          handlers) stays in this file for now until a cleanup pass. */}
+      <RosterPage />
 
       {/* Room detail drawer */}
       <RoomDetailDrawer

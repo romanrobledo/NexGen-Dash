@@ -132,12 +132,9 @@ export const navItems = [
     // Universal — every role sees the floor plan. Intentionally unkeyed.
     path: '/facility-map',
   },
-  {
-    icon: Baby,
-    label: 'Students',
-    permissionKey: 'nav_students',
-    path: '/roster',
-  },
+  // Students sidebar entry retired 2026-11-18; the Roster now renders
+  // inside the Facility page. /roster route still wired as a deep link
+  // so bookmarks keep working.
   {
     icon: Users,
     label: 'Staff',
