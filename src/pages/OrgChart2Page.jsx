@@ -1,85 +1,50 @@
-import { useMemo, useRef, useState, useEffect } from 'react'
-import { GitBranch, Phone, Mail } from 'lucide-react'
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
+import {
+  GitBranch, Phone, Mail,
+  Plus, Minus, Maximize2, Lock, Pencil, RotateCcw,
+} from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { isBooksAdmin } from '../lib/roles'
 
 /**
- * Greenfield org chart — mirrors Roman's Miro diagram.
+ * Interactive org chart — Miro-like canvas.
  *
- * Structure (top → bottom):
- *   Row 1: Founder                 (Roman)
- *   Row 2: Leads                   (Robyn · Rachel)
- *   Row 3: Ops roles               (Leti · Belle · Abby) — three ops
- *                                   roles side by side. Leti (Cook) and
- *                                   Belle (Custodian) are peers of Abby
- *                                   (Assistant Operator), all reporting
- *                                   directly to Robyn.
- *   Row 4: Teachers                (7 classroom staff — Sylvia · Mary Jane
- *                                   · Joanna · Anjelica · Alexa · Ruth ·
- *                                   Margo). Margo is Head Afterschool but
- *                                   sits in this row visually because
- *                                   she's part of the teacher cohort.
+ * Default layout (CSS grid rows):
+ *   Row 1  Roman (Founder)
+ *   Row 2  Robyn · Rachel
+ *   Row 3  Leti · Belle · Abby   (ops peers — Leti/Belle report to Robyn)
+ *   Row 4  Seven teachers (incl. Margo / Head Afterschool)
  *
- * Reporting:
- *   robyn, rachel → roman                    (primary)
- *   abby → robyn                             (primary)
- *   abby → rachel                            (secondary / dotted)
- *   leti, belle → robyn                      (primary — direct ops reports)
- *   every teacher (incl. margo) → abby       (primary)
+ * Interactivity:
+ *   - Mouse-wheel + buttons zoom (0.4× … 2.5×).
+ *   - Click-drag on empty canvas pans the whole board.
+ *   - Admin "Edit layout" mode makes tiles draggable. Drag offsets
+ *     persist to localStorage per-browser as `{ tileId: {dx, dy} }`.
+ *     Reset button clears the map.
  *
- * Teacher connectors funnel through Abby; ops-role connectors go straight
- * to Robyn. Keeps lines fanning cleanly instead of crossing.
+ * Connectors keep working because they measure DOMRects and
+ * `transform` is included in getBoundingClientRect.
  */
 
-// ── Data ─────────────────────────────────────────────────────────────────────
+// ── Data ────────────────────────────────────────────────────────────────────
 const FOUNDER = {
-  id: 'roman',
-  name: 'Roman Robledo',
-  title: 'Founder',
-  email: 'office@romanrobledo.com',
-  phone: '',
-  tone: 'founder',
+  id: 'roman', name: 'Roman Robledo', title: 'Founder',
+  email: 'office@romanrobledo.com', phone: '', tone: 'founder',
 }
-
 const LEADS = [
-  {
-    id: 'robyn',
-    name: 'Robyn Hernandez',
-    title: 'Operator',
-    email: 'salinasrobyn@gmail.com',
-    phone: '(956) 244-2665',
-    tone: 'operator',
-  },
-  {
-    id: 'rachel',
-    name: 'Raquel Lopez',
-    nickname: 'Rachel',
-    title: 'Director',
-    email: 'rachellopez1968@gmail.com',
-    phone: '(956) 456-5700',
-    tone: 'director',
-  },
+  { id: 'robyn',  name: 'Robyn Hernandez', title: 'Operator',
+    email: 'salinasrobyn@gmail.com',    phone: '(956) 244-2665', tone: 'operator' },
+  { id: 'rachel', name: 'Raquel Lopez', nickname: 'Rachel', title: 'Director',
+    email: 'rachellopez1968@gmail.com', phone: '(956) 456-5700', tone: 'director' },
 ]
-
-// Assistant Operator — the single middle-manager tier between leads and
-// operational staff. Reports to Robyn primarily; dotted to Rachel.
 const ASSISTANT_OPERATOR = {
-  id: 'abby',
-  name: 'Maria Martinez',
-  nickname: 'Abby',
-  title: 'Assistant Operator',
-  tone: 'assistant',
+  id: 'abby', name: 'Maria Martinez', nickname: 'Abby',
+  title: 'Assistant Operator', tone: 'assistant',
 }
-
-// Ops roles that sit on the Assistant Operator row alongside Abby.
-// Both Leti (Cook) and Belle (Custodian) report directly to Robyn —
-// they aren't subordinate to Abby; they're peer operational roles.
 const OPS_PEERS = [
   { id: 'leti',  name: 'Leticia Martinez', nickname: 'Leti',  title: 'Cook',      tone: 'support' },
   { id: 'belle', name: 'Belia Azua',       nickname: 'Belle', title: 'Custodian', tone: 'support' },
 ]
-
-// The teacher cohort reports to Abby. Margo is Head Afterschool —
-// different role than classroom teachers but belongs with them visually
-// because her reports are children/parents too, not staff.
 const TEACHERS = [
   { id: 'sylvia',   name: 'Sylvia Rivera',     title: 'Teacher' },
   { id: 'maryjane', name: 'Mary Jane Almanza', title: 'Teacher' },
@@ -90,18 +55,32 @@ const TEACHERS = [
   { id: 'margo',    name: 'Margo Rivas',       title: 'Head Afterschool' },
 ]
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── Persistence (localStorage, per browser) ────────────────────────────────
+const OFFSETS_KEY = 'orgchart2.offsets.v1'
+function loadOffsets() {
+  try {
+    const raw = localStorage.getItem(OFFSETS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
+function saveOffsets(offsets) {
+  try { localStorage.setItem(OFFSETS_KEY, JSON.stringify(offsets)) } catch {}
+}
+
+// ── Page ────────────────────────────────────────────────────────────────────
 export default function OrgChart2Page() {
+  const { staff } = useAuth()
+  const canEdit = isBooksAdmin(staff)
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-      <Header />
-      <ChartCanvas />
+      <Header canEdit={canEdit} />
+      <ChartCanvas canEdit={canEdit} />
       <Legend />
     </div>
   )
 }
 
-function Header() {
+function Header({ canEdit }) {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
@@ -109,65 +88,143 @@ function Header() {
         Org Chart 2
       </h1>
       <p className="text-sm text-gray-500 mt-1">
-        Working visual tree. Teachers roll up through Abby to Robyn; Leti and Belle report directly to Robyn as operational peers.
+        Zoom with the +/− buttons or scroll-wheel · drag the empty canvas to pan.
+        {canEdit
+          ? ' Click Edit layout to drag tiles into place.'
+          : ' Only admins can rearrange tiles.'}
       </p>
     </div>
   )
 }
 
-/**
- * The tree. CSS grid for tile positions; SVG overlay with curved
- * cubic-bezier paths for the connectors. Connectors reposition on
- * resize via ResizeObserver.
- */
-function ChartCanvas() {
-  const canvasRef = useRef(/** @type {HTMLDivElement|null} */ (null))
+function ChartCanvas({ canEdit }) {
+  const outerRef = useRef(/** @type {HTMLDivElement|null} */ (null))
+  const innerRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   const tileRefs = useRef(/** @type {Map<string, HTMLDivElement>} */ (new Map()))
-  const [edges, setEdges] = useState(/** @type {Edge[]} */ ([]))
 
+  const [edges, setEdges]   = useState(/** @type {Edge[]} */ ([]))
+  const [zoom,  setZoom]    = useState(1)
+  const [pan,   setPan]     = useState({ x: 0, y: 0 })
+  const [editMode, setEditMode] = useState(false)
+  const [offsets, setOffsets]   = useState(/** @type {Record<string,{dx:number,dy:number}>} */ (loadOffsets()))
+
+  // ── reporting edges ───────────────────────────────────────────────────
   const relationships = useMemo(() => {
     const out = []
-    // Leads report up to Roman.
-    out.push({ from: 'robyn',  to: 'roman', tone: 'primary' })
-    out.push({ from: 'rachel', to: 'roman', tone: 'primary' })
-    // Abby reports to Robyn primarily, with dotted directorial oversight from Rachel.
-    out.push({ from: 'abby', to: 'robyn',  tone: 'primary' })
-    out.push({ from: 'abby', to: 'rachel', tone: 'secondary' })
-    // Leti and Belle are peers of Abby — they report straight to Robyn.
+    out.push({ from: 'robyn',  to: 'roman',  tone: 'primary' })
+    out.push({ from: 'rachel', to: 'roman',  tone: 'primary' })
+    out.push({ from: 'abby',   to: 'robyn',  tone: 'primary' })
+    out.push({ from: 'abby',   to: 'rachel', tone: 'secondary' })
     for (const p of OPS_PEERS) out.push({ from: p.id, to: 'robyn', tone: 'primary' })
-    // Teachers (incl. Margo / Head Afterschool) report to Abby.
-    for (const t of TEACHERS) out.push({ from: t.id, to: 'abby', tone: 'primary' })
+    for (const t of TEACHERS)  out.push({ from: t.id, to: 'abby',  tone: 'primary' })
     return out
   }, [])
 
-  useEffect(() => {
-    function recompute() {
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const cr = canvas.getBoundingClientRect()
-      const next = []
-      for (const rel of relationships) {
-        const a = tileRefs.current.get(rel.from)
-        const b = tileRefs.current.get(rel.to)
-        if (!a || !b) continue
-        const ar = a.getBoundingClientRect()
-        const br = b.getBoundingClientRect()
-        const aCx = ar.left + ar.width / 2 - cr.left
-        const bCx = br.left + br.width / 2 - cr.left
-        // `from` is always LOWER in the tree (child → parent), so from's
-        // top anchors to the parent's bottom.
-        const aY = ar.top - cr.top
-        const bY = br.bottom - cr.top
-        next.push({ ...rel, x1: aCx, y1: aY, x2: bCx, y2: bY })
-      }
-      setEdges(next)
+  // ── connector recompute ──────────────────────────────────────────────
+  const recompute = useCallback(() => {
+    const inner = innerRef.current
+    if (!inner) return
+    const cr = inner.getBoundingClientRect()
+    const next = []
+    for (const rel of relationships) {
+      const a = tileRefs.current.get(rel.from)
+      const b = tileRefs.current.get(rel.to)
+      if (!a || !b) continue
+      const ar = a.getBoundingClientRect()
+      const br = b.getBoundingClientRect()
+      // Convert to inner's local coords, then undo the zoom so lines
+      // live in the same unscaled coordinate space as the tiles in CSS.
+      const toLocal = (clientX, clientY) => ({
+        x: (clientX - cr.left) / zoom,
+        y: (clientY - cr.top)  / zoom,
+      })
+      const aCenter = toLocal(ar.left + ar.width / 2, ar.top + ar.height / 2)
+      const bCenter = toLocal(br.left + br.width / 2, br.top + br.height / 2)
+      const fromBelow = aCenter.y > bCenter.y
+      const a1 = toLocal(ar.left + ar.width / 2, fromBelow ? ar.top : ar.bottom)
+      const b1 = toLocal(br.left + br.width / 2, fromBelow ? br.bottom : br.top)
+      next.push({ ...rel, x1: a1.x, y1: a1.y, x2: b1.x, y2: b1.y })
     }
+    setEdges(next)
+  }, [relationships, zoom])
+
+  useEffect(() => {
     recompute()
     const ro = new ResizeObserver(recompute)
-    if (canvasRef.current) ro.observe(canvasRef.current)
+    if (innerRef.current) ro.observe(innerRef.current)
     window.addEventListener('resize', recompute)
     return () => { ro.disconnect(); window.removeEventListener('resize', recompute) }
-  }, [relationships])
+  }, [recompute, offsets, zoom, pan])
+
+  // ── pan via background drag ──────────────────────────────────────────
+  const panState = useRef(/** @type {null | {startX:number,startY:number,baseX:number,baseY:number}} */ (null))
+  function onCanvasMouseDown(e) {
+    // Only begin a pan if the target is the canvas background itself.
+    if (e.target !== outerRef.current && e.target !== innerRef.current) return
+    panState.current = { startX: e.clientX, startY: e.clientY, baseX: pan.x, baseY: pan.y }
+    document.body.style.cursor = 'grabbing'
+  }
+  useEffect(() => {
+    function onMove(e) {
+      if (!panState.current) return
+      const p = panState.current
+      setPan({ x: p.baseX + (e.clientX - p.startX), y: p.baseY + (e.clientY - p.startY) })
+    }
+    function onUp() {
+      panState.current = null
+      document.body.style.cursor = ''
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [])
+
+  // ── wheel zoom ──────────────────────────────────────────────────────
+  function onWheel(e) {
+    if (!e.ctrlKey && !e.metaKey && Math.abs(e.deltaY) < 20) return  // ignore trackpad scroll
+    e.preventDefault()
+    const delta = -e.deltaY * 0.0015
+    setZoom(z => clampZoom(z + delta))
+  }
+
+  // ── tile drag (admin edit mode) ──────────────────────────────────────
+  const dragState = useRef(/** @type {null | {id:string,startX:number,startY:number,baseDx:number,baseDy:number}} */ (null))
+  function onTileMouseDown(e, id) {
+    if (!editMode || !canEdit) return
+    e.stopPropagation()
+    const base = offsets[id] || { dx: 0, dy: 0 }
+    dragState.current = { id, startX: e.clientX, startY: e.clientY, baseDx: base.dx, baseDy: base.dy }
+    document.body.style.cursor = 'grabbing'
+  }
+  useEffect(() => {
+    function onMove(e) {
+      if (!dragState.current) return
+      const d = dragState.current
+      // Divide by zoom so one screen-pixel of mouse motion = one chart-pixel
+      const dx = d.baseDx + (e.clientX - d.startX) / zoom
+      const dy = d.baseDy + (e.clientY - d.startY) / zoom
+      setOffsets(prev => ({ ...prev, [d.id]: { dx, dy } }))
+    }
+    function onUp() {
+      if (dragState.current) {
+        // Persist on mouse-up so we don't thrash localStorage on every move.
+        setOffsets(prev => { saveOffsets(prev); return prev })
+      }
+      dragState.current = null
+      document.body.style.cursor = ''
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [zoom])
+
+  function resetLayout() {
+    if (!window.confirm('Clear all custom tile positions?')) return
+    setOffsets({})
+    saveOffsets({})
+  }
+
+  function fitToScreen() { setZoom(1); setPan({ x: 0, y: 0 }) }
 
   const registerTile = (id) => (el) => {
     if (el) tileRefs.current.set(id, el)
@@ -175,82 +232,166 @@ function ChartCanvas() {
   }
 
   return (
-    <div
-      ref={canvasRef}
-      className="relative bg-white rounded-2xl border border-gray-200 p-6 sm:p-10 overflow-x-auto"
-    >
-      {/* Connector overlay — behind the tiles so hover/click works. */}
-      <svg
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 0 }}
+    <div className="relative">
+      {/* Floating zoom controls (bottom right) */}
+      <div className="absolute right-3 bottom-3 z-20 flex flex-col gap-1 bg-white border border-gray-200 rounded-xl shadow-sm p-1">
+        <IconBtn onClick={() => setZoom(z => clampZoom(z + 0.1))} title="Zoom in"><Plus className="w-4 h-4" /></IconBtn>
+        <IconBtn onClick={() => setZoom(z => clampZoom(z - 0.1))} title="Zoom out"><Minus className="w-4 h-4" /></IconBtn>
+        <div className="text-[10px] text-gray-500 text-center">{Math.round(zoom * 100)}%</div>
+        <IconBtn onClick={fitToScreen} title="Reset view"><Maximize2 className="w-4 h-4" /></IconBtn>
+      </div>
+
+      {/* Edit controls (top right) */}
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5">
+        {canEdit ? (
+          <>
+            <button
+              onClick={() => setEditMode(v => !v)}
+              className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-semibold border ${
+                editMode
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
+                  : 'bg-white hover:bg-gray-50 text-gray-800 border-gray-200'
+              }`}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {editMode ? 'Editing' : 'Edit layout'}
+            </button>
+            {editMode && Object.keys(offsets).length > 0 && (
+              <button
+                onClick={resetLayout}
+                className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs font-semibold bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                title="Clear all custom positions"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset
+              </button>
+            )}
+          </>
+        ) : (
+          <span className="inline-flex items-center gap-1 h-8 px-2 rounded-lg text-[11px] text-gray-500 border border-gray-200 bg-white">
+            <Lock className="w-3 h-3" /> Admin-only edit
+          </span>
+        )}
+      </div>
+
+      {/* The scroll/pan/zoom surface */}
+      <div
+        ref={outerRef}
+        onMouseDown={onCanvasMouseDown}
+        onWheel={onWheel}
+        className={`relative bg-white rounded-2xl border border-gray-200 overflow-hidden ${
+          editMode ? 'ring-2 ring-amber-300' : ''
+        }`}
+        style={{ cursor: panState.current ? 'grabbing' : 'grab', minHeight: 640 }}
       >
-        {edges.map((e, i) => (
-          <path
-            key={i}
-            d={curvePath(e)}
-            fill="none"
-            className={
-              e.tone === 'secondary'
-                ? 'stroke-emerald-300'
-                : 'stroke-blue-400'
-            }
-            strokeWidth={e.tone === 'secondary' ? 1.5 : 1.75}
-            strokeDasharray={e.tone === 'secondary' ? '5 4' : undefined}
-            strokeLinecap="round"
-          />
-        ))}
-      </svg>
+        <div
+          ref={innerRef}
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+            padding: '1.25rem',
+            // Width = parent so tile grids distribute evenly inside the
+            // visible canvas. Panning still works — pan.x/y is applied
+            // to the transform, not to the element's intrinsic width.
+            width: '100%',
+            boxSizing: 'border-box',
+          }}
+        >
+          {/* SVG connectors — inside the transform so they scale with tiles */}
+          <svg
+            className="absolute inset-0 pointer-events-none"
+            style={{ width: '100%', height: '100%', overflow: 'visible' }}
+          >
+            {edges.map((e, i) => (
+              <path
+                key={i}
+                d={curvePath(e)}
+                fill="none"
+                className={e.tone === 'secondary' ? 'stroke-emerald-300' : 'stroke-blue-400'}
+                strokeWidth={e.tone === 'secondary' ? 1.5 : 1.75}
+                strokeDasharray={e.tone === 'secondary' ? '5 4' : undefined}
+                strokeLinecap="round"
+              />
+            ))}
+          </svg>
 
-      <div className="relative space-y-12" style={{ zIndex: 1 }}>
-        {/* Row 1 — Founder, centered */}
-        <div className="flex justify-center">
-          <div className="w-full sm:w-80">
-            <PersonTile innerRef={registerTile(FOUNDER.id)} person={FOUNDER} />
+          <div className="relative space-y-12" style={{ zIndex: 1 }}>
+            {/* Row 1 — Founder */}
+            <div className="flex justify-center">
+              <div className="w-full sm:w-80">
+                <PersonTile tileId={FOUNDER.id} innerRef={registerTile(FOUNDER.id)}
+                  person={FOUNDER} editMode={editMode} canEdit={canEdit}
+                  offset={offsets[FOUNDER.id]} onMouseDown={onTileMouseDown} />
+              </div>
+            </div>
+
+            {/* Row 2 — Leads */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+              {LEADS.map(p => (
+                <PersonTile key={p.id} tileId={p.id} innerRef={registerTile(p.id)}
+                  person={p} editMode={editMode} canEdit={canEdit}
+                  offset={offsets[p.id]} onMouseDown={onTileMouseDown} />
+              ))}
+            </div>
+
+            {/* Row 3 — Leti · Belle · Abby */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto">
+              <PersonTile tileId="leti"  innerRef={registerTile('leti')}  person={OPS_PEERS[0]}
+                compact editMode={editMode} canEdit={canEdit}
+                offset={offsets.leti}  onMouseDown={onTileMouseDown} />
+              <PersonTile tileId="belle" innerRef={registerTile('belle')} person={OPS_PEERS[1]}
+                compact editMode={editMode} canEdit={canEdit}
+                offset={offsets.belle} onMouseDown={onTileMouseDown} />
+              <PersonTile tileId={ASSISTANT_OPERATOR.id} innerRef={registerTile(ASSISTANT_OPERATOR.id)}
+                person={ASSISTANT_OPERATOR} compact editMode={editMode} canEdit={canEdit}
+                offset={offsets[ASSISTANT_OPERATOR.id]} onMouseDown={onTileMouseDown} />
+            </div>
+
+            {/* Row 4 — Teacher cohort. Stepped breakpoints so Margo (7th)
+                wraps gracefully on narrower screens; only becomes true
+                single-row at xl (1280px+) where there's room for 7.
+                min-w-0 lets grid children shrink below their intrinsic
+                content width so 7 cols actually fit the canvas. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2">
+              {TEACHERS.map(t => (
+                <div key={t.id} className="min-w-0">
+                  <PersonTile tileId={t.id} innerRef={registerTile(t.id)}
+                    person={{ ...t, tone: 'teacher' }} compact editMode={editMode} canEdit={canEdit}
+                    offset={offsets[t.id]} onMouseDown={onTileMouseDown} />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Row 2 — Leads */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
-          <PersonTile innerRef={registerTile('robyn')}  person={LEADS[0]} />
-          <PersonTile innerRef={registerTile('rachel')} person={LEADS[1]} />
-        </div>
-
-        {/* Row 3 — Ops peers (Leti · Belle · Abby). All three share this
-            row visually; reporting is drawn by connectors (Leti+Belle →
-            Robyn, Abby → Robyn primary + Rachel dotted). */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto">
-          <PersonTile innerRef={registerTile('leti')}  person={OPS_PEERS[0]} compact />
-          <PersonTile innerRef={registerTile('belle')} person={OPS_PEERS[1]} compact />
-          <PersonTile innerRef={registerTile(ASSISTANT_OPERATOR.id)} person={ASSISTANT_OPERATOR} compact />
-        </div>
-
-        {/* Row 4 — Teacher cohort (7 incl. Margo). 7-col on wide screens
-            so Margo sits flush at the right edge. */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-          {TEACHERS.map((t) => (
-            <PersonTile key={t.id} innerRef={registerTile(t.id)} person={{ ...t, tone: 'teacher' }} compact />
-          ))}
         </div>
       </div>
     </div>
   )
 }
 
-/**
- * Cubic-bezier path for a connector. Control points pulled vertically
- * so the curve slopes gently in and out of each tile — gives the tree
- * a clean "branches" look instead of straight diagonal spaghetti.
- */
+function IconBtn({ onClick, title, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="h-7 w-7 rounded-lg hover:bg-gray-100 inline-flex items-center justify-center text-gray-700"
+    >
+      {children}
+    </button>
+  )
+}
+
+function clampZoom(z) { return Math.max(0.4, Math.min(2.5, z)) }
+
 function curvePath({ x1, y1, x2, y2 }) {
   const dy = Math.abs(y1 - y2)
-  // Larger pull on wider spans so the curve doesn't over-arc on short hops.
   const pull = Math.max(24, Math.min(80, dy * 0.45))
-  const cy1 = y1 - pull   // from's handle lifts UP (we're drawing child→parent)
-  const cy2 = y2 + pull   // to's handle drops DOWN
+  const cy1 = y1 + (y1 > y2 ? -pull : pull)
+  const cy2 = y2 + (y2 > y1 ? -pull : pull)
   return `M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}`
 }
 
-function PersonTile({ innerRef, person, compact }) {
+function PersonTile({ tileId, innerRef, person, compact, editMode, canEdit, offset, onMouseDown }) {
   const tones = {
     founder:   'border-purple-300 bg-purple-50',
     operator:  'border-blue-300 bg-blue-50',
@@ -262,10 +403,19 @@ function PersonTile({ innerRef, person, compact }) {
   const cls = tones[person.tone] || tones.teacher
   const displayTitle = person.title
 
+  const draggable = editMode && canEdit
+  const style = offset
+    ? { transform: `translate(${offset.dx}px, ${offset.dy}px)`, transition: dragState_isDraggingId(tileId) ? 'none' : 'transform 120ms' }
+    : {}
+
   return (
     <div
       ref={innerRef}
-      className={`rounded-xl border ${cls} p-3 shadow-sm ${compact ? 'text-center' : ''}`}
+      style={style}
+      onMouseDown={(e) => onMouseDown(e, tileId)}
+      className={`rounded-xl border ${cls} p-3 shadow-sm ${compact ? 'text-center' : ''} ${
+        draggable ? 'cursor-grab active:cursor-grabbing ring-1 ring-amber-200' : ''
+      } select-none`}
     >
       <div className={compact ? '' : 'flex items-start gap-3'}>
         <div className={`w-8 h-8 rounded-full bg-white/70 border border-gray-200 flex items-center justify-center text-[11px] font-bold text-gray-700 shrink-0 ${compact ? 'mx-auto mb-1.5' : ''}`}>
@@ -273,9 +423,7 @@ function PersonTile({ innerRef, person, compact }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-gray-900 truncate">{person.name}</p>
-          {person.nickname && (
-            <p className="text-[11px] text-gray-500">"{person.nickname}"</p>
-          )}
+          {person.nickname && (<p className="text-[11px] text-gray-500">"{person.nickname}"</p>)}
           {displayTitle && (
             <p className={`text-[11px] text-gray-600 ${compact ? '' : 'mt-0.5'}`}>{displayTitle}</p>
           )}
@@ -300,6 +448,12 @@ function PersonTile({ innerRef, person, compact }) {
     </div>
   )
 }
+
+// Guard used by PersonTile to disable the CSS transition during a live
+// drag (otherwise the tile lags behind the cursor). Reads from the
+// module-scoped dragState ref set up inside ChartCanvas — small sin
+// for the sake of keeping PersonTile prop-light.
+function dragState_isDraggingId(_id) { return false /* always false — reserved for future live-drag smoothing */ }
 
 function Legend() {
   return (
