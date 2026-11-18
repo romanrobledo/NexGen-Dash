@@ -298,7 +298,9 @@ function ChartCanvas({ canEdit }) {
   const tileRefs = useRef(/** @type {Map<string, HTMLDivElement>} */ (new Map()))
 
   const [edges, setEdges]   = useState(/** @type {Edge[]} */ ([]))
-  const [zoom,  setZoom]    = useState(1)
+  // Default zoom shows the whole baked layout at a glance — Roman's
+  // layout spans a wide canvas and 1.0 cropped the edges.
+  const [zoom,  setZoom]    = useState(0.4)
   const [pan,   setPan]     = useState({ x: 0, y: 0 })
   const [editMode, setEditMode] = useState(false)
   // 'drag' = drag tiles to reposition · 'connect' = click two tiles to wire
@@ -480,7 +482,7 @@ function ChartCanvas({ canEdit }) {
     saveOffsets(defaults)
   }
 
-  function fitToScreen() { setZoom(1); setPan({ x: 0, y: 0 }) }
+  function fitToScreen() { setZoom(0.4); setPan({ x: 0, y: 0 }) }
 
   const registerTile = (id) => (el) => {
     if (el) tileRefs.current.set(id, el)
