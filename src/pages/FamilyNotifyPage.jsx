@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   Megaphone, Users, Loader2, Send, AlertCircle, CheckCircle2, Tag,
-  ChevronLeft, UserCircle, Baby,
+  UserCircle, Baby,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { isBooksAdmin } from '../lib/roles'
@@ -95,10 +94,9 @@ export default function FamilyNotifyPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      {/* Header — Notify moved under Conversations on 2026-11-18, so no
+          breadcrumb back-link to Families; sidebar provides the context. */}
       <div>
-        <Link to="/families" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-2">
-          <ChevronLeft className="w-4 h-4" /> Families
-        </Link>
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
           <Megaphone className="w-6 h-6 text-blue-600" />
           Notify

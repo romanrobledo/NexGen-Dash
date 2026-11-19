@@ -152,19 +152,28 @@ export const navItems = [
     children: [
       { label: 'Directory', path: '/families' },
       { label: 'Contacts',  path: '/families/contacts' },
-      { label: 'Notify',    path: '/families/notify' },
+      // Notify moved out to Conversations → Notify on 2026-11-18. The
+      // /families/notify route is still wired in App.jsx so bookmarks
+      // keep resolving; only the sidebar entry moved.
     ],
   },
-  // Conversations — GHL inbox mirror, promoted to top-level between
-  // Families and Report per Roman 2026-11-18. Same permission key as
-  // Families so effective visibility is unchanged (whoever saw the old
-  // child still sees this). Route stays /families/conversations so deep
-  // links keep working.
+  // Conversations — GHL inbox hub. Three children:
+  //   - Notify   (blast composer — same page, hosted at /conversations/notify)
+  //   - Families (inbox filtered to contacts tagged "nexgen parent")
+  //   - Staff    (inbox filtered to contacts tagged "staff")
+  // The tag-first filter is intentional: parents + staff get worked in
+  // GHL first, then earn their way into NexGenOS by being tagged. Tag
+  // strings here must match FamilyNotifyPage's PRESETS — the Staff/
+  // Families inboxes display the same audience the Notify page blasts.
   {
     icon: Inbox,
     label: 'Conversations',
     permissionKey: 'nav_families',
-    path: '/families/conversations',
+    children: [
+      { label: 'Notify',   path: '/conversations/notify' },
+      { label: 'Families', path: '/conversations/families' },
+      { label: 'Staff',    path: '/conversations/staff' },
+    ],
   },
   // Report — centralized incident logging. Three scopes, one Supabase
   // table (facility_incidents). Family + Classroom pages take the

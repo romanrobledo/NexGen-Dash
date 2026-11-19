@@ -11,6 +11,14 @@ import GhlConversationPanel from '../components/GhlConversationPanel'
  * Conversations inbox — mirrors GHL's inbox inside NexGen so staff don't
  * leave the app to see parent replies.
  *
+ * Audience scoping: the `audienceTag` prop filters the inbox to
+ * conversations whose contact carries that GHL tag. Roman's workflow is
+ * that parents + staff get worked in GHL first and only "graduate" to
+ * NexGenOS once they're tagged (e.g. 'nexgen parent', 'staff'), which
+ * is what this filter enforces. An empty tag ('' or undefined) shows
+ * everything — used by the unfiltered /families/conversations deep link
+ * that pre-dates the Staff/Families split.
+ *
  * Layout:
  *   - Desktop: left column = conversation list, right column = selected thread
  *   - Mobile:  drill-down. List fills the screen; tapping a row opens the
@@ -25,7 +33,7 @@ import GhlConversationPanel from '../components/GhlConversationPanel'
  * Permission: route is admin-gated at the App.jsx layer (BOOKS_ADMIN_ROLES).
  * Teacher scoping lands in Phase 2 of the plan.
  */
-export default function GhlConversationsPage() {
+export default function GhlConversationsPage({ audienceTag = '', audienceLabel = '' } = {}) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [unreadOnly, setUnreadOnly] = useState(false)
@@ -39,6 +47,10 @@ export default function GhlConversationsPage() {
     // types. Debouncing is overkill for a list under ~200 rows — the
     // GHL call fires on every keystroke and settles in <300ms.
     query: search,
+    // Tag filter — intersects conversations with contacts carrying this
+    // tag server-side. See lib/ghl.js listConversations for the two-step
+    // lookup rationale.
+    tag: audienceTag,
   })
 
   const selected = useMemo(
@@ -53,15 +65,25 @@ export default function GhlConversationsPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto">
-      {/* Header — Conversations is a top-level nav item (promoted out of
-          Families on 2026-11-18), so no breadcrumb back-link here. */}
+      {/* Header — shows which audience slice we're viewing. Tag-scoped
+          views (Families/Staff) spell out the GHL tag that gates the
+          list so Roman can see at a glance why a contact is or isn't
+          here. The unfiltered /families/conversations variant falls back
+          to the generic subtitle. */}
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900 inline-flex items-center gap-2">
           <Inbox className="w-6 h-6 text-indigo-600" />
-          Conversations
+          Conversations{audienceLabel ? ` — ${audienceLabel}` : ''}
         </h1>
         <p className="text-sm text-gray-600 mt-0.5">
-          Every SMS / call / email thread across the NexGen GHL sub-account. Reply inline — delivered through GHL.
+          {audienceTag ? (
+            <>
+              Threads with contacts tagged <code className="px-1 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[11px] font-mono">{audienceTag}</code> in GHL.
+              Reply inline — delivered through GHL. Contacts only appear here once they carry the tag.
+            </>
+          ) : (
+            'Every SMS / call / email thread across the NexGen GHL sub-account. Reply inline — delivered through GHL.'
+          )}
         </p>
       </div>
 
@@ -136,7 +158,13 @@ export default function GhlConversationsPage() {
               <EmptyState
                 icon={MessageSquare}
                 title={unreadOnly ? 'No unread' : 'No conversations yet'}
-                hint={unreadOnly ? 'Everyone\'s caught up.' : 'When a parent texts your GHL number, their thread appears here.'}
+                hint={
+                  unreadOnly
+                    ? "Everyone's caught up."
+                    : audienceTag
+                      ? `No threads yet from contacts tagged "${audienceTag}". Tag a contact in GHL and they'll show up here on the next refresh.`
+                      : 'When a parent texts your GHL number, their thread appears here.'
+                }
               />
             )}
             {rows.map(c => (

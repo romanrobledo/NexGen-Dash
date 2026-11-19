@@ -86,6 +86,7 @@ export default async function handler(req, res) {
         limit:      Number(req.query.limit) || 50,
         unreadOnly: String(req.query.unreadOnly || '') === 'true',
         query:      req.query.q || '',
+        tag:        req.query.tag || '',
       })
       return res.json({ conversations })
     }

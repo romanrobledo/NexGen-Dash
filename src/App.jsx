@@ -215,10 +215,21 @@ function App() {
                     before /families/:id or the :id matcher swallows the
                     literal paths. */}
                 <Route path="/families/notify" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyNotifyPage /></ProtectedRoute>} />
+                {/* /families/conversations predates the Staff/Families
+                    split and is preserved unfiltered for any existing
+                    bookmarks. New nav points at /conversations/*. */}
                 <Route path="/families/conversations" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlConversationsPage /></ProtectedRoute>} />
                 <Route path="/families/contacts" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlContactsPage /></ProtectedRoute>} />
                 <Route path="/families/contacts/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlContactDetailPage /></ProtectedRoute>} />
                 <Route path="/families/:id" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyDetailPage /></ProtectedRoute>} />
+                {/* Conversations — tag-scoped inboxes. The GHL tag
+                    strings below MUST match the ones used by the Notify
+                    page audiences (src/pages/FamilyNotifyPage.jsx
+                    PRESETS) — change one, change the other, or the
+                    inbox view will show the wrong contacts. */}
+                <Route path="/conversations/notify"   element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><FamilyNotifyPage /></ProtectedRoute>} />
+                <Route path="/conversations/families" element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlConversationsPage audienceTag="nexgen parent" audienceLabel="Families" /></ProtectedRoute>} />
+                <Route path="/conversations/staff"    element={<ProtectedRoute requiredRole={BOOKS_ADMIN_ROLES}><GhlConversationsPage audienceTag="staff" audienceLabel="Staff" /></ProtectedRoute>} />
                 {/* Report menu — three incident-scope pages, shared
                     facility_incidents table. Any authenticated staff can
                     log + read; admin update/delete. */}

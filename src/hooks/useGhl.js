@@ -113,7 +113,7 @@ export function useGhlContact({ id, enabled = true } = {}) {
  *
  * Returns { rows, loading, error, refetch }.
  */
-export function useGhlConversations({ limit = 50, unreadOnly = false, query = '', refreshMs = 30_000, enabled = true } = {}) {
+export function useGhlConversations({ limit = 50, unreadOnly = false, query = '', tag = '', refreshMs = 30_000, enabled = true } = {}) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(enabled)
   const [error, setError] = useState(null)
@@ -125,12 +125,13 @@ export function useGhlConversations({ limit = 50, unreadOnly = false, query = ''
       const params = { limit }
       if (unreadOnly) params.unreadOnly = 'true'
       if (query?.trim()) params.q = query.trim()
+      if (tag?.trim())   params.tag = tag.trim()
       const r = await apiGet('list_conversations', params)
       setRows(r.conversations || [])
     } catch (e) {
       setError(e.message)
     } finally { setLoading(false) }
-  }, [limit, unreadOnly, query, enabled])
+  }, [limit, unreadOnly, query, tag, enabled])
 
   useEffect(() => { if (enabled) { setLoading(true); fetchRows() } }, [fetchRows, enabled])
 
