@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, ChevronLeft, Search, RefreshCw, Loader2,
+  ChevronLeft, Search, RefreshCw, Loader2,
   MessageSquare, AlertCircle, Phone, Mail, Inbox,
 } from 'lucide-react'
 import { useGhlConversations } from '../hooks/useGhl'
@@ -53,12 +53,10 @@ export default function GhlConversationsPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto">
-      {/* Header */}
+      {/* Header — Conversations is a top-level nav item (promoted out of
+          Families on 2026-11-18), so no breadcrumb back-link here. */}
       <div className="mb-4">
-        <Link to="/families" className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1">
-          <ArrowLeft className="w-3.5 h-3.5" /> Families
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-1 inline-flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-gray-900 inline-flex items-center gap-2">
           <Inbox className="w-6 h-6 text-indigo-600" />
           Conversations
         </h1>

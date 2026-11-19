@@ -150,15 +150,21 @@ export const navItems = [
     label: 'Families',
     permissionKey: 'nav_families',
     children: [
-      { label: 'Directory',     path: '/families' },
-      { label: 'Contacts',      path: '/families/contacts' },
-      { label: 'Notify',        path: '/families/notify' },
-      // Conversations — GHL inbox mirror. Lives next to Notify since
-      // both are communication surfaces powered by the same GHL
-      // sub-account. Teacher scoping is deferred to Phase 2 of the
-      // plan; admin-only at the route level for now.
-      { label: 'Conversations', path: '/families/conversations' },
+      { label: 'Directory', path: '/families' },
+      { label: 'Contacts',  path: '/families/contacts' },
+      { label: 'Notify',    path: '/families/notify' },
     ],
+  },
+  // Conversations — GHL inbox mirror, promoted to top-level between
+  // Families and Report per Roman 2026-11-18. Same permission key as
+  // Families so effective visibility is unchanged (whoever saw the old
+  // child still sees this). Route stays /families/conversations so deep
+  // links keep working.
+  {
+    icon: Inbox,
+    label: 'Conversations',
+    permissionKey: 'nav_families',
+    path: '/families/conversations',
   },
   // Report — centralized incident logging. Three scopes, one Supabase
   // table (facility_incidents). Family + Classroom pages take the
